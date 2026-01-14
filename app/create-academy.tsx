@@ -14,6 +14,7 @@ import { ArrowLeft } from "lucide-react-native";
 import type { Academy, Belt, MemberProfile } from "../src/core/ports/dojoflow-ports";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
 import { dojoFlowAdapters } from "../src/infra/supabase/adapters";
+import { useTheme } from "../src/ui/theme/ThemeProvider";
 
 const BELTS: Belt[] = ["Branca", "Azul", "Roxa", "Marrom", "Preta"];
 
@@ -43,6 +44,8 @@ export default function CreateAcademy() {
   const [city, setCity] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const iconColor = theme === "dark" ? "#E5E7EB" : "#0F172A";
 
   const canCreate = useMemo(() => name.trim().length > 2 && !isLoading, [name, isLoading]);
 
@@ -136,22 +139,23 @@ export default function CreateAcademy() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} className="flex-1 px-5">
-        <View className="mx-auto w-full max-w-[520px]">
+    <SafeAreaView className="flex-1 bg-app-light dark:bg-app-dark">
+      <ScrollView className="flex-1">
+        <View className="px-5 pb-10">
+          <View className="mx-auto w-full max-w-[520px]">
           <Pressable
             accessibilityRole="button"
             onPress={() => router.back()}
             className="mt-4 flex-row items-center gap-2 self-start"
           >
-            <ArrowLeft size={18} color="#0F172A" strokeWidth={2.2} />
-            <Text className="text-sm text-ink">Voltar</Text>
+            <ArrowLeft size={18} color={iconColor} strokeWidth={2.2} />
+            <Text className="text-sm text-strong-light dark:text-strong-dark">Voltar</Text>
           </Pressable>
 
-          <Text className="mt-6 font-display text-2xl text-ink">
+          <Text className="mt-6 font-display text-2xl text-strong-light dark:text-strong-dark">
             {academy ? "Sua academia" : "Criar academia"}
           </Text>
-          <Text className="mt-2 text-base text-slate-600">
+          <Text className="mt-2 text-base text-muted-light dark:text-muted-dark">
             {academy
               ? "Compartilhe o codigo com seus alunos e gerencie as faixas."
               : "Cadastre sua academia e gere o codigo de acesso."}
@@ -160,33 +164,39 @@ export default function CreateAcademy() {
           {isBooting || isLoading ? (
             <View className="mt-6 flex-row items-center gap-3">
               <ActivityIndicator />
-              <Text className="text-sm text-slate-500">Carregando dados...</Text>
+              <Text className="text-sm text-muted-light dark:text-muted-dark">
+                Carregando dados...
+              </Text>
             </View>
           ) : null}
 
           {error ? <Text className="mt-4 text-sm text-red-500">{error}</Text> : null}
 
           {!academy ? (
-            <View className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <Text className="text-xs uppercase tracking-widest text-slate-500">Nome</Text>
+            <View className="mt-6 rounded-card border border-subtle-light bg-surface-light p-card shadow-card dark:border-subtle-dark dark:bg-surface-dark">
+              <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
+                Nome
+              </Text>
               <TextInput
                 value={name}
                 onChangeText={setName}
                 placeholder="Ex: Dojo Central"
                 placeholderTextColor="#94A3B8"
-                className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-ink"
+                className="mt-2 rounded-input border border-subtle-light bg-app-light px-4 py-4 text-base text-strong-light dark:border-subtle-dark dark:bg-app-dark dark:text-strong-dark"
               />
 
-              <Text className="mt-5 text-xs uppercase tracking-widest text-slate-500">Cidade</Text>
+              <Text className="mt-5 text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
+                Cidade
+              </Text>
               <TextInput
                 value={city}
                 onChangeText={setCity}
                 placeholder="Ex: Sao Paulo"
                 placeholderTextColor="#94A3B8"
-                className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-ink"
+                className="mt-2 rounded-input border border-subtle-light bg-app-light px-4 py-4 text-base text-strong-light dark:border-subtle-dark dark:bg-app-dark dark:text-strong-dark"
               />
 
-              <Text className="mt-5 text-xs uppercase tracking-widest text-slate-500">
+              <Text className="mt-5 text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
                 Logo (URL)
               </Text>
               <TextInput
@@ -195,7 +205,7 @@ export default function CreateAcademy() {
                 placeholder="https://..."
                 placeholderTextColor="#94A3B8"
                 autoCapitalize="none"
-                className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-ink"
+                className="mt-2 rounded-input border border-subtle-light bg-app-light px-4 py-4 text-base text-strong-light dark:border-subtle-dark dark:bg-app-dark dark:text-strong-dark"
               />
 
               <Pressable
@@ -204,40 +214,50 @@ export default function CreateAcademy() {
                 onPress={handleCreateAcademy}
                 className={[
                   "mt-6 rounded-2xl px-5 py-4",
-                  canCreate ? "bg-brand-600" : "bg-slate-200",
+                  canCreate ? "bg-brand-600" : "bg-subtle-light dark:bg-subtle-dark",
                 ].join(" ")}
                 style={({ pressed }) => (pressed && canCreate ? { opacity: 0.9 } : undefined)}
               >
-                <Text className={canCreate ? "text-center text-white" : "text-center text-slate-500"}>
+                <Text
+                  className={
+                    canCreate
+                      ? "text-center text-white"
+                      : "text-center text-muted-light dark:text-muted-dark"
+                  }
+                >
                   Gerar codigo
                 </Text>
               </Pressable>
             </View>
           ) : (
             <View className="mt-6">
-              <View className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <Text className="text-xs uppercase tracking-widest text-slate-500">
+              <View className="rounded-card border border-subtle-light bg-surface-light p-card shadow-card dark:border-subtle-dark dark:bg-surface-dark">
+                <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
                   Codigo de acesso
                 </Text>
-                <Text className="mt-2 font-display text-3xl text-ink">{academy.inviteCode}</Text>
-                <Text className="mt-3 text-sm text-slate-600">
+                <Text className="mt-2 font-display text-3xl text-strong-light dark:text-strong-dark">
+                  {academy.inviteCode}
+                </Text>
+                <Text className="mt-3 text-sm text-muted-light dark:text-muted-dark">
                   {academy.name}
                   {academy.city ? ` - ${academy.city}` : ""}
                 </Text>
-                <Text className="mt-3 text-sm text-slate-600">
+                <Text className="mt-3 text-sm text-muted-light dark:text-muted-dark">
                   Compartilhe este codigo com os alunos para liberar o acesso.
                 </Text>
               </View>
 
               <View className="mt-6">
-                <Text className="font-display text-lg text-ink">Alunos vinculados</Text>
-                <Text className="mt-1 text-sm text-slate-600">
+                <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
+                  Alunos vinculados
+                </Text>
+                <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
                   Atualize rapidamente a faixa de cada aluno.
                 </Text>
                 <View className="mt-4 gap-3">
                   {members.length === 0 ? (
-                    <View className="rounded-2xl border border-dashed border-slate-200 bg-white p-5">
-                      <Text className="text-sm text-slate-500">
+                    <View className="rounded-2xl border border-dashed border-subtle-light bg-surface-light p-5 dark:border-subtle-dark dark:bg-surface-dark">
+                      <Text className="text-sm text-muted-light dark:text-muted-dark">
                         Nenhum aluno vinculado ainda.
                       </Text>
                     </View>
@@ -245,12 +265,12 @@ export default function CreateAcademy() {
                     members.map((member) => (
                       <View
                         key={member.userId}
-                        className="rounded-2xl border border-slate-200 bg-white p-4"
+                        className="rounded-2xl border border-subtle-light bg-surface-light p-4 dark:border-subtle-dark dark:bg-surface-dark"
                       >
-                        <Text className="font-display text-base text-ink">
+                        <Text className="font-display text-base text-strong-light dark:text-strong-dark">
                           {member.fullName || member.email || "Aluno"}
                         </Text>
-                        <Text className="mt-1 text-sm text-slate-600">
+                        <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
                           Faixa atual: {member.currentBelt ?? "Branca"}
                         </Text>
                         <Pressable
@@ -259,13 +279,15 @@ export default function CreateAcademy() {
                           disabled={isUpdating === member.userId}
                           className={[
                             "mt-3 self-start rounded-xl px-4 py-2",
-                            isUpdating === member.userId ? "bg-slate-200" : "bg-brand-50",
+                            isUpdating === member.userId
+                              ? "bg-subtle-light dark:bg-subtle-dark"
+                              : "bg-brand-50 dark:bg-brand-600/20",
                           ].join(" ")}
                           style={({ pressed }) =>
                             pressed && isUpdating !== member.userId ? { opacity: 0.85 } : undefined
                           }
                         >
-                          <Text className="text-sm text-brand-700">
+                          <Text className="text-sm text-brand-700 dark:text-brand-50">
                             {isUpdating === member.userId ? "Atualizando..." : "Promover faixa"}
                           </Text>
                         </Pressable>
@@ -276,6 +298,7 @@ export default function CreateAcademy() {
               </View>
             </View>
           )}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

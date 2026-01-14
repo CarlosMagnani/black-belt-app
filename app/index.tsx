@@ -32,7 +32,7 @@ export default function Index() {
             router.replace("/join-academy");
             return;
           }
-          router.replace("/student-home");
+          router.replace("/home");
           return;
         }
 
@@ -57,12 +57,14 @@ export default function Index() {
   }, [router]);
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-app-light dark:bg-app-dark">
       <View className="flex-1 items-center justify-center px-5">
         {status === "loading" ? (
           <>
             <ActivityIndicator />
-            <Text className="mt-3 text-sm text-slate-600">Carregando DojoFlow...</Text>
+            <Text className="mt-3 text-sm text-muted-light dark:text-muted-dark">
+              Carregando DojoFlow...
+            </Text>
           </>
         ) : (
           <Text className="text-sm text-red-500">{error ?? "Erro inesperado."}</Text>

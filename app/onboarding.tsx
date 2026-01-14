@@ -44,15 +44,20 @@ export default function Onboarding() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
-      <View className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-brand-50 opacity-80" />
-      <View className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-slate-100 opacity-90" />
+    <SafeAreaView className="flex-1 bg-app-light dark:bg-app-dark">
+      <View className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-brand-50 opacity-80 dark:bg-brand-600/20" />
+      <View className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-surface-light opacity-90 dark:bg-surface-dark dark:opacity-60" />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} className="flex-1 px-5">
-        <View className="mx-auto mt-8 w-full max-w-[520px]">
-          <Text className="text-xs uppercase tracking-[4px] text-brand-600">DojoFlow</Text>
-          <Text className="mt-3 font-display text-3xl text-ink">Comece em minutos</Text>
-          <Text className="mt-2 text-base text-slate-600">
+      <ScrollView className="flex-1">
+        <View className="px-5 pb-10">
+          <View className="mx-auto mt-8 w-full max-w-[520px]">
+          <Text className="text-xs uppercase tracking-[4px] text-brand-600 dark:text-brand-50">
+            DojoFlow
+          </Text>
+          <Text className="mt-3 font-display text-3xl text-strong-light dark:text-strong-dark">
+            Comece em minutos
+          </Text>
+          <Text className="mt-2 text-base text-muted-light dark:text-muted-dark">
             Escolha como voce usa o DojoFlow hoje.
           </Text>
 
@@ -83,16 +88,19 @@ export default function Onboarding() {
           {isLoading || isSaving ? (
             <View className="mt-6 flex-row items-center gap-3">
               <ActivityIndicator />
-              <Text className="text-sm text-slate-500">Preparando seu perfil...</Text>
+              <Text className="text-sm text-muted-light dark:text-muted-dark">
+                Preparando seu perfil...
+              </Text>
             </View>
           ) : null}
 
           {error ? <Text className="mt-4 text-sm text-red-500">{error}</Text> : null}
           {saveError ? <Text className="mt-2 text-sm text-red-500">{saveError}</Text> : null}
 
-          <Text className="mt-6 text-sm text-slate-500">
+          <Text className="mt-6 text-sm text-muted-light dark:text-muted-dark">
             Fluxo simples, poucos cliques para comecar.
           </Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -37,6 +37,19 @@ export type AcademyMember = {
   joinedAt: string | null;
 };
 
+export type ClassScheduleItem = {
+  id: string;
+  academyId: string;
+  title: string;
+  instructorName: string | null;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  location: string | null;
+  level: string | null;
+  notes: string | null;
+};
+
 export type MemberProfile = {
   userId: string;
   fullName: string | null;
@@ -96,9 +109,18 @@ export interface MembershipsPort {
   listMembersWithProfiles(academyId: string): Promise<MemberProfile[]>;
 }
 
+export interface SchedulesPort {
+  getWeeklySchedule(
+    academyId: string,
+    weekStartISO: string,
+    weekEndISO: string
+  ): Promise<ClassScheduleItem[]>;
+}
+
 export type DojoFlowPorts = {
   auth: AuthPort;
   profiles: ProfilesPort;
   academies: AcademiesPort;
   memberships: MembershipsPort;
+  schedules: SchedulesPort;
 };

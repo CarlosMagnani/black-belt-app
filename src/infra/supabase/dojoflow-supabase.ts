@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
-import { createClient, type SupabaseClient, type SupabaseClientOptions } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupportedStorage } from "@supabase/auth-js";
 
 import type {
   Academy,
@@ -8,6 +9,7 @@ import type {
   AuthSession,
   AuthUser,
   Belt,
+  ClassScheduleItem,
   CreateAcademyInput,
   DojoFlowPorts,
   MemberProfile,
@@ -17,13 +19,14 @@ import type {
 } from "../../core/ports/dojoflow-ports";
 import type { Database } from "./database.types";
 
-type SupabaseAuthStorage = SupabaseClientOptions<Database>["auth"]["storage"];
+type SupabaseSchema = "public";
+type SupabaseAuthStorage = SupportedStorage;
 
 export type SupabaseConfig = {
   url?: string;
   key?: string;
   storage?: SupabaseAuthStorage;
-  client?: SupabaseClient<Database>;
+  client?: SupabaseClient<Database, SupabaseSchema>;
 };
 
 const BELT_VALUES: Belt[] = ["Branca", "Azul", "Roxa", "Marrom", "Preta"];
@@ -72,6 +75,21 @@ const toMember = (row: Database["public"]["Tables"]["academy_members"]["Row"]): 
   joinedAt: row.joined_at,
 });
 
+const toScheduleItem = (
+  row: Database["public"]["Tables"]["academy_class_schedule"]["Row"]
+): ClassScheduleItem => ({
+  id: row.id,
+  academyId: row.academy_id,
+  title: row.title,
+  instructorName: row.instructor_name,
+  weekday: row.weekday,
+  startTime: row.start_time,
+  endTime: row.end_time,
+  location: row.location,
+  level: row.level,
+  notes: row.notes,
+});
+
 const resolveSupabaseConfig = (config?: SupabaseConfig) => {
   const url = config?.url ?? process.env.EXPO_PUBLIC_SUPABASE_URL;
   const key =
@@ -89,14 +107,16 @@ const resolveSupabaseConfig = (config?: SupabaseConfig) => {
   return { url, key };
 };
 
-export const createSupabaseClient = (config?: SupabaseConfig): SupabaseClient<Database> => {
+export const createSupabaseClient = (
+  config?: SupabaseConfig
+): SupabaseClient<Database, SupabaseSchema> => {
   if (config?.client) {
     return config.client;
   }
 
   const { url, key } = resolveSupabaseConfig(config);
 
-  return createClient<Database>(url, key, {
+  return createClient<Database, SupabaseSchema>(url, key, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -170,7 +190,7 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
       if (error) throw error;
       
       const academy = Array.isArray(data) ? data[0] : data;
-      return academy ?? null;
+      return academy ? toAcademy(academy) : null;
     },
     async getById(academyId: string): Promise<Academy | null> {
       const { data, error } = await client
@@ -255,6 +275,24 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
     },
   };
 
+  const schedules = {
+    async getWeeklySchedule(
+      academyId: string,
+      _weekStartISO: string,
+      _weekEndISO: string
+    ): Promise<ClassScheduleItem[]> {
+      const { data, error } = await client
+        .from("academy_class_schedule")
+        .select("*")
+        .eq("academy_id", academyId)
+        .order("weekday", { ascending: true })
+        .order("start_time", { ascending: true });
+
+      if (error) throw error;
+      return (data ?? []).map(toScheduleItem);
+    },
+  };
+
   const auth = {
     async signIn(email: string, password: string): Promise<AuthUser> {
       const { data, error } = await client.auth.signInWithPassword({ email, password });
@@ -300,5 +338,5 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
     },
   };
 
-  return { auth, profiles, academies, memberships };
+  return { auth, profiles, academies, memberships, schedules };
 };

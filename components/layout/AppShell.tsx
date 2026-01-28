@@ -25,6 +25,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Ajustes", href: "/settings", icon: Settings2 },
 ];
 
+const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) =>
+  ["/home", "/schedule", "/profile"].includes(item.href)
+);
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -126,9 +130,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Pressable>
           </View>
 
-          <View className="flex-1">{children}</View>
+          <View className="flex-1" style={!isDesktop ? { paddingBottom: 72 } : undefined}>
+            {children}
+          </View>
         </View>
       </View>
+
+      {!isDesktop ? (
+        <View className="border-t border-subtle-light bg-surface-light px-2 pb-2 pt-2 dark:border-subtle-dark dark:bg-surface-dark">
+          <View className="flex-row">
+            {MOBILE_NAV_ITEMS.map((item) => {
+              const isActive = activeHref === item.href;
+              const Icon = item.icon;
+              const iconColor = isActive ? (theme === "dark" ? "#EEF2FF" : "#1E3A8A") : "#94A3B8";
+              return (
+                <Pressable
+                  key={item.href}
+                  accessibilityRole="button"
+                  onPress={() => router.replace(item.href)}
+                  className="flex-1 items-center justify-center gap-1 py-2"
+                  style={({ pressed }) => (pressed ? { opacity: 0.9 } : undefined)}
+                >
+                  <Icon size={18} color={iconColor} strokeWidth={2.2} />
+                  <Text
+                    className={[
+                      "text-xs font-body",
+                      isActive
+                        ? "text-brand-700 dark:text-brand-50"
+                        : "text-muted-light dark:text-muted-dark",
+                    ].join(" ")}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
 
       <Modal transparent visible={drawerOpen} animationType="slide" onRequestClose={() => setDrawerOpen(false)}>
         <View className="flex-1">

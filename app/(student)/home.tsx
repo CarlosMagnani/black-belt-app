@@ -58,6 +58,7 @@ export default function StudentHome() {
   }, [profile?.fullName, profile?.email]);
 
   const currentBelt: BeltName = profile?.currentBelt ?? "Branca";
+  const beltDegree = profile?.beltDegree ?? undefined;
   const progress = useStudentProgress(currentBelt);
   const calendarIconColor = theme === "dark" ? "#E0E7FF" : "#1E3A8A";
 
@@ -167,6 +168,7 @@ export default function StudentHome() {
             userAvatarUrl={profile?.avatarUrl ?? null}
             academyName={academy?.name ?? "Academia"}
             academyLogoUrl={academy?.logoUrl ?? null}
+            beltDegree={beltDegree}
           />
 
           {error ? (

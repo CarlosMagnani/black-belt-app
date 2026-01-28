@@ -7,6 +7,7 @@ import { AvatarCluster } from "./AvatarCluster";
 type HomeHeaderProps = {
   displayName: string;
   belt?: BeltName | null;
+  beltDegree?: number | null;
   userName?: string | null;
   userAvatarUrl?: string | null;
   academyName?: string | null;
@@ -16,6 +17,7 @@ type HomeHeaderProps = {
 export function HomeHeader({
   displayName,
   belt,
+  beltDegree,
   userName,
   userAvatarUrl,
   academyName,
@@ -29,6 +31,7 @@ export function HomeHeader({
         academyName={academyName}
         academyLogoUrl={academyLogoUrl}
         belt={belt}
+        beltDegree={beltDegree}
       />
     </View>
   );

@@ -14,10 +14,15 @@ export type AuthSession = {
 export type Profile = {
   id: string;
   email: string | null;
+  firstName: string | null;
+  lastName: string | null;
   fullName: string | null;
   role: UserRole | null;
   avatarUrl: string | null;
   currentBelt: Belt | null;
+  beltDegree: number | null;
+  birthDate: string | null;
+  federationNumber: string | null;
   createdAt: string | null;
 };
 
@@ -55,6 +60,7 @@ export type MemberProfile = {
   fullName: string | null;
   email: string | null;
   currentBelt: Belt | null;
+  beltDegree: number | null;
   avatarUrl: string | null;
   joinedAt: string | null;
 };
@@ -62,10 +68,15 @@ export type MemberProfile = {
 export type ProfileUpsertInput = {
   id: string;
   email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   fullName?: string | null;
   role?: UserRole | null;
   avatarUrl?: string | null;
   currentBelt?: Belt | null;
+  beltDegree?: number | null;
+  birthDate?: string | null;
+  federationNumber?: string | null;
 };
 
 export type CreateAcademyInput = {

@@ -38,13 +38,29 @@ const toBelt = (value: string | null): Belt | null =>
 const toRole = (value: string | null): UserRole | null =>
   ROLE_VALUES.includes(value as UserRole) ? (value as UserRole) : null;
 
+const buildFullName = (
+  firstName?: string | null,
+  lastName?: string | null,
+  fallback?: string | null
+) => {
+  const first = firstName?.trim() ?? "";
+  const last = lastName?.trim() ?? "";
+  const combined = `${first} ${last}`.trim();
+  return combined || fallback || null;
+};
+
 const toProfile = (row: Database["public"]["Tables"]["profiles"]["Row"]): Profile => ({
   id: row.id,
   email: row.email,
-  fullName: row.full_name,
+  firstName: row.first_name,
+  lastName: row.last_name,
+  fullName: buildFullName(row.first_name, row.last_name, row.full_name),
   role: toRole(row.role),
   avatarUrl: row.avatar_url,
   currentBelt: toBelt(row.current_belt),
+  beltDegree: row.belt_degree,
+  birthDate: row.birth_date,
+  federationNumber: row.federation_number,
   createdAt: row.created_at,
 });
 
@@ -53,10 +69,19 @@ const toProfilePayload = (
 ): Database["public"]["Tables"]["profiles"]["Insert"] => ({
   id: input.id,
   ...(input.email !== undefined ? { email: input.email } : {}),
-  ...(input.fullName !== undefined ? { full_name: input.fullName } : {}),
+  ...(input.firstName !== undefined ? { first_name: input.firstName } : {}),
+  ...(input.lastName !== undefined ? { last_name: input.lastName } : {}),
+  ...(input.firstName !== undefined || input.lastName !== undefined
+    ? { full_name: buildFullName(input.firstName, input.lastName) }
+    : input.fullName !== undefined
+      ? { full_name: input.fullName }
+      : {}),
   ...(input.role !== undefined ? { role: input.role } : {}),
   ...(input.avatarUrl !== undefined ? { avatar_url: input.avatarUrl } : {}),
   ...(input.currentBelt !== undefined ? { current_belt: input.currentBelt } : {}),
+  ...(input.beltDegree !== undefined ? { belt_degree: input.beltDegree } : {}),
+  ...(input.birthDate !== undefined ? { birth_date: input.birthDate } : {}),
+  ...(input.federationNumber !== undefined ? { federation_number: input.federationNumber } : {}),
 });
 
 const toAcademy = (row: Database["public"]["Tables"]["academies"]["Row"]): Academy => ({
@@ -254,13 +279,16 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
           full_name: string | null;
           email: string | null;
           current_belt: string | null;
+          belt_degree: number | null;
           avatar_url: string | null;
         } | null;
       };
 
       const { data, error } = await client
         .from("academy_members")
-        .select("user_id, joined_at, profiles:profiles (full_name, email, current_belt, avatar_url)")
+        .select(
+          "user_id, joined_at, profiles:profiles (full_name, email, current_belt, belt_degree, avatar_url)"
+        )
         .eq("academy_id", academyId);
       if (error) throw error;
       const rows = (data as MemberRow[] | null) ?? [];
@@ -270,6 +298,7 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
         fullName: row.profiles?.full_name ?? null,
         email: row.profiles?.email ?? null,
         currentBelt: toBelt(row.profiles?.current_belt ?? null),
+        beltDegree: row.profiles?.belt_degree ?? null,
         avatarUrl: row.profiles?.avatar_url ?? null,
       }));
     },

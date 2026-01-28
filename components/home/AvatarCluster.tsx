@@ -10,6 +10,7 @@ type AvatarClusterProps = {
   academyName?: string | null;
   academyLogoUrl?: string | null;
   belt?: BeltName | null;
+  beltDegree?: number | null;
   className?: string;
 };
 
@@ -27,6 +28,7 @@ export function AvatarCluster({
   academyName,
   academyLogoUrl,
   belt,
+  beltDegree,
   className,
 }: AvatarClusterProps) {
   const userInitials = getInitials(userName);
@@ -57,7 +59,11 @@ export function AvatarCluster({
             {userLabel}
           </Text>
           <View className="mt-2 items-center">
-            <BeltBadge belt={beltToShow} className="max-w-full" />
+            <BeltBadge
+              belt={beltToShow}
+              degree={beltDegree ?? undefined}
+              className="max-w-full"
+            />
           </View>
         </View>
         <View className="w-[300px] h-[207.767px] max-w-full items-center rounded-card border border-subtle-light bg-surface-light px-4 py-4 shadow-card dark:border-subtle-dark dark:bg-surface-dark">

@@ -13,28 +13,43 @@ export type Database = {
         Row: {
           id: string;
           email: string | null;
+          first_name: string | null;
+          last_name: string | null;
           full_name: string | null;
           role: string | null;
           avatar_url: string | null;
           current_belt: string | null;
+          belt_degree: number | null;
+          birth_date: string | null;
+          federation_number: string | null;
           created_at: string | null;
         };
         Insert: {
           id?: string;
           email?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
           full_name?: string | null;
           role?: string | null;
           avatar_url?: string | null;
           current_belt?: string | null;
+          belt_degree?: number | null;
+          birth_date?: string | null;
+          federation_number?: string | null;
           created_at?: string | null;
         };
         Update: {
           id?: string;
           email?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
           full_name?: string | null;
           role?: string | null;
           avatar_url?: string | null;
           current_belt?: string | null;
+          belt_degree?: number | null;
+          birth_date?: string | null;
+          federation_number?: string | null;
           created_at?: string | null;
         };
         Relationships: [];

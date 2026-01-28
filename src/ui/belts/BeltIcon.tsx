@@ -15,9 +15,9 @@ type BeltIconProps = {
 };
 
 const SIZE_MAP: Record<BeltIconSize, { width: number; height: number; tip: number }> = {
-  sm: { width: 48, height: 12, tip: 12 },
-  md: { width: 64, height: 16, tip: 16 },
-  lg: { width: 80, height: 20, tip: 20 },
+  sm: { width: 160, height: 12, tip: 16 },
+  md: { width: 200, height: 12, tip: 18 },
+  lg: { width: 240, height: 14, tip: 20 },
 };
 
 const BASE_COLORS: Record<BeltName, string> = {
@@ -30,10 +30,14 @@ const BASE_COLORS: Record<BeltName, string> = {
   Vermelha: "#B91C1C",
 };
 
-const getBaseSegments = (belt: BeltName, coralVariant?: CoralVariant) => {
+const resolveCoralVariant = (degree?: number, coralVariant?: CoralVariant): CoralVariant =>
+  coralVariant ?? (degree !== undefined && degree >= 8 ? "red-white" : "red-black");
+
+const getBaseSegments = (belt: BeltName, degree?: number, coralVariant?: CoralVariant) => {
   if (belt !== "Coral") return [BASE_COLORS[belt]];
 
-  if (coralVariant === "red-white") {
+  const variant = resolveCoralVariant(degree, coralVariant);
+  if (variant === "red-white") {
     return [BASE_COLORS.Coral, "#FFFFFF"];
   }
 
@@ -44,14 +48,18 @@ export function BeltIcon({
   belt,
   degree,
   coralVariant,
-  size = "md",
+  size = "lg",
   className,
 }: BeltIconProps) {
   const clampedDegree = normalizeDegree(belt, degree) ?? 0;
   const stripeCount = Math.min(clampedDegree, getMaxDegrees(belt));
   const { width, height, tip } = SIZE_MAP[size];
-  const baseSegments = useMemo(() => getBaseSegments(belt, coralVariant), [belt, coralVariant]);
+  const baseSegments = useMemo(
+    () => getBaseSegments(belt, normalizeDegree(belt, degree), coralVariant),
+    [belt, degree, coralVariant]
+  );
   const borderColor = belt === "Branca" ? "#E2E8F0" : "transparent";
+  const tipColor = "#111827";
 
   return (
     <View
@@ -74,10 +82,11 @@ export function BeltIcon({
       <View
         style={{
           width: tip,
-          backgroundColor: "#111827",
+          backgroundColor: tipColor,
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "row",
+          paddingRight: 2,
         }}
       >
         {stripeCount > 0

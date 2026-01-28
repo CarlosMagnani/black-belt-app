@@ -2,19 +2,37 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { TextField } from "../../components/ui/TextField";
 import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
 import type { Academy } from "../../src/core/ports/dojoflow-ports";
 import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
+import { BeltBadge } from "../../src/ui/belts/BeltBadge";
+
+const splitFullName = (fullName?: string | null) => {
+  if (!fullName) return { firstName: "", lastName: "" };
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  const [first, ...rest] = parts;
+  return { firstName: first, lastName: rest.join(" ") };
+};
 
 export default function Profile() {
   const router = useRouter();
-  const { isLoading: isBooting, session, profile } = useAuthProfile();
+  const { isLoading: isBooting, session, profile, refresh } = useAuthProfile();
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [federationNumber, setFederationNumber] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   const displayName = useMemo(() => {
     if (profile?.fullName) return profile.fullName;
@@ -35,6 +53,20 @@ export default function Profile() {
       router.replace("/");
     }
   }, [isBooting, session, profile, router]);
+
+  useEffect(() => {
+    if (!profile) return;
+    const inferred =
+      profile.firstName || profile.lastName
+        ? { firstName: profile.firstName ?? "", lastName: profile.lastName ?? "" }
+        : splitFullName(profile.fullName);
+
+    setFirstName(inferred.firstName);
+    setLastName(inferred.lastName);
+    setBirthDate(profile.birthDate ?? "");
+    setFederationNumber(profile.federationNumber ?? "");
+    setAvatarUrl(profile.avatarUrl ?? "");
+  }, [profile]);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -61,6 +93,29 @@ export default function Profile() {
     void loadAcademy();
   }, [profile?.id, profile?.role, router]);
 
+  const handleSaveProfile = async () => {
+    if (!profile?.id) return;
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+    try {
+      await dojoFlowAdapters.profiles.upsertProfile({
+        id: profile.id,
+        firstName: firstName.trim() ? firstName.trim() : null,
+        lastName: lastName.trim() ? lastName.trim() : null,
+        birthDate: birthDate.trim() ? birthDate.trim() : null,
+        federationNumber: federationNumber.trim() ? federationNumber.trim() : null,
+        avatarUrl: avatarUrl.trim() ? avatarUrl.trim() : null,
+      });
+      await refresh();
+      setSaveSuccess("Perfil atualizado.");
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Nao foi possivel salvar seu perfil.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await dojoFlowAdapters.auth.signOut();
@@ -81,7 +136,7 @@ export default function Profile() {
             Seus dados
           </Text>
           <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
-            Informacoes da sua conta e da academia vinculada.
+            Atualize suas informacoes pessoais. Faixa e graus sao somente leitura.
           </Text>
 
           {isBooting || isLoading ? (
@@ -110,23 +165,96 @@ export default function Profile() {
               <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
                 {profile?.email ?? "Email nao informado"}
               </Text>
-              <View className="mt-4 self-start">
-                <Badge label={profile?.currentBelt ?? "Branca"} variant="brand" />
-              </View>
             </Card>
 
             <Card className="flex-1">
               <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
-                Academia
+                Faixa e graus
               </Text>
-              <Text className="mt-2 font-display text-xl text-strong-light dark:text-strong-dark">
-                {academy?.name ?? "Nao vinculada"}
-              </Text>
-              <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
-                {academy?.city ? academy.city : "Cidade nao informada"}
+              <View className="mt-3">
+                <BeltBadge
+                  belt={profile?.currentBelt ?? "Branca"}
+                  degree={profile?.beltDegree ?? undefined}
+                />
+              </View>
+              <Text className="mt-3 text-xs text-muted-light dark:text-muted-dark">
+                Somente professor/owner pode alterar.
               </Text>
             </Card>
           </View>
+
+          <Card className="mt-6 gap-4">
+            <View>
+              <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
+                Dados pessoais
+              </Text>
+              <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
+                Preencha seu nome, data de nascimento e numero de federacao.
+              </Text>
+            </View>
+
+            <View className="gap-4">
+              <TextField
+                label="Nome"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Seu nome"
+                autoCapitalize="words"
+              />
+              <TextField
+                label="Sobrenome"
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Seu sobrenome"
+                autoCapitalize="words"
+              />
+              <TextField
+                label="Data de nascimento"
+                value={birthDate}
+                onChangeText={setBirthDate}
+                placeholder="AAAA-MM-DD"
+                keyboardType="numbers-and-punctuation"
+                autoCapitalize="none"
+              />
+              <TextField
+                label="Numero de federacao"
+                value={federationNumber}
+                onChangeText={setFederationNumber}
+                placeholder="Opcional"
+                autoCapitalize="characters"
+              />
+              <TextField
+                label="Avatar (URL)"
+                value={avatarUrl}
+                onChangeText={setAvatarUrl}
+                placeholder="https://..."
+                autoCapitalize="none"
+              />
+            </View>
+
+            {saveError ? <Text className="text-sm text-red-500">{saveError}</Text> : null}
+            {saveSuccess ? (
+              <Text className="text-sm text-emerald-600">{saveSuccess}</Text>
+            ) : null}
+
+            <Button
+              label={isSaving ? "Salvando..." : "Salvar alteracoes"}
+              onPress={handleSaveProfile}
+              disabled={isSaving || !profile?.id}
+            />
+          </Card>
+
+          <Card className="mt-6">
+            <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
+              Academia
+            </Text>
+            <Text className="mt-2 font-display text-xl text-strong-light dark:text-strong-dark">
+              {academy?.name ?? "Nao vinculada"}
+            </Text>
+            <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
+              {academy?.city ? academy.city : "Cidade nao informada"}
+            </Text>
+          </Card>
 
           <View className="mt-6">
             <Button label="Sair da conta" variant="secondary" onPress={handleSignOut} />

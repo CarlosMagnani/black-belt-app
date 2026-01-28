@@ -13,10 +13,10 @@ type BeltBadgeProps = {
 
 const BELT_WIDTH = 250;
 const BELT_HEIGHT = 30;
-const TIP_WIDTH = 50;
+const TIP_WIDTH = 60;
 const TIP_END_WIDTH = 16;
-const STRIPE_WIDTH = 2;
-const STRIPE_HEIGHT = 8;
+const STRIPE_WIDTH = 10;
+const STRIPE_HEIGHT = 40;
 const STRIPE_GAP = 5;
 
 const BASE_COLORS: Record<BeltName, string> = {
@@ -76,6 +76,7 @@ export function BeltBadge({ belt, degree, coralVariant, className }: BeltBadgePr
       <View
         style={{
           width: TIP_WIDTH,
+          marginLeft: 5,
           backgroundColor: tipColor,
           paddingHorizontal: 2,
           paddingVertical: 4,

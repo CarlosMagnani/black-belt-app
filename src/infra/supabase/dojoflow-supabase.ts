@@ -29,7 +29,7 @@ export type SupabaseConfig = {
   client?: SupabaseClient<Database, SupabaseSchema>;
 };
 
-const BELT_VALUES: Belt[] = ["Branca", "Azul", "Roxa", "Marrom", "Preta"];
+const BELT_VALUES: Belt[] = ["Branca", "Azul", "Roxa", "Marrom", "Preta", "Coral", "Vermelha"];
 const ROLE_VALUES: UserRole[] = ["professor", "student"];
 
 const toBelt = (value: string | null): Belt | null =>

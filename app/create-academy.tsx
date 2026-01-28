@@ -16,7 +16,7 @@ import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
 import { dojoFlowAdapters } from "../src/infra/supabase/adapters";
 import { useTheme } from "../src/ui/theme/ThemeProvider";
 
-const BELTS: Belt[] = ["Branca", "Azul", "Roxa", "Marrom", "Preta"];
+const BELTS: Belt[] = ["Branca", "Azul", "Roxa", "Marrom", "Preta", "Coral", "Vermelha"];
 
 const nextBelt = (belt: Belt | null): Belt => {
   if (!belt) return BELTS[0];

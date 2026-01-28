@@ -1,5 +1,5 @@
 export type UserRole = "professor" | "student";
-export type Belt = "Branca" | "Azul" | "Roxa" | "Marrom" | "Preta";
+export type Belt = "Branca" | "Azul" | "Roxa" | "Marrom" | "Preta" | "Coral" | "Vermelha";
 export type AuthUser = {
   id: string;
   email: string | null;

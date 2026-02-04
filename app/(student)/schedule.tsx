@@ -6,7 +6,7 @@ import { WeekCalendar } from "../../components/calendar/WeekCalendar";
 import { Badge } from "../../components/ui/Badge";
 import { Card } from "../../components/ui/Card";
 import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
-import type { Academy, ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
+import type { Academy, CheckinStatus, ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
 import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
 
 const getWeekStart = (date: Date) => {
@@ -39,6 +39,11 @@ export default function Schedule() {
   const [isScheduleLoading, setIsScheduleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
+  const [checkinStatusByClassId, setCheckinStatusByClassId] = useState<
+    Record<string, CheckinStatus>
+  >({});
+  const [checkinLoadingId, setCheckinLoadingId] = useState<string | null>(null);
+  const [checkinMessage, setCheckinMessage] = useState<string | null>(null);
 
   const weekStartISO = useMemo(() => toISODate(weekStart), [weekStart]);
   const weekEndISO = useMemo(() => toISODate(addDays(weekStart, 6)), [weekStart]);
@@ -114,6 +119,26 @@ export default function Schedule() {
     };
   }, [academyId, weekStartISO, weekEndISO]);
 
+  const handleCheckin = async (item: ClassScheduleItem) => {
+    if (!academyId || !profile?.id) return;
+    setCheckinLoadingId(item.id);
+    setCheckinMessage(null);
+    setError(null);
+    try {
+      await dojoFlowAdapters.checkins.createCheckin({
+        academyId,
+        classId: item.id,
+        studentId: profile.id,
+      });
+      setCheckinStatusByClassId((prev) => ({ ...prev, [item.id]: "pending" }));
+      setCheckinMessage("Check-in enviado para validacao.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel registrar o check-in.");
+    } finally {
+      setCheckinLoadingId(null);
+    }
+  };
+
   return (
     <ScrollView className="flex-1">
       <View className="px-page pb-10 pt-6 web:px-10">
@@ -139,6 +164,11 @@ export default function Schedule() {
               <Text className="text-sm text-red-500">{error}</Text>
             </Card>
           ) : null}
+          {checkinMessage ? (
+            <Card className="mt-4">
+              <Text className="text-sm text-emerald-600">{checkinMessage}</Text>
+            </Card>
+          ) : null}
 
           <View className="mt-6">
             <WeekCalendar
@@ -147,6 +177,9 @@ export default function Schedule() {
               isLoading={isAcademyLoading || isScheduleLoading}
               onPrevWeek={() => setWeekStart((prev) => addDays(prev, -7))}
               onNextWeek={() => setWeekStart((prev) => addDays(prev, 7))}
+              onCheckin={handleCheckin}
+              checkinStatusByClassId={checkinStatusByClassId}
+              checkinLoadingId={checkinLoadingId}
             />
           </View>
         </View>

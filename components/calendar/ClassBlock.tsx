@@ -2,11 +2,25 @@ import React from "react";
 import { Text, View } from "react-native";
 import { Clock, MapPin, User } from "lucide-react-native";
 
-import type { ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
+import type { CheckinStatus, ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
+import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
 
 const formatTime = (value: string) => value.slice(0, 5);
 
-export function ClassBlock({ item }: { item: ClassScheduleItem }) {
+type ClassBlockProps = {
+  item: ClassScheduleItem;
+  onCheckin?: () => void;
+  checkinStatus?: CheckinStatus;
+  isCheckinLoading?: boolean;
+};
+
+export function ClassBlock({
+  item,
+  onCheckin,
+  checkinStatus,
+  isCheckinLoading,
+}: ClassBlockProps) {
   return (
     <View className="rounded-2xl border border-subtle-light bg-app-light p-4 dark:border-subtle-dark dark:bg-app-dark">
       <Text className="font-display text-base text-strong-light dark:text-strong-dark">
@@ -36,6 +50,29 @@ export function ClassBlock({ item }: { item: ClassScheduleItem }) {
         <Text className="mt-2 text-xs text-muted-light dark:text-muted-dark">
           Nivel: {item.level}
         </Text>
+      ) : null}
+      {checkinStatus ? (
+        <View className="mt-3 self-start">
+          <Badge
+            label={
+              checkinStatus === "approved"
+                ? "Check-in aprovado"
+                : checkinStatus === "rejected"
+                  ? "Check-in rejeitado"
+                  : "Check-in pendente"
+            }
+            variant="outline"
+          />
+        </View>
+      ) : onCheckin ? (
+        <View className="mt-3">
+          <Button
+            label={isCheckinLoading ? "Enviando..." : "Fazer check-in"}
+            size="sm"
+            onPress={onCheckin}
+            disabled={isCheckinLoading}
+          />
+        </View>
       ) : null}
     </View>
   );

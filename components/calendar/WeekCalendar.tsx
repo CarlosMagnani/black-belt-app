@@ -29,6 +29,9 @@ type WeekCalendarProps = {
   isLoading?: boolean;
   onPrevWeek: () => void;
   onNextWeek: () => void;
+  onCheckin?: (item: ClassScheduleItem) => void;
+  checkinStatusByClassId?: Record<string, "pending" | "approved" | "rejected">;
+  checkinLoadingId?: string | null;
 };
 
 export function WeekCalendar({
@@ -37,6 +40,9 @@ export function WeekCalendar({
   isLoading = false,
   onPrevWeek,
   onNextWeek,
+  onCheckin,
+  checkinStatusByClassId,
+  checkinLoadingId,
 }: WeekCalendarProps) {
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
 
@@ -124,7 +130,13 @@ export function WeekCalendar({
                 ) : (
                   <View className="mt-3 gap-3">
                     {list.map((item) => (
-                      <ClassBlock key={item.id} item={item} />
+                      <ClassBlock
+                        key={item.id}
+                        item={item}
+                        onCheckin={onCheckin ? () => onCheckin(item) : undefined}
+                        checkinStatus={checkinStatusByClassId?.[item.id]}
+                        isCheckinLoading={checkinLoadingId === item.id}
+                      />
                     ))}
                   </View>
                 )}

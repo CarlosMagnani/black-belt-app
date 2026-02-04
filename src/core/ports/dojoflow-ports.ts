@@ -53,6 +53,39 @@ export type ClassScheduleItem = {
   location: string | null;
   level: string | null;
   notes: string | null;
+  isRecurring: boolean;
+  startDate: string | null;
+};
+
+export type AcademyClass = ClassScheduleItem & {
+  createdAt: string | null;
+};
+
+export type CheckinStatus = "pending" | "approved" | "rejected";
+
+export type ClassCheckin = {
+  id: string;
+  academyId: string;
+  classId: string;
+  studentId: string;
+  status: CheckinStatus;
+  validatedBy: string | null;
+  validatedAt: string | null;
+  createdAt: string | null;
+};
+
+export type CheckinListItem = {
+  id: string;
+  academyId: string;
+  classId: string;
+  classTitle: string | null;
+  classWeekday: number | null;
+  classStartTime: string | null;
+  studentId: string;
+  studentName: string | null;
+  studentAvatarUrl: string | null;
+  status: CheckinStatus;
+  createdAt: string | null;
 };
 
 export type MemberProfile = {
@@ -77,6 +110,46 @@ export type ProfileUpsertInput = {
   beltDegree?: number | null;
   birthDate?: string | null;
   federationNumber?: string | null;
+};
+
+export type CreateClassInput = {
+  academyId: string;
+  title: string;
+  instructorName?: string | null;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  location?: string | null;
+  level?: string | null;
+  notes?: string | null;
+  isRecurring?: boolean;
+  startDate?: string | null;
+};
+
+export type UpdateClassInput = {
+  id: string;
+  title?: string;
+  instructorName?: string | null;
+  weekday?: number;
+  startTime?: string;
+  endTime?: string;
+  location?: string | null;
+  level?: string | null;
+  notes?: string | null;
+  isRecurring?: boolean;
+  startDate?: string | null;
+};
+
+export type CreateCheckinInput = {
+  academyId: string;
+  classId: string;
+  studentId: string;
+};
+
+export type UpdateCheckinStatusInput = {
+  id: string;
+  status: CheckinStatus;
+  validatedBy: string;
 };
 
 export type CreateAcademyInput = {
@@ -104,6 +177,7 @@ export interface ProfilesPort {
   getProfile(userId: string): Promise<Profile | null>;
   upsertProfile(input: ProfileUpsertInput): Promise<Profile>;
   setCurrentBelt(userId: string, belt: Belt): Promise<Profile>;
+  setBeltAndDegree(userId: string, belt: Belt, degree: number | null): Promise<Profile>;
 }
 
 export interface AcademiesPort {
@@ -120,6 +194,19 @@ export interface MembershipsPort {
   listMembersWithProfiles(academyId: string): Promise<MemberProfile[]>;
 }
 
+export interface ClassesPort {
+  listByAcademy(academyId: string): Promise<AcademyClass[]>;
+  createClass(input: CreateClassInput): Promise<AcademyClass>;
+  updateClass(input: UpdateClassInput): Promise<AcademyClass>;
+  deleteClass(id: string): Promise<void>;
+}
+
+export interface CheckinsPort {
+  createCheckin(input: CreateCheckinInput): Promise<ClassCheckin>;
+  listPendingByAcademy(academyId: string): Promise<CheckinListItem[]>;
+  updateStatus(input: UpdateCheckinStatusInput): Promise<ClassCheckin>;
+}
+
 export interface SchedulesPort {
   getWeeklySchedule(
     academyId: string,
@@ -133,5 +220,7 @@ export type DojoFlowPorts = {
   profiles: ProfilesPort;
   academies: AcademiesPort;
   memberships: MembershipsPort;
+  classes: ClassesPort;
+  checkins: CheckinsPort;
   schedules: SchedulesPort;
 };

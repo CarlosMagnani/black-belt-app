@@ -41,7 +41,7 @@ export default function Index() {
           router.replace("/create-academy");
           return;
         }
-        router.replace("/create-academy");
+        router.replace("/owner-home");
       } catch (err) {
         if (!isActive) return;
         setError(err instanceof Error ? err.message : "Erro ao carregar o app.");

@@ -5,16 +5,23 @@ import type { SupportedStorage } from "@supabase/auth-js";
 import type {
   Academy,
   AcademyMember,
+  AcademyClass,
   AddMemberInput,
   AuthSession,
   AuthUser,
   Belt,
+  CheckinListItem,
+  ClassCheckin,
   ClassScheduleItem,
+  CreateCheckinInput,
   CreateAcademyInput,
+  CreateClassInput,
   DojoFlowPorts,
   MemberProfile,
   Profile,
   ProfileUpsertInput,
+  UpdateCheckinStatusInput,
+  UpdateClassInput,
   UserRole,
 } from "../../core/ports/dojoflow-ports";
 import type { Database } from "./database.types";
@@ -113,6 +120,28 @@ const toScheduleItem = (
   location: row.location,
   level: row.level,
   notes: row.notes,
+  isRecurring: row.is_recurring ?? true,
+  startDate: row.start_date,
+});
+
+const toAcademyClass = (
+  row: Database["public"]["Tables"]["academy_class_schedule"]["Row"]
+): AcademyClass => ({
+  ...toScheduleItem(row),
+  createdAt: row.created_at,
+});
+
+const toCheckin = (
+  row: Database["public"]["Tables"]["class_checkins"]["Row"]
+): ClassCheckin => ({
+  id: row.id,
+  academyId: row.academy_id,
+  classId: row.class_id,
+  studentId: row.student_id,
+  status: row.status,
+  validatedBy: row.validated_by,
+  validatedAt: row.validated_at,
+  createdAt: row.created_at,
 });
 
 const resolveSupabaseConfig = (config?: SupabaseConfig) => {
@@ -182,6 +211,16 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
       const { data, error } = await client
         .from("profiles")
         .update({ current_belt: belt })
+        .eq("id", userId)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toProfile(data);
+    },
+    async setBeltAndDegree(userId: string, belt: Belt, degree: number | null): Promise<Profile> {
+      const { data, error } = await client
+        .from("profiles")
+        .update({ current_belt: belt, belt_degree: degree })
         .eq("id", userId)
         .select("*")
         .single();
@@ -304,6 +343,164 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
     },
   };
 
+  const classes = {
+    async listByAcademy(academyId: string): Promise<AcademyClass[]> {
+      const { data, error } = await client
+        .from("academy_class_schedule")
+        .select("*")
+        .eq("academy_id", academyId)
+        .order("weekday", { ascending: true })
+        .order("start_time", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map(toAcademyClass);
+    },
+    async createClass(input: CreateClassInput): Promise<AcademyClass> {
+      const { data, error } = await client
+        .from("academy_class_schedule")
+        .insert({
+          academy_id: input.academyId,
+          title: input.title,
+          weekday: input.weekday,
+          start_time: input.startTime,
+          end_time: input.endTime,
+          ...(input.instructorName !== undefined ? { instructor_name: input.instructorName } : {}),
+          ...(input.location !== undefined ? { location: input.location } : {}),
+          ...(input.level !== undefined ? { level: input.level } : {}),
+          ...(input.notes !== undefined ? { notes: input.notes } : {}),
+          ...(input.isRecurring !== undefined ? { is_recurring: input.isRecurring } : {}),
+          ...(input.startDate !== undefined ? { start_date: input.startDate } : {}),
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toAcademyClass(data);
+    },
+    async updateClass(input: UpdateClassInput): Promise<AcademyClass> {
+      const { data, error } = await client
+        .from("academy_class_schedule")
+        .update({
+          ...(input.title !== undefined ? { title: input.title } : {}),
+          ...(input.weekday !== undefined ? { weekday: input.weekday } : {}),
+          ...(input.startTime !== undefined ? { start_time: input.startTime } : {}),
+          ...(input.endTime !== undefined ? { end_time: input.endTime } : {}),
+          ...(input.instructorName !== undefined ? { instructor_name: input.instructorName } : {}),
+          ...(input.location !== undefined ? { location: input.location } : {}),
+          ...(input.level !== undefined ? { level: input.level } : {}),
+          ...(input.notes !== undefined ? { notes: input.notes } : {}),
+          ...(input.isRecurring !== undefined ? { is_recurring: input.isRecurring } : {}),
+          ...(input.startDate !== undefined ? { start_date: input.startDate } : {}),
+        })
+        .eq("id", input.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toAcademyClass(data);
+    },
+    async deleteClass(id: string): Promise<void> {
+      const { error } = await client
+        .from("academy_class_schedule")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+  };
+
+  const checkins = {
+    async createCheckin(input: CreateCheckinInput): Promise<ClassCheckin> {
+      const { data, error } = await client
+        .from("class_checkins")
+        .insert({
+          academy_id: input.academyId,
+          class_id: input.classId,
+          student_id: input.studentId,
+          status: "pending",
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toCheckin(data);
+    },
+    async listPendingByAcademy(academyId: string): Promise<CheckinListItem[]> {
+      type PendingRow = {
+        id: string;
+        academy_id: string;
+        class_id: string;
+        student_id: string;
+        status: string;
+        created_at: string | null;
+        profiles: { full_name: string | null; avatar_url: string | null } | null;
+        academy_class_schedule: { title: string | null; weekday: number | null; start_time: string | null } | null;
+      };
+
+      const { data, error } = await client
+        .from("class_checkins")
+        .select(
+          "id, academy_id, class_id, student_id, status, created_at, profiles:profiles!class_checkins_student_id_fkey (full_name, avatar_url), academy_class_schedule:academy_class_schedule (title, weekday, start_time)"
+        )
+        .eq("academy_id", academyId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data as PendingRow[] | null) ?? [];
+      return rows.map((row) => ({
+        id: row.id,
+        academyId: row.academy_id,
+        classId: row.class_id,
+        classTitle: row.academy_class_schedule?.title ?? null,
+        classWeekday: row.academy_class_schedule?.weekday ?? null,
+        classStartTime: row.academy_class_schedule?.start_time ?? null,
+        studentId: row.student_id,
+        studentName: row.profiles?.full_name ?? null,
+        studentAvatarUrl: row.profiles?.avatar_url ?? null,
+        status: row.status as ClassCheckin["status"],
+        createdAt: row.created_at,
+      }));
+    },
+    async updateStatus(input: UpdateCheckinStatusInput): Promise<ClassCheckin> {
+      const { data: current, error: currentError } = await client
+        .from("class_checkins")
+        .select("status, student_id, academy_id")
+        .eq("id", input.id)
+        .single();
+      if (currentError) throw currentError;
+
+      const { data, error } = await client
+        .from("class_checkins")
+        .update({
+          status: input.status,
+          validated_by: input.validatedBy,
+          validated_at: new Date().toISOString(),
+        })
+        .eq("id", input.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+
+      if (input.status === "approved" && current?.status !== "approved") {
+        const { data: progressRow, error: progressSelectError } = await client
+          .from("student_progress")
+          .select("approved_classes_count")
+          .eq("student_id", current.student_id)
+          .maybeSingle();
+        if (progressSelectError) throw progressSelectError;
+        const nextCount = (progressRow?.approved_classes_count ?? 0) + 1;
+        const { error: progressError } = await client
+          .from("student_progress")
+          .upsert({
+            student_id: current.student_id,
+            academy_id: current.academy_id,
+            approved_classes_count: nextCount,
+            updated_at: new Date().toISOString(),
+          })
+          .select("*")
+          .single();
+        if (progressError) throw progressError;
+      }
+
+      return toCheckin(data);
+    },
+  };
+
   const schedules = {
     async getWeeklySchedule(
       academyId: string,
@@ -367,5 +564,5 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
     },
   };
 
-  return { auth, profiles, academies, memberships, schedules };
+  return { auth, profiles, academies, memberships, classes, checkins, schedules };
 };

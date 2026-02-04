@@ -18,33 +18,48 @@ type NavItem = {
   icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 };
 
-const NAV_ITEMS: NavItem[] = [
+const DEFAULT_NAV_ITEMS: NavItem[] = [
   { label: "Inicio", href: "/home", icon: Home },
   { label: "Agenda", href: "/schedule", icon: CalendarDays },
   { label: "Perfil", href: "/profile", icon: UserCircle2 },
   { label: "Ajustes", href: "/settings", icon: Settings2 },
 ];
 
-const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) =>
+const DEFAULT_MOBILE_NAV_ITEMS = DEFAULT_NAV_ITEMS.filter((item) =>
   ["/home", "/schedule", "/profile"].includes(item.href)
 );
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+type AppShellProps = {
+  children: React.ReactNode;
+  navItems?: NavItem[];
+  mobileNavItems?: NavItem[];
+  headerSubtitle?: string;
+};
+
+export function AppShell({
+  children,
+  navItems,
+  mobileNavItems,
+  headerSubtitle,
+}: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { theme, toggle } = useTheme();
+  const resolvedNavItems = navItems ?? DEFAULT_NAV_ITEMS;
+  const resolvedMobileItems = mobileNavItems ?? DEFAULT_MOBILE_NAV_ITEMS;
+  const subtitle = headerSubtitle ?? "Portal do aluno";
 
   const activeHref = useMemo(() => {
     if (!pathname) return "/home";
-    const match = NAV_ITEMS.find((item) => pathname.startsWith(item.href));
+    const match = resolvedNavItems.find((item) => pathname.startsWith(item.href));
     return match?.href ?? "/home";
-  }, [pathname]);
+  }, [pathname, resolvedNavItems]);
 
   const renderNavItems = (onNavigate?: () => void) =>
-    NAV_ITEMS.map((item) => {
+    resolvedNavItems.map((item) => {
       const isActive = activeHref === item.href;
       const Icon = item.icon;
       const iconColor = isActive ? (theme === "dark" ? "#EEF2FF" : "#1E3A8A") : "#94A3B8";
@@ -108,7 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   DojoFlow
                 </Text>
                 <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
-                  Portal do aluno
+                  {subtitle}
                 </Text>
               </View>
             </View>
@@ -139,7 +154,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {!isDesktop ? (
         <View className="border-t border-subtle-light bg-surface-light px-2 pb-2 pt-2 dark:border-subtle-dark dark:bg-surface-dark">
           <View className="flex-row">
-            {MOBILE_NAV_ITEMS.map((item) => {
+            {resolvedMobileItems.map((item) => {
               const isActive = activeHref === item.href;
               const Icon = item.icon;
               const iconColor = isActive ? (theme === "dark" ? "#EEF2FF" : "#1E3A8A") : "#94A3B8";

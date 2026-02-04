@@ -127,6 +127,8 @@ export type Database = {
           location: string | null;
           level: string | null;
           notes: string | null;
+          is_recurring: boolean | null;
+          start_date: string | null;
           created_at: string | null;
         };
         Insert: {
@@ -140,6 +142,8 @@ export type Database = {
           location?: string | null;
           level?: string | null;
           notes?: string | null;
+          is_recurring?: boolean | null;
+          start_date?: string | null;
           created_at?: string | null;
         };
         Update: {
@@ -153,6 +157,8 @@ export type Database = {
           location?: string | null;
           level?: string | null;
           notes?: string | null;
+          is_recurring?: boolean | null;
+          start_date?: string | null;
           created_at?: string | null;
         };
         Relationships: [
@@ -160,6 +166,98 @@ export type Database = {
             foreignKeyName: "academy_class_schedule_academy_id_fkey";
             columns: ["academy_id"];
             referencedRelation: "academies";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      class_checkins: {
+        Row: {
+          id: string;
+          academy_id: string;
+          class_id: string;
+          student_id: string;
+          status: "pending" | "approved" | "rejected";
+          validated_by: string | null;
+          validated_at: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          academy_id: string;
+          class_id: string;
+          student_id: string;
+          status?: "pending" | "approved" | "rejected";
+          validated_by?: string | null;
+          validated_at?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          academy_id?: string;
+          class_id?: string;
+          student_id?: string;
+          status?: "pending" | "approved" | "rejected";
+          validated_by?: string | null;
+          validated_at?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "class_checkins_academy_id_fkey";
+            columns: ["academy_id"];
+            referencedRelation: "academies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "class_checkins_class_id_fkey";
+            columns: ["class_id"];
+            referencedRelation: "academy_class_schedule";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "class_checkins_student_id_fkey";
+            columns: ["student_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "class_checkins_validated_by_fkey";
+            columns: ["validated_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      student_progress: {
+        Row: {
+          student_id: string;
+          academy_id: string;
+          approved_classes_count: number;
+          updated_at: string | null;
+        };
+        Insert: {
+          student_id: string;
+          academy_id: string;
+          approved_classes_count?: number;
+          updated_at?: string | null;
+        };
+        Update: {
+          student_id?: string;
+          academy_id?: string;
+          approved_classes_count?: number;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "student_progress_academy_id_fkey";
+            columns: ["academy_id"];
+            referencedRelation: "academies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "student_progress_student_id_fkey";
+            columns: ["student_id"];
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           }
         ];

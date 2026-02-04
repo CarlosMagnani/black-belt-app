@@ -5,6 +5,14 @@
     "version": "0.1.0",
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "29bd424b-0f57-4814-aa38-d250fbf555fe"
+      }
+    },
+    "android": {
+      "package": "com.carlosmagnani.dojoflow"
     }
   }
 }

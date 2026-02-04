@@ -15,9 +15,9 @@ type BeltIconProps = {
 };
 
 const SIZE_MAP: Record<BeltIconSize, { width: number; height: number; tip: number }> = {
-  sm: { width: 160, height: 12, tip: 16 },
-  md: { width: 200, height: 12, tip: 18 },
-  lg: { width: 240, height: 14, tip: 20 },
+  sm: { width: 48, height: 12, tip: 12 },
+  md: { width: 64, height: 16, tip: 16 },
+  lg: { width: 80, height: 20, tip: 20 },
 };
 
 const BASE_COLORS: Record<BeltName, string> = {
@@ -86,7 +86,6 @@ export function BeltIcon({
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "row",
-          paddingRight: 2,
         }}
       >
         {stripeCount > 0

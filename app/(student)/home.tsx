@@ -8,10 +8,10 @@ import { DayChips } from "../../components/home/DayChips";
 import { HomeHeader } from "../../components/home/HomeHeader";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
+import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
 import { useStudentProgress } from "../../src/core/hooks/use-student-progress";
 import type { BeltName } from "../../src/core/belts/belts";
-import type { Academy, ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
+import type { ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
 import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
 import { BeltProgressCard } from "../../src/ui/belts/BeltProgressCard";
 import { useTheme } from "../../src/ui/theme/ThemeProvider";
@@ -42,13 +42,17 @@ const toISODate = (date: Date) => {
 export default function StudentHome() {
   const router = useRouter();
   const { theme } = useTheme();
-  const { isLoading: isBooting, session, profile } = useAuthProfile();
-  const [academy, setAcademy] = useState<Academy | null>(null);
-  const [academyId, setAcademyId] = useState<string | null>(null);
+  const {
+    isBooting,
+    profile,
+    academy,
+    academyId,
+    isAcademyLoading,
+    error: academyError,
+  } = useStudentAcademy();
   const [scheduleItems, setScheduleItems] = useState<ClassScheduleItem[]>([]);
-  const [isAcademyLoading, setIsAcademyLoading] = useState(false);
   const [isScheduleLoading, setIsScheduleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [selectedWeekday, setSelectedWeekday] = useState(() => new Date().getDay());
 
   const displayName = useMemo(() => {
@@ -59,10 +63,10 @@ export default function StudentHome() {
 
   const currentBelt: BeltName = profile?.currentBelt ?? "Branca";
   const beltDegree = profile?.beltDegree ?? undefined;
-  const progress = useStudentProgress(currentBelt);
+  const progress = useStudentProgress(currentBelt, profile?.id);
   const calendarIconColor = theme === "dark" ? "#E0E7FF" : "#1E3A8A";
 
-  const weekStart = useMemo(() => getWeekStart(new Date()), []);
+  const [weekStart] = useState(() => getWeekStart(new Date()));
   const weekStartISO = useMemo(() => toISODate(weekStart), [weekStart]);
   const weekEndISO = useMemo(() => toISODate(addDays(weekStart, 6)), [weekStart]);
 
@@ -78,62 +82,12 @@ export default function StudentHome() {
   );
 
   useEffect(() => {
-    if (isBooting) return;
-    if (!session) {
-      router.replace("/auth");
-      return;
-    }
-    if (!profile?.role) {
-      router.replace("/onboarding");
-      return;
-    }
-    if (profile.role !== "student") {
-      router.replace("/");
-    }
-  }, [isBooting, session, profile, router]);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    if (profile.role !== "student") return;
-
-    let isActive = true;
-
-    const loadAcademy = async () => {
-      setIsAcademyLoading(true);
-      setError(null);
-      try {
-        const memberships = await dojoFlowAdapters.memberships.listByUser(profile.id);
-        if (!isActive) return;
-        if (memberships.length === 0) {
-          router.replace("/join-academy");
-          return;
-        }
-        setAcademyId(memberships[0].academyId);
-        const academyData = await dojoFlowAdapters.academies.getById(memberships[0].academyId);
-        if (!isActive) return;
-        setAcademy(academyData);
-      } catch (err) {
-        if (!isActive) return;
-        setError(err instanceof Error ? err.message : "Nao foi possivel carregar a academia.");
-      } finally {
-        if (isActive) setIsAcademyLoading(false);
-      }
-    };
-
-    void loadAcademy();
-
-    return () => {
-      isActive = false;
-    };
-  }, [profile?.id, profile?.role, router]);
-
-  useEffect(() => {
     if (!academyId) return;
     let isActive = true;
 
     const loadSchedule = async () => {
       setIsScheduleLoading(true);
-      setError(null);
+      setScheduleError(null);
       try {
         const items = await dojoFlowAdapters.schedules.getWeeklySchedule(
           academyId,
@@ -144,7 +98,7 @@ export default function StudentHome() {
         setScheduleItems(items);
       } catch (err) {
         if (!isActive) return;
-        setError(err instanceof Error ? err.message : "Nao foi possivel carregar a agenda.");
+        setScheduleError(err instanceof Error ? err.message : "Nao foi possivel carregar a agenda.");
       } finally {
         if (isActive) setIsScheduleLoading(false);
       }
@@ -156,6 +110,8 @@ export default function StudentHome() {
       isActive = false;
     };
   }, [academyId, weekStartISO, weekEndISO]);
+
+  const error = academyError ?? scheduleError;
 
   return (
     <ScrollView className="flex-1">

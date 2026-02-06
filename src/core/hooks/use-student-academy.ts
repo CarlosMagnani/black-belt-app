@@ -1,0 +1,87 @@
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+
+import type { Academy } from "../ports/dojoflow-ports";
+import { useAuthProfile } from "./use-auth-profile";
+import { dojoFlowAdapters } from "../../infra/supabase/adapters";
+
+type StudentAcademyState = {
+  isBooting: boolean;
+  session: ReturnType<typeof useAuthProfile>["session"];
+  profile: ReturnType<typeof useAuthProfile>["profile"];
+  academy: Academy | null;
+  academyId: string | null;
+  isAcademyLoading: boolean;
+  error: string | null;
+  refreshProfile: () => Promise<void>;
+};
+
+export const useStudentAcademy = (): StudentAcademyState => {
+  const router = useRouter();
+  const { isLoading: isBooting, session, profile, refresh: refreshProfile } = useAuthProfile();
+  const [academy, setAcademy] = useState<Academy | null>(null);
+  const [academyId, setAcademyId] = useState<string | null>(null);
+  const [isAcademyLoading, setIsAcademyLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isBooting) return;
+    if (!session) {
+      router.replace("/auth");
+      return;
+    }
+    if (!profile?.role) {
+      router.replace("/onboarding");
+      return;
+    }
+    if (profile.role !== "student") {
+      router.replace("/");
+    }
+  }, [isBooting, session, profile, router]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    if (profile.role !== "student") return;
+
+    let isActive = true;
+
+    const loadAcademy = async () => {
+      setIsAcademyLoading(true);
+      setError(null);
+      try {
+        const memberships = await dojoFlowAdapters.memberships.listByUser(profile.id);
+        if (!isActive) return;
+        if (memberships.length === 0) {
+          router.replace("/join-academy");
+          return;
+        }
+        setAcademyId(memberships[0].academyId);
+        const academyData = await dojoFlowAdapters.academies.getById(memberships[0].academyId);
+        if (!isActive) return;
+        setAcademy(academyData);
+      } catch (err) {
+        if (!isActive) return;
+        setError(err instanceof Error ? err.message : "Nao foi possivel carregar a academia.");
+      } finally {
+        if (isActive) setIsAcademyLoading(false);
+      }
+    };
+
+    void loadAcademy();
+
+    return () => {
+      isActive = false;
+    };
+  }, [profile?.id, profile?.role, router]);
+
+  return {
+    isBooting,
+    session,
+    profile,
+    academy,
+    academyId,
+    isAcademyLoading,
+    error,
+    refreshProfile,
+  };
+};

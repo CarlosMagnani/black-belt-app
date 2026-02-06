@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
 
 import { WeekCalendar } from "../../components/calendar/WeekCalendar";
 import { Badge } from "../../components/ui/Badge";
 import { Card } from "../../components/ui/Card";
-import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
-import type { Academy, CheckinStatus, ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
+import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
+import type { CheckinStatus, ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
 import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
 
 const getWeekStart = (date: Date) => {
@@ -30,14 +29,17 @@ const toISODate = (date: Date) => {
 };
 
 export default function Schedule() {
-  const router = useRouter();
-  const { isLoading: isBooting, session, profile } = useAuthProfile();
-  const [academy, setAcademy] = useState<Academy | null>(null);
-  const [academyId, setAcademyId] = useState<string | null>(null);
+  const {
+    isBooting,
+    profile,
+    academy,
+    academyId,
+    isAcademyLoading,
+    error: academyError,
+  } = useStudentAcademy();
   const [scheduleItems, setScheduleItems] = useState<ClassScheduleItem[]>([]);
-  const [isAcademyLoading, setIsAcademyLoading] = useState(false);
   const [isScheduleLoading, setIsScheduleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [checkinStatusByClassId, setCheckinStatusByClassId] = useState<
     Record<string, CheckinStatus>
@@ -49,53 +51,12 @@ export default function Schedule() {
   const weekEndISO = useMemo(() => toISODate(addDays(weekStart, 6)), [weekStart]);
 
   useEffect(() => {
-    if (isBooting) return;
-    if (!session) {
-      router.replace("/auth");
-      return;
-    }
-    if (!profile?.role) {
-      router.replace("/onboarding");
-      return;
-    }
-    if (profile.role !== "student") {
-      router.replace("/");
-    }
-  }, [isBooting, session, profile, router]);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    if (profile.role !== "student") return;
-
-    const loadAcademy = async () => {
-      setIsAcademyLoading(true);
-      setError(null);
-      try {
-        const memberships = await dojoFlowAdapters.memberships.listByUser(profile.id);
-        if (memberships.length === 0) {
-          router.replace("/join-academy");
-          return;
-        }
-        setAcademyId(memberships[0].academyId);
-        const academyData = await dojoFlowAdapters.academies.getById(memberships[0].academyId);
-        setAcademy(academyData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Nao foi possivel carregar a academia.");
-      } finally {
-        setIsAcademyLoading(false);
-      }
-    };
-
-    void loadAcademy();
-  }, [profile?.id, profile?.role, router]);
-
-  useEffect(() => {
     if (!academyId) return;
     let isActive = true;
 
     const loadSchedule = async () => {
       setIsScheduleLoading(true);
-      setError(null);
+      setScheduleError(null);
       try {
         const items = await dojoFlowAdapters.schedules.getWeeklySchedule(
           academyId,
@@ -106,7 +67,7 @@ export default function Schedule() {
         setScheduleItems(items);
       } catch (err) {
         if (!isActive) return;
-        setError(err instanceof Error ? err.message : "Nao foi possivel carregar a agenda.");
+        setScheduleError(err instanceof Error ? err.message : "Nao foi possivel carregar a agenda.");
       } finally {
         if (isActive) setIsScheduleLoading(false);
       }
@@ -123,7 +84,7 @@ export default function Schedule() {
     if (!academyId || !profile?.id) return;
     setCheckinLoadingId(item.id);
     setCheckinMessage(null);
-    setError(null);
+    setScheduleError(null);
     try {
       await dojoFlowAdapters.checkins.createCheckin({
         academyId,
@@ -133,11 +94,13 @@ export default function Schedule() {
       setCheckinStatusByClassId((prev) => ({ ...prev, [item.id]: "pending" }));
       setCheckinMessage("Check-in enviado para validacao.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nao foi possivel registrar o check-in.");
+      setScheduleError(err instanceof Error ? err.message : "Nao foi possivel registrar o check-in.");
     } finally {
       setCheckinLoadingId(null);
     }
   };
+
+  const error = academyError ?? scheduleError;
 
   return (
     <ScrollView className="flex-1">

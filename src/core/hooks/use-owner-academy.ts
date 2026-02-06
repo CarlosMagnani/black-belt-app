@@ -19,6 +19,7 @@ export const useOwnerAcademy = (): OwnerAcademyState => {
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasNoAcademy, setHasNoAcademy] = useState(false);
 
   useEffect(() => {
     if (isBooting) return;
@@ -32,8 +33,12 @@ export const useOwnerAcademy = (): OwnerAcademyState => {
     }
     if (profile.role !== "professor") {
       router.replace("/home");
+      return;
     }
-  }, [isBooting, session, profile, router]);
+    if (hasNoAcademy) {
+      router.replace("/create-academy");
+    }
+  }, [isBooting, session, profile, router, hasNoAcademy]);
 
   const refresh = useCallback(async () => {
     if (!profile?.id || profile.role !== "professor") return;
@@ -42,16 +47,17 @@ export const useOwnerAcademy = (): OwnerAcademyState => {
     try {
       const academyData = await dojoFlowAdapters.academies.getByOwnerId(profile.id);
       if (!academyData) {
-        router.replace("/create-academy");
+        setHasNoAcademy(true);
         return;
       }
+      setHasNoAcademy(false);
       setAcademy(academyData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nao foi possivel carregar a academia.");
     } finally {
       setIsLoading(false);
     }
-  }, [profile?.id, profile?.role, router]);
+  }, [profile?.id, profile?.role]);
 
   useEffect(() => {
     void refresh();

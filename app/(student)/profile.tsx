@@ -5,8 +5,7 @@ import { useRouter } from "expo-router";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
-import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
-import type { Academy } from "../../src/core/ports/dojoflow-ports";
+import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
 import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
 import { BeltBadge } from "../../src/ui/belts/BeltBadge";
 
@@ -20,11 +19,15 @@ const splitFullName = (fullName?: string | null) => {
 
 export default function Profile() {
   const router = useRouter();
-  const { isLoading: isBooting, session, profile, refresh } = useAuthProfile();
-  const [academy, setAcademy] = useState<Academy | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    isBooting,
+    profile,
+    academy,
+    isAcademyLoading,
+    error: academyError,
+    refreshProfile,
+  } = useStudentAcademy();
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
@@ -40,21 +43,6 @@ export default function Profile() {
   }, [profile?.fullName, profile?.email]);
 
   useEffect(() => {
-    if (isBooting) return;
-    if (!session) {
-      router.replace("/auth");
-      return;
-    }
-    if (!profile?.role) {
-      router.replace("/onboarding");
-      return;
-    }
-    if (profile.role !== "student") {
-      router.replace("/");
-    }
-  }, [isBooting, session, profile, router]);
-
-  useEffect(() => {
     if (!profile) return;
     const inferred =
       profile.firstName || profile.lastName
@@ -67,31 +55,6 @@ export default function Profile() {
     setFederationNumber(profile.federationNumber ?? "");
     setAvatarUrl(profile.avatarUrl ?? "");
   }, [profile]);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    if (profile.role !== "student") return;
-
-    const loadAcademy = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const memberships = await dojoFlowAdapters.memberships.listByUser(profile.id);
-        if (memberships.length === 0) {
-          router.replace("/join-academy");
-          return;
-        }
-        const academyData = await dojoFlowAdapters.academies.getById(memberships[0].academyId);
-        setAcademy(academyData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Nao foi possivel carregar a academia.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void loadAcademy();
-  }, [profile?.id, profile?.role, router]);
 
   const handleSaveProfile = async () => {
     if (!profile?.id) return;
@@ -107,8 +70,9 @@ export default function Profile() {
         federationNumber: federationNumber.trim() ? federationNumber.trim() : null,
         avatarUrl: avatarUrl.trim() ? avatarUrl.trim() : null,
       });
-      await refresh();
+      await refreshProfile();
       setSaveSuccess("Perfil atualizado.");
+      setTimeout(() => setSaveSuccess(null), 3000);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Nao foi possivel salvar seu perfil.");
     } finally {
@@ -121,7 +85,7 @@ export default function Profile() {
       await dojoFlowAdapters.auth.signOut();
       router.replace("/auth");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nao foi possivel sair.");
+      setSaveError(err instanceof Error ? err.message : "Nao foi possivel sair.");
     }
   };
 
@@ -139,7 +103,7 @@ export default function Profile() {
             Atualize suas informacoes pessoais. Faixa e graus sao somente leitura.
           </Text>
 
-          {isBooting || isLoading ? (
+          {isBooting || isAcademyLoading ? (
             <Card className="mt-6 flex-row items-center gap-3">
               <ActivityIndicator />
               <Text className="text-sm text-muted-light dark:text-muted-dark">
@@ -148,9 +112,9 @@ export default function Profile() {
             </Card>
           ) : null}
 
-          {error ? (
+          {academyError ? (
             <Card className="mt-6" variant="outline">
-              <Text className="text-sm text-red-500">{error}</Text>
+              <Text className="text-sm text-red-500">{academyError}</Text>
             </Card>
           ) : null}
 

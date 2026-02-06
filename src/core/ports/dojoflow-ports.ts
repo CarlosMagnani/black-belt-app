@@ -215,6 +215,16 @@ export interface SchedulesPort {
   ): Promise<ClassScheduleItem[]>;
 }
 
+export type StudentProgress = {
+  studentId: string;
+  academyId: string;
+  approvedClassesCount: number;
+};
+
+export interface ProgressPort {
+  getByStudent(studentId: string): Promise<StudentProgress | null>;
+}
+
 export type DojoFlowPorts = {
   auth: AuthPort;
   profiles: ProfilesPort;
@@ -223,4 +233,5 @@ export type DojoFlowPorts = {
   classes: ClassesPort;
   checkins: CheckinsPort;
   schedules: SchedulesPort;
+  progress: ProgressPort;
 };

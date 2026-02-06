@@ -20,6 +20,7 @@ import type {
   MemberProfile,
   Profile,
   ProfileUpsertInput,
+  StudentProgress,
   UpdateCheckinStatusInput,
   UpdateClassInput,
   UserRole,
@@ -253,7 +254,7 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
       
       if (error) throw error;
       
-      const academy = Array.isArray(data) ? data[0] : data;
+      const academy = Array.isArray(data) ? (data.length > 0 ? data[0] : null) : data;
       return academy ? toAcademy(academy) : null;
     },
     async getById(academyId: string): Promise<Academy | null> {
@@ -464,6 +465,8 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
         .single();
       if (currentError) throw currentError;
 
+      const previousStatus = current.status;
+
       const { data, error } = await client
         .from("class_checkins")
         .update({
@@ -476,25 +479,34 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
         .single();
       if (error) throw error;
 
-      if (input.status === "approved" && current?.status !== "approved") {
-        const { data: progressRow, error: progressSelectError } = await client
-          .from("student_progress")
-          .select("approved_classes_count")
-          .eq("student_id", current.student_id)
-          .maybeSingle();
-        if (progressSelectError) throw progressSelectError;
-        const nextCount = (progressRow?.approved_classes_count ?? 0) + 1;
-        const { error: progressError } = await client
-          .from("student_progress")
-          .upsert({
-            student_id: current.student_id,
-            academy_id: current.academy_id,
-            approved_classes_count: nextCount,
-            updated_at: new Date().toISOString(),
-          })
-          .select("*")
-          .single();
-        if (progressError) throw progressError;
+      if (input.status === "approved" && previousStatus !== "approved") {
+        try {
+          const { data: progressRow, error: progressSelectError } = await client
+            .from("student_progress")
+            .select("approved_classes_count")
+            .eq("student_id", current.student_id)
+            .maybeSingle();
+          if (progressSelectError) throw progressSelectError;
+          const nextCount = (progressRow?.approved_classes_count ?? 0) + 1;
+          const { error: progressError } = await client
+            .from("student_progress")
+            .upsert({
+              student_id: current.student_id,
+              academy_id: current.academy_id,
+              approved_classes_count: nextCount,
+              updated_at: new Date().toISOString(),
+            })
+            .select("*")
+            .single();
+          if (progressError) throw progressError;
+        } catch (progressErr) {
+          // Rollback checkin status to avoid inconsistency
+          await client
+            .from("class_checkins")
+            .update({ status: previousStatus, validated_by: null, validated_at: null })
+            .eq("id", input.id);
+          throw progressErr;
+        }
       }
 
       return toCheckin(data);
@@ -504,8 +516,8 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
   const schedules = {
     async getWeeklySchedule(
       academyId: string,
-      _weekStartISO: string,
-      _weekEndISO: string
+      weekStartISO: string,
+      weekEndISO: string
     ): Promise<ClassScheduleItem[]> {
       const { data, error } = await client
         .from("academy_class_schedule")
@@ -515,7 +527,13 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
         .order("start_time", { ascending: true });
 
       if (error) throw error;
-      return (data ?? []).map(toScheduleItem);
+      return (data ?? [])
+        .filter((row) => {
+          if (row.is_recurring !== false) return true;
+          if (!row.start_date) return false;
+          return row.start_date >= weekStartISO && row.start_date <= weekEndISO;
+        })
+        .map(toScheduleItem);
     },
   };
 
@@ -564,5 +582,22 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts =
     },
   };
 
-  return { auth, profiles, academies, memberships, classes, checkins, schedules };
+  const progress = {
+    async getByStudent(studentId: string): Promise<StudentProgress | null> {
+      const { data, error } = await client
+        .from("student_progress")
+        .select("*")
+        .eq("student_id", studentId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        studentId: data.student_id,
+        academyId: data.academy_id,
+        approvedClassesCount: data.approved_classes_count,
+      };
+    },
+  };
+
+  return { auth, profiles, academies, memberships, classes, checkins, schedules, progress };
 };

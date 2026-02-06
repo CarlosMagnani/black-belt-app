@@ -111,6 +111,7 @@ export function AppShell({
               {!isDesktop ? (
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel="Abrir menu"
                   onPress={() => setDrawerOpen(true)}
                   className="rounded-full border border-subtle-light bg-surface-light p-2 dark:border-subtle-dark dark:bg-surface-dark"
                   style={({ pressed }) => (pressed ? { opacity: 0.9 } : undefined)}
@@ -130,6 +131,7 @@ export function AppShell({
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Alternar tema"
               onPress={() => void toggle()}
               className="flex-row items-center gap-2 rounded-full border border-subtle-light bg-surface-light px-3 py-2 dark:border-subtle-dark dark:bg-surface-dark"
               style={({ pressed }) => (pressed ? { opacity: 0.9 } : undefined)}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, Platform, ScrollView, Text, View } from "react-native";
 
 import { DayChips } from "../../components/home/DayChips";
 import { ClassCard } from "../../components/owner/ClassCard";
@@ -90,7 +90,7 @@ export default function OwnerSchedule() {
     setStartDate(item.startDate ?? "");
   };
 
-  const handleDelete = async (item: AcademyClass) => {
+  const confirmAndDelete = async (item: AcademyClass) => {
     setIsSaving(true);
     setLocalError(null);
     try {
@@ -104,11 +104,44 @@ export default function OwnerSchedule() {
     }
   };
 
+  const handleDelete = (item: AcademyClass) => {
+    if (Platform.OS === "web") {
+      if (window.confirm(`Remover a aula "${item.title}"?`)) {
+        void confirmAndDelete(item);
+      }
+    } else {
+      Alert.alert(
+        "Remover aula",
+        `Deseja remover a aula "${item.title}"?`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Remover", style: "destructive", onPress: () => void confirmAndDelete(item) },
+        ]
+      );
+    }
+  };
+
   const handleSubmit = async () => {
     if (!academy) return;
     if (!title.trim() || !startTime.trim() || !endTime.trim()) {
       setLocalError("Preencha titulo e horario.");
       return;
+    }
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!timeRegex.test(startTime.trim()) || !timeRegex.test(endTime.trim())) {
+      setLocalError("Horario deve estar no formato HH:MM.");
+      return;
+    }
+    if (startTime.trim() >= endTime.trim()) {
+      setLocalError("O horario de inicio deve ser anterior ao de fim.");
+      return;
+    }
+    if (!isRecurring && startDate.trim()) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(startDate.trim())) {
+        setLocalError("Data deve estar no formato AAAA-MM-DD.");
+        return;
+      }
     }
     setIsSaving(true);
     setLocalError(null);

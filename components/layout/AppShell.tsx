@@ -99,7 +99,7 @@ export function AppShell({
         {isDesktop ? (
           <View className="w-64 border-r border-subtle-light bg-surface-light px-4 py-6 dark:border-subtle-dark dark:bg-surface-dark">
             <Text className="px-2 font-display text-lg text-strong-light dark:text-strong-dark">
-              DojoFlow
+              BlackBelt
             </Text>
             <View className="mt-6 gap-2">{renderNavItems()}</View>
           </View>
@@ -121,7 +121,7 @@ export function AppShell({
               ) : null}
               <View>
                 <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
-                  DojoFlow
+                  BlackBelt
                 </Text>
                 <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
                   {subtitle}
@@ -194,7 +194,7 @@ export function AppShell({
           />
           <View className="h-full w-72 bg-surface-light px-6 py-8 dark:bg-surface-dark">
             <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
-              DojoFlow
+              BlackBelt
             </Text>
             <View className="mt-6 gap-2">{renderNavItems(() => setDrawerOpen(false))}</View>
           </View>

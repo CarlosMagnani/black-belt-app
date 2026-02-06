@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, SafeAreaView, Text, View } from "react-native";
 
-import { dojoFlowAdapters } from "../src/infra/supabase/adapters";
+import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 
 export default function Index() {
   const router = useRouter();
@@ -14,20 +14,20 @@ export default function Index() {
 
     const resolveRoute = async () => {
       try {
-        const session = await dojoFlowAdapters.auth.getSession();
+        const session = await blackBeltAdapters.auth.getSession();
         if (!session) {
           router.replace("/auth");
           return;
         }
 
-        const profile = await dojoFlowAdapters.profiles.getProfile(session.user.id);
+        const profile = await blackBeltAdapters.profiles.getProfile(session.user.id);
         if (!profile?.role) {
           router.replace("/onboarding");
           return;
         }
 
         if (profile.role === "student") {
-          const memberships = await dojoFlowAdapters.memberships.listByUser(profile.id);
+          const memberships = await blackBeltAdapters.memberships.listByUser(profile.id);
           if (memberships.length === 0) {
             router.replace("/join-academy");
             return;
@@ -36,7 +36,7 @@ export default function Index() {
           return;
         }
 
-        const academy = await dojoFlowAdapters.academies.getByOwnerId(profile.id);
+        const academy = await blackBeltAdapters.academies.getByOwnerId(profile.id);
         if (!academy) {
           router.replace("/create-academy");
           return;
@@ -63,7 +63,7 @@ export default function Index() {
           <>
             <ActivityIndicator />
             <Text className="mt-3 text-sm text-muted-light dark:text-muted-dark">
-              Carregando DojoFlow...
+              Carregando BlackBelt...
             </Text>
           </>
         ) : (

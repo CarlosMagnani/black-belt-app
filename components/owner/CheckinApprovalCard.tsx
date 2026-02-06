@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, Text, View } from "react-native";
 
-import type { CheckinListItem } from "../../src/core/ports/dojoflow-ports";
+import type { CheckinListItem } from "../../src/core/ports/blackbelt-ports";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 

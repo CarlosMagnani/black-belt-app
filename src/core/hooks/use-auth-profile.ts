@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { AuthSession, Profile } from "../ports/dojoflow-ports";
-import { dojoFlowAdapters } from "../../infra/supabase/adapters";
+import type { AuthSession, Profile } from "../ports/blackbelt-ports";
+import { blackBeltAdapters } from "../../infra/supabase/adapters";
 
 type AuthProfileState = {
   isLoading: boolean;
@@ -21,13 +21,13 @@ export const useAuthProfile = (): AuthProfileState => {
     setIsLoading(true);
     setError(null);
     try {
-      const currentSession = await dojoFlowAdapters.auth.getSession();
+      const currentSession = await blackBeltAdapters.auth.getSession();
       setSession(currentSession);
       if (!currentSession) {
         setProfile(null);
         return;
       }
-      const currentProfile = await dojoFlowAdapters.profiles.getProfile(currentSession.user.id);
+      const currentProfile = await blackBeltAdapters.profiles.getProfile(currentSession.user.id);
       setProfile(currentProfile);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao carregar a sessao.");

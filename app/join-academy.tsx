@@ -14,7 +14,7 @@ import { ArrowLeft } from "lucide-react-native";
 
 import { JoinAcademyCard } from "../components/JoinAcademyCard";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
-import { dojoFlowAdapters } from "../src/infra/supabase/adapters";
+import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 import { useTheme } from "../src/ui/theme/ThemeProvider";
 
 export default function JoinAcademy() {
@@ -30,12 +30,12 @@ export default function JoinAcademy() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const academy = await dojoFlowAdapters.academies.getByInviteCode(inviteCode);
+      const academy = await blackBeltAdapters.academies.getByInviteCode(inviteCode);
       if (!academy) {
         setError("Codigo invalido. Verifique com o professor.");
         return;
       }
-      await dojoFlowAdapters.memberships.addMember({
+      await blackBeltAdapters.memberships.addMember({
         academyId: academy.id,
         userId: session.user.id,
       });

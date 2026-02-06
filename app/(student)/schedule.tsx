@@ -5,8 +5,8 @@ import { WeekCalendar } from "../../components/calendar/WeekCalendar";
 import { Badge } from "../../components/ui/Badge";
 import { Card } from "../../components/ui/Card";
 import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
-import type { CheckinStatus, ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
-import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
+import type { CheckinStatus, ClassScheduleItem } from "../../src/core/ports/blackbelt-ports";
+import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
 const getWeekStart = (date: Date) => {
   const day = date.getDay();
@@ -58,7 +58,7 @@ export default function Schedule() {
       setIsScheduleLoading(true);
       setScheduleError(null);
       try {
-        const items = await dojoFlowAdapters.schedules.getWeeklySchedule(
+        const items = await blackBeltAdapters.schedules.getWeeklySchedule(
           academyId,
           weekStartISO,
           weekEndISO
@@ -86,7 +86,7 @@ export default function Schedule() {
     setCheckinMessage(null);
     setScheduleError(null);
     try {
-      await dojoFlowAdapters.checkins.createCheckin({
+      await blackBeltAdapters.checkins.createCheckin({
         academyId,
         classId: item.id,
         studentId: profile.id,

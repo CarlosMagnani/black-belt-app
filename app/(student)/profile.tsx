@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
 import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
-import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
+import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 import { BeltBadge } from "../../src/ui/belts/BeltBadge";
 
 const splitFullName = (fullName?: string | null) => {
@@ -62,7 +62,7 @@ export default function Profile() {
     setSaveError(null);
     setSaveSuccess(null);
     try {
-      await dojoFlowAdapters.profiles.upsertProfile({
+      await blackBeltAdapters.profiles.upsertProfile({
         id: profile.id,
         firstName: firstName.trim() ? firstName.trim() : null,
         lastName: lastName.trim() ? lastName.trim() : null,
@@ -82,7 +82,7 @@ export default function Profile() {
 
   const handleSignOut = async () => {
     try {
-      await dojoFlowAdapters.auth.signOut();
+      await blackBeltAdapters.auth.signOut();
       router.replace("/auth");
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Nao foi possivel sair.");

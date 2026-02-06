@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, Text, View } from "react-native";
 
-import type { MemberProfile } from "../../src/core/ports/dojoflow-ports";
+import type { MemberProfile } from "../../src/core/ports/blackbelt-ports";
 import type { BeltRank } from "../../src/core/belts/belts";
 import { BeltBadge } from "../../src/ui/belts/BeltBadge";
 import { BeltPicker } from "../../src/ui/belts/BeltPicker";

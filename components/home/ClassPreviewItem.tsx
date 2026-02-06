@@ -2,7 +2,7 @@ import React from "react";
 import { Text, View } from "react-native";
 import { Clock } from "lucide-react-native";
 
-import type { ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
+import type { ClassScheduleItem } from "../../src/core/ports/blackbelt-ports";
 import { Badge } from "../ui/Badge";
 
 type ClassPreviewItemProps = {

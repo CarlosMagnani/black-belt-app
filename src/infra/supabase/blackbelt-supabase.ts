@@ -16,7 +16,7 @@ import type {
   CreateCheckinInput,
   CreateAcademyInput,
   CreateClassInput,
-  DojoFlowPorts,
+  BlackBeltPorts,
   MemberProfile,
   Profile,
   ProfileUpsertInput,
@@ -24,7 +24,7 @@ import type {
   UpdateCheckinStatusInput,
   UpdateClassInput,
   UserRole,
-} from "../../core/ports/dojoflow-ports";
+} from "../../core/ports/blackbelt-ports";
 import type { Database } from "./database.types";
 
 type SupabaseSchema = "public";
@@ -186,7 +186,7 @@ export const createSupabaseClient = (
   });
 };
 
-export const createSupabaseAdapters = (config?: SupabaseConfig): DojoFlowPorts => {
+export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts => {
   const client = createSupabaseClient(config);
 
   const profiles = {

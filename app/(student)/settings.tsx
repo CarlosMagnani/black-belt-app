@@ -42,7 +42,7 @@ export default function Settings() {
             Tema do app
           </Text>
           <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
-            Escolha como prefere visualizar o DojoFlow.
+            Escolha como prefere visualizar o BlackBelt.
           </Text>
 
           <Card className="mt-6">

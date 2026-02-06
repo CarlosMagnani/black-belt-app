@@ -4,8 +4,8 @@ import { ScrollView, Text, View } from "react-native";
 import { CheckinApprovalCard } from "../../components/owner/CheckinApprovalCard";
 import { Card } from "../../components/ui/Card";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
-import type { CheckinListItem } from "../../src/core/ports/dojoflow-ports";
-import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
+import type { CheckinListItem } from "../../src/core/ports/blackbelt-ports";
+import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
 export default function OwnerCheckins() {
   const { academy, profileId, isLoading, error } = useOwnerAcademy();
@@ -22,7 +22,7 @@ export default function OwnerCheckins() {
       setIsListLoading(true);
       setLocalError(null);
       try {
-        const list = await dojoFlowAdapters.checkins.listPendingByAcademy(academy.id);
+        const list = await blackBeltAdapters.checkins.listPendingByAcademy(academy.id);
         if (!isActive) return;
         setPending(list);
       } catch (err) {
@@ -45,7 +45,7 @@ export default function OwnerCheckins() {
     setProcessingId(item.id);
     setLocalError(null);
     try {
-      await dojoFlowAdapters.checkins.updateStatus({
+      await blackBeltAdapters.checkins.updateStatus({
         id: item.id,
         status,
         validatedBy: profileId,

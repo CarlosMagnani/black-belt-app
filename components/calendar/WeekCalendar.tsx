@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 
-import type { ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
+import type { ClassScheduleItem } from "../../src/core/ports/blackbelt-ports";
 import { Card } from "../ui/Card";
 import { ClassBlock } from "./ClassBlock";
 

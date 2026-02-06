@@ -225,7 +225,7 @@ export interface ProgressPort {
   getByStudent(studentId: string): Promise<StudentProgress | null>;
 }
 
-export type DojoFlowPorts = {
+export type BlackBeltPorts = {
   auth: AuthPort;
   profiles: ProfilesPort;
   academies: AcademiesPort;

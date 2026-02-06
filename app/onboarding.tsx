@@ -4,9 +4,9 @@ import { ActivityIndicator, SafeAreaView, ScrollView, Text, View } from "react-n
 import { GraduationCap, Users } from "lucide-react-native";
 
 import { RoleCard } from "../components/RoleCard";
-import type { UserRole } from "../src/core/ports/dojoflow-ports";
+import type { UserRole } from "../src/core/ports/blackbelt-ports";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
-import { dojoFlowAdapters } from "../src/infra/supabase/adapters";
+import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 
 export default function Onboarding() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function Onboarding() {
     setIsSaving(true);
     setSaveError(null);
     try {
-      await dojoFlowAdapters.profiles.upsertProfile({
+      await blackBeltAdapters.profiles.upsertProfile({
         id: session.user.id,
         email: session.user.email,
         role,
@@ -52,13 +52,13 @@ export default function Onboarding() {
         <View className="px-5 pb-10">
           <View className="mx-auto mt-8 w-full max-w-[520px]">
           <Text className="text-xs uppercase tracking-[4px] text-brand-600 dark:text-brand-50">
-            DojoFlow
+            BlackBelt
           </Text>
           <Text className="mt-3 font-display text-3xl text-strong-light dark:text-strong-dark">
             Comece em minutos
           </Text>
           <Text className="mt-2 text-base text-muted-light dark:text-muted-dark">
-            Escolha como voce usa o DojoFlow hoje.
+            Escolha como voce usa o BlackBelt hoje.
           </Text>
 
           <View className="mt-8">

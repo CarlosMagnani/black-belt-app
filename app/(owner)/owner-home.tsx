@@ -7,7 +7,7 @@ import { KpiCard } from "../../components/owner/KpiCard";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
-import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
+import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
 export default function OwnerHome() {
   const router = useRouter();
@@ -29,9 +29,9 @@ export default function OwnerHome() {
       setIsMetricsLoading(true);
       try {
         const [members, pending, classes] = await Promise.all([
-          dojoFlowAdapters.memberships.listByAcademy(academy.id),
-          dojoFlowAdapters.checkins.listPendingByAcademy(academy.id),
-          dojoFlowAdapters.classes.listByAcademy(academy.id),
+          blackBeltAdapters.memberships.listByAcademy(academy.id),
+          blackBeltAdapters.checkins.listPendingByAcademy(academy.id),
+          blackBeltAdapters.classes.listByAcademy(academy.id),
         ]);
         if (!isActive) return;
         setMembersCount(members.length);

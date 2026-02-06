@@ -7,8 +7,8 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
-import type { AcademyClass } from "../../src/core/ports/dojoflow-ports";
-import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
+import type { AcademyClass } from "../../src/core/ports/blackbelt-ports";
+import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
 const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 
@@ -44,7 +44,7 @@ export default function OwnerSchedule() {
       setIsClassesLoading(true);
       setLocalError(null);
       try {
-        const list = await dojoFlowAdapters.classes.listByAcademy(academy.id);
+        const list = await blackBeltAdapters.classes.listByAcademy(academy.id);
         if (!isActive) return;
         setClasses(list);
       } catch (err) {
@@ -94,7 +94,7 @@ export default function OwnerSchedule() {
     setIsSaving(true);
     setLocalError(null);
     try {
-      await dojoFlowAdapters.classes.deleteClass(item.id);
+      await blackBeltAdapters.classes.deleteClass(item.id);
       setClasses((prev) => prev.filter((entry) => entry.id !== item.id));
       if (editingId === item.id) resetForm();
     } catch (err) {
@@ -147,7 +147,7 @@ export default function OwnerSchedule() {
     setLocalError(null);
     try {
       if (editingId) {
-        const updated = await dojoFlowAdapters.classes.updateClass({
+        const updated = await blackBeltAdapters.classes.updateClass({
           id: editingId,
           title: title.trim(),
           instructorName: instructorName.trim() || null,
@@ -162,7 +162,7 @@ export default function OwnerSchedule() {
         });
         setClasses((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       } else {
-        const created = await dojoFlowAdapters.classes.createClass({
+        const created = await blackBeltAdapters.classes.createClass({
           academyId: academy.id,
           title: title.trim(),
           instructorName: instructorName.trim() || null,

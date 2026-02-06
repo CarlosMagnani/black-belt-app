@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, View } from "react-native";
 
-import type { AcademyClass } from "../../src/core/ports/dojoflow-ports";
+import type { AcademyClass } from "../../src/core/ports/blackbelt-ports";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 

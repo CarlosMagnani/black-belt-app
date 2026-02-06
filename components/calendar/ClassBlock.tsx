@@ -2,7 +2,7 @@ import React from "react";
 import { Text, View } from "react-native";
 import { Clock, MapPin, User } from "lucide-react-native";
 
-import type { CheckinStatus, ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
+import type { CheckinStatus, ClassScheduleItem } from "../../src/core/ports/blackbelt-ports";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { BeltName } from "../belts/belts";
 import { getNextBelt } from "../belts/belts";
-import { dojoFlowAdapters } from "../../infra/supabase/adapters";
+import { blackBeltAdapters } from "../../infra/supabase/adapters";
 
 type StudentProgress = {
   classesThisGrade: number;
@@ -29,7 +29,7 @@ export const useStudentProgress = (
     if (!studentId) return;
     setIsLoading(true);
     try {
-      const data = await dojoFlowAdapters.progress.getByStudent(studentId);
+      const data = await blackBeltAdapters.progress.getByStudent(studentId);
       setApprovedCount(data?.approvedClassesCount ?? 0);
     } catch {
       // Fallback to 0 on error

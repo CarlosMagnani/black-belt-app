@@ -2,8 +2,8 @@ import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
 
-import type { UserRole } from "../src/core/ports/dojoflow-ports";
-import { dojoFlowAdapters } from "../src/infra/supabase/adapters";
+import type { UserRole } from "../src/core/ports/blackbelt-ports";
+import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 
 type Mode = "signin" | "signup";
 
@@ -28,9 +28,9 @@ export default function Auth() {
     setError(null);
     try {
       if (mode === "signin") {
-        await dojoFlowAdapters.auth.signIn(email.trim(), password);
+        await blackBeltAdapters.auth.signIn(email.trim(), password);
       } else {
-        await dojoFlowAdapters.auth.signUp(email.trim(), password, role);
+        await blackBeltAdapters.auth.signUp(email.trim(), password, role);
       }
       router.replace("/");
     } catch (err) {
@@ -49,7 +49,7 @@ export default function Auth() {
         <View className="px-5 pb-10">
           <View className="mx-auto mt-10 w-full max-w-[520px]">
           <Text className="text-xs uppercase tracking-[4px] text-brand-600 dark:text-brand-50">
-            DojoFlow
+            BlackBelt
           </Text>
           <Text className="mt-3 font-display text-3xl text-strong-light dark:text-strong-dark">
             {mode === "signin" ? "Entrar" : "Criar conta"}

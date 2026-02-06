@@ -11,9 +11,9 @@ import {
 } from "react-native";
 import { ArrowLeft } from "lucide-react-native";
 
-import type { Academy } from "../src/core/ports/dojoflow-ports";
+import type { Academy } from "../src/core/ports/blackbelt-ports";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
-import { dojoFlowAdapters } from "../src/infra/supabase/adapters";
+import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 import { useTheme } from "../src/ui/theme/ThemeProvider";
 
 const generateInviteCode = () => {
@@ -62,7 +62,7 @@ export default function CreateAcademy() {
       setIsLoading(true);
       setError(null);
       try {
-        const existing = await dojoFlowAdapters.academies.getByOwnerId(profile.id);
+        const existing = await blackBeltAdapters.academies.getByOwnerId(profile.id);
         if (!existing) {
           setAcademy(null);
           return;
@@ -82,7 +82,7 @@ export default function CreateAcademy() {
   const generateUniqueCode = async () => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const code = generateInviteCode();
-      const existing = await dojoFlowAdapters.academies.getByInviteCode(code);
+      const existing = await blackBeltAdapters.academies.getByInviteCode(code);
       if (!existing) return code;
     }
     throw new Error("Nao foi possivel gerar um codigo unico.");
@@ -94,7 +94,7 @@ export default function CreateAcademy() {
     setError(null);
     try {
       const inviteCode = await generateUniqueCode();
-      const created = await dojoFlowAdapters.academies.createAcademy({
+      const created = await blackBeltAdapters.academies.createAcademy({
         ownerId: profile.id,
         name: name.trim(),
         city: city.trim() || null,

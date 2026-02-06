@@ -1,4 +1,4 @@
-# DojoFlow — Plano de Implementação (Backlog → MVP Validado)
+# BlackBeltApp — Plano de Implementação (Backlog → MVP Validado)
 
 Este plano organiza o que falta fazer em **fases incrementais**, priorizando **validar o MVP** com o mínimo de risco e com **base na arquitetura já existente** (Expo Router + NativeWind + Supabase + ports/adapters).  
 **Objetivo final do MVP:** professor/dono cadastra a academia + grade de horários; aluno entra com invite code, escolhe faixa/graus e consegue fazer **check-in** em um treino.

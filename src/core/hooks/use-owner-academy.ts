@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 
-import type { Academy } from "../ports/dojoflow-ports";
+import type { Academy } from "../ports/blackbelt-ports";
 import { useAuthProfile } from "./use-auth-profile";
-import { dojoFlowAdapters } from "../../infra/supabase/adapters";
+import { blackBeltAdapters } from "../../infra/supabase/adapters";
 
 type OwnerAcademyState = {
   isLoading: boolean;
@@ -45,7 +45,7 @@ export const useOwnerAcademy = (): OwnerAcademyState => {
     setIsLoading(true);
     setError(null);
     try {
-      const academyData = await dojoFlowAdapters.academies.getByOwnerId(profile.id);
+      const academyData = await blackBeltAdapters.academies.getByOwnerId(profile.id);
       if (!academyData) {
         setHasNoAcademy(true);
         return;

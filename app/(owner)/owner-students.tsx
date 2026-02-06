@@ -4,8 +4,8 @@ import { ScrollView, Text, View } from "react-native";
 import type { BeltRank } from "../../src/core/belts/belts";
 import { normalizeDegree } from "../../src/core/belts/belts";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
-import type { MemberProfile } from "../../src/core/ports/dojoflow-ports";
-import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
+import type { MemberProfile } from "../../src/core/ports/blackbelt-ports";
+import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 import { MembersListItem } from "../../components/owner/MembersListItem";
 import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
@@ -28,7 +28,7 @@ export default function OwnerStudents() {
       setIsMembersLoading(true);
       setLocalError(null);
       try {
-        const list = await dojoFlowAdapters.memberships.listMembersWithProfiles(academy.id);
+        const list = await blackBeltAdapters.memberships.listMembersWithProfiles(academy.id);
         if (!isActive) return;
         setMembers(list);
       } catch (err) {
@@ -71,7 +71,7 @@ export default function OwnerStudents() {
     setIsSaving(true);
     setLocalError(null);
     try {
-      const updated = await dojoFlowAdapters.profiles.setBeltAndDegree(
+      const updated = await blackBeltAdapters.profiles.setBeltAndDegree(
         member.userId,
         editingBelt.name,
         editingBelt.degree ?? null

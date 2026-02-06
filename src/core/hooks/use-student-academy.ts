@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 
-import type { Academy } from "../ports/dojoflow-ports";
+import type { Academy } from "../ports/blackbelt-ports";
 import { useAuthProfile } from "./use-auth-profile";
-import { dojoFlowAdapters } from "../../infra/supabase/adapters";
+import { blackBeltAdapters } from "../../infra/supabase/adapters";
 
 type StudentAcademyState = {
   isBooting: boolean;
@@ -49,14 +49,14 @@ export const useStudentAcademy = (): StudentAcademyState => {
       setIsAcademyLoading(true);
       setError(null);
       try {
-        const memberships = await dojoFlowAdapters.memberships.listByUser(profile.id);
+        const memberships = await blackBeltAdapters.memberships.listByUser(profile.id);
         if (!isActive) return;
         if (memberships.length === 0) {
           router.replace("/join-academy");
           return;
         }
         setAcademyId(memberships[0].academyId);
-        const academyData = await dojoFlowAdapters.academies.getById(memberships[0].academyId);
+        const academyData = await blackBeltAdapters.academies.getById(memberships[0].academyId);
         if (!isActive) return;
         setAcademy(academyData);
       } catch (err) {

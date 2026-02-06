@@ -11,8 +11,8 @@ import { Card } from "../../components/ui/Card";
 import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
 import { useStudentProgress } from "../../src/core/hooks/use-student-progress";
 import type { BeltName } from "../../src/core/belts/belts";
-import type { ClassScheduleItem } from "../../src/core/ports/dojoflow-ports";
-import { dojoFlowAdapters } from "../../src/infra/supabase/adapters";
+import type { ClassScheduleItem } from "../../src/core/ports/blackbelt-ports";
+import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 import { BeltProgressCard } from "../../src/ui/belts/BeltProgressCard";
 import { useTheme } from "../../src/ui/theme/ThemeProvider";
 
@@ -89,7 +89,7 @@ export default function StudentHome() {
       setIsScheduleLoading(true);
       setScheduleError(null);
       try {
-        const items = await dojoFlowAdapters.schedules.getWeeklySchedule(
+        const items = await blackBeltAdapters.schedules.getWeeklySchedule(
           academyId,
           weekStartISO,
           weekEndISO

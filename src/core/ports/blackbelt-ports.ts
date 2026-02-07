@@ -11,6 +11,8 @@ export type AuthSession = {
   expiresAt: number | null;
 };
 
+export type Sex = "M" | "F" | "O" | "N"; // Male, Female, Other, Not specified
+
 export type Profile = {
   id: string;
   email: string | null;
@@ -22,6 +24,7 @@ export type Profile = {
   currentBelt: Belt | null;
   beltDegree: number | null;
   birthDate: string | null;
+  sex: Sex | null;
   federationNumber: string | null;
   createdAt: string | null;
 };
@@ -109,6 +112,7 @@ export type ProfileUpsertInput = {
   currentBelt?: Belt | null;
   beltDegree?: number | null;
   birthDate?: string | null;
+  sex?: Sex | null;
   federationNumber?: string | null;
 };
 

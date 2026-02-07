@@ -57,6 +57,12 @@ const buildFullName = (
   return combined || fallback || null;
 };
 
+const SEX_VALUES = ["M", "F", "O", "N"] as const;
+type Sex = (typeof SEX_VALUES)[number];
+
+const toSex = (value: string | null): Sex | null =>
+  SEX_VALUES.includes(value as Sex) ? (value as Sex) : null;
+
 const toProfile = (row: Database["public"]["Tables"]["profiles"]["Row"]): Profile => ({
   id: row.id,
   email: row.email,
@@ -68,6 +74,7 @@ const toProfile = (row: Database["public"]["Tables"]["profiles"]["Row"]): Profil
   currentBelt: toBelt(row.current_belt),
   beltDegree: row.belt_degree,
   birthDate: row.birth_date,
+  sex: toSex((row as any).sex),
   federationNumber: row.federation_number,
   createdAt: row.created_at,
 });
@@ -89,6 +96,7 @@ const toProfilePayload = (
   ...(input.currentBelt !== undefined ? { current_belt: input.currentBelt } : {}),
   ...(input.beltDegree !== undefined ? { belt_degree: input.beltDegree } : {}),
   ...(input.birthDate !== undefined ? { birth_date: input.birthDate } : {}),
+  ...(input.sex !== undefined ? { sex: input.sex } : {}),
   ...(input.federationNumber !== undefined ? { federation_number: input.federationNumber } : {}),
 });
 

@@ -21,6 +21,7 @@ export type Database = {
           current_belt: string | null;
           belt_degree: number | null;
           birth_date: string | null;
+          sex: string | null;
           federation_number: string | null;
           created_at: string | null;
         };
@@ -35,6 +36,7 @@ export type Database = {
           current_belt?: string | null;
           belt_degree?: number | null;
           birth_date?: string | null;
+          sex?: string | null;
           federation_number?: string | null;
           created_at?: string | null;
         };
@@ -49,6 +51,7 @@ export type Database = {
           current_belt?: string | null;
           belt_degree?: number | null;
           birth_date?: string | null;
+          sex?: string | null;
           federation_number?: string | null;
           created_at?: string | null;
         };

@@ -80,10 +80,10 @@ export function DateInput({
     }
   };
 
-  // Sync with external value changes
+  // Sync with external value changes (including clears)
   React.useEffect(() => {
     const fromExternal = fromISODate(value);
-    if (fromExternal !== displayValue && value) {
+    if (fromExternal !== displayValue) {
       setDisplayValue(fromExternal);
     }
   }, [value]);

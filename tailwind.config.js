@@ -73,6 +73,15 @@ module.exports = {
           light: "#EF4444",
           dark: "#F87171",
         },
+        // Legacy tokens (keep for backward compatibility)
+        strong: {
+          light: "#0F172A",
+          dark: "#F8FAFC",
+        },
+        muted: {
+          light: "#94A3B8",
+          dark: "#64748B",
+        },
         // Glassmorphism
         glass: {
           light: "rgba(255, 255, 255, 0.1)",

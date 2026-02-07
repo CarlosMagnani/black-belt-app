@@ -15,6 +15,7 @@ type RoleCardProps = {
   icon: React.ComponentType<IconProps>;
   onPress: () => void;
   accent?: "brand" | "ink";
+  selected?: boolean;
 };
 
 export function RoleCard({
@@ -23,15 +24,32 @@ export function RoleCard({
   icon: Icon,
   onPress,
   accent = "ink",
+  selected = false,
 }: RoleCardProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const iconColor =
-    accent === "brand" ? (isDark ? "#E0E7FF" : "#1E40AF") : isDark ? "#E5E7EB" : "#0F172A";
-  const iconWrapClass =
-    accent === "brand"
-      ? "bg-brand-50 border-brand-100 dark:bg-brand-600/20 dark:border-brand-600/40"
-      : "bg-app-light border-subtle-light dark:bg-app-dark dark:border-subtle-dark";
+  
+  const iconColor = selected
+    ? "#fff"
+    : accent === "brand"
+    ? isDark
+      ? "#E0E7FF"
+      : "#1E40AF"
+    : isDark
+    ? "#E5E7EB"
+    : "#0F172A";
+
+  const iconWrapClass = selected
+    ? "bg-brand-500 border-brand-600"
+    : accent === "brand"
+    ? "bg-brand-50 border-brand-100 dark:bg-brand-600/20 dark:border-brand-600/40"
+    : "bg-app-light border-subtle-light dark:bg-app-dark dark:border-subtle-dark";
+
+  const cardBorderClass = selected
+    ? "border-brand-500 border-2"
+    : accent === "brand"
+    ? "border-brand-100 dark:border-brand-600/40"
+    : "border-subtle-light dark:border-subtle-dark";
 
   return (
     <Pressable
@@ -40,14 +58,14 @@ export function RoleCard({
       className={[
         "rounded-card border p-5 shadow-card",
         "bg-surface-light dark:bg-surface-dark",
-        accent === "brand"
-          ? "border-brand-100 dark:border-brand-600/40"
-          : "border-subtle-light dark:border-subtle-dark",
+        cardBorderClass,
       ].join(" ")}
       style={({ pressed }) => (pressed ? { opacity: 0.92 } : undefined)}
     >
       <View className="flex-row items-center gap-4">
-        <View className={`h-12 w-12 items-center justify-center rounded-xl border ${iconWrapClass}`}>
+        <View
+          className={`h-12 w-12 items-center justify-center rounded-xl border ${iconWrapClass}`}
+        >
           <Icon color={iconColor} size={22} strokeWidth={2.2} />
         </View>
         <View className="flex-1">
@@ -58,6 +76,11 @@ export function RoleCard({
             {description}
           </Text>
         </View>
+        {selected && (
+          <View className="h-6 w-6 items-center justify-center rounded-full bg-brand-500">
+            <Text className="text-xs text-white">✓</Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );

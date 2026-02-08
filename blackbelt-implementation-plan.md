@@ -1,6 +1,6 @@
-# BlackBeltApp — Plano de Implementação (Backlog → MVP Validado)
+# BlackBeltApp - Plano de Implementação (Backlog → MVP Validado)
 
-Este plano organiza o que falta fazer em **fases incrementais**, priorizando **validar o MVP** com o mínimo de risco e com **base na arquitetura já existente** (Expo Router + NativeWind + Supabase + ports/adapters).  
+Este plano organiza o que falta fazer em **fases incrementais**, priorizando **validar o MVP** com o mínimo de risco e com **base na arquitetura já existente** (Expo Router + NativeWind + Supabase + ports/adapters).
 **Objetivo final do MVP:** professor/dono cadastra a academia + grade de horários; aluno entra com invite code, escolhe faixa/graus e consegue fazer **check-in** em um treino.
 
 ---
@@ -19,19 +19,19 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 - Tabelas principais: `profiles`, `academies`, `academy_members`.
 - Fluxos já funcionando: login, join academy por invite code, criação de academy, select básico.
 - Estrutura de UI e tokens em `agent_v0.3.md` (guia do projeto).
-- Início do “sistema de agenda” já previsto: `academy_class_schedule` (ou equivalente).
+- Início do "sistema de agenda" já previsto: `academy_class_schedule` (ou equivalente).
 
 ---
 
 ## Visão de alto nível (roadmap)
 
-### Fase 0 — Ajustes de base (1–2 ciclos curtos)
+### Fase 0 - Ajustes de base (1-2 ciclos curtos)
 **Meta:** deixar o projeto pronto para crescer sem retrabalho.
 
 **Entregas**
 - Revisar schema do Supabase e aplicar migrations (SQL versionado).
 - Centralizar e tipar modelos no app (types + mappers).
-- Padronizar e documentar RLS “sem recursão”.
+- Padronizar e documentar RLS "sem recursão".
 - Instrumentar erros (logs e mensagens amigáveis no app).
 
 **Critérios de aceite**
@@ -41,7 +41,7 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 
 ---
 
-### Fase 1 — Perfil do usuário completo + Faixa/Graus (core do aluno)
+### Fase 1 - Perfil do usuário completo + Faixa/Graus (core do aluno)
 **Meta:** dados do aluno completos e renderizados no app.
 
 **Backlog dessa fase**
@@ -61,13 +61,13 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 
 ---
 
-### Fase 2 — Diretório da academia (membros + perfis)
+### Fase 2 - Diretório da academia (membros + perfis)
 **Meta:** aluno vê quem treina na academia e acessa perfis básicos.
 
 **Backlog dessa fase**
-- Tela “Integrantes” (lista) com:
+- Tela "Integrantes" (lista) com:
   - avatar, nome, faixa, graus (badge + belt icon)
-- Tela “Perfil do integrante” (readonly)
+- Tela "Perfil do integrante" (readonly)
 - Query baseada em `academy_members` + `profiles` (join via RLS/edge ou duas queries)
 
 **Critérios de aceite**
@@ -76,13 +76,13 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 
 ---
 
-### Fase 3 — Grade de aulas + Agenda do aluno (leitura)
+### Fase 3 - Grade de aulas + Agenda do aluno (leitura)
 **Meta:** aluno vê agenda semanal (dados inseridos manualmente no Supabase).
 
 **Backlog dessa fase**
 - Finalizar tabela `academy_class_schedule` (dias/horários/instrutor/modalidade/capacidade)
-- Tela “Agenda” semanal (componente leve, sem libs pesadas)
-- Home mostra preview “Próximos treinos”
+- Tela "Agenda" semanal (componente leve, sem libs pesadas)
+- Home mostra preview "Próximos treinos"
 
 **Critérios de aceite**
 - O aluno visualiza corretamente aulas por dia/semana.
@@ -90,7 +90,7 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 
 ---
 
-### Fase 4 — Check-in funcional (MVP real)
+### Fase 4 - Check-in funcional (MVP real)
 **Meta:** check-in realmente registra presença e conta para progresso.
 
 **Backlog dessa fase**
@@ -100,9 +100,9 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 - Regras de validação:
   - checar se usuário é membro daquela academy
   - opcional: limitar 1 check-in por aula/dia
-- UI: botão “Fazer check-in no tatame” (Home) → confirma e salva
+- UI: botão "Fazer check-in no tatame" (Home) → confirma e salva
 - Atualizar contadores de progresso (mock → real):
-  - aulas do “próximo grau” e total para faixa (modelos simples primeiro)
+  - aulas do "próximo grau" e total para faixa (modelos simples primeiro)
 
 **Critérios de aceite**
 - Check-in cria registro no banco com RLS ok.
@@ -111,23 +111,23 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 
 ---
 
-### Fase 5 — Loja da academia (MVP-lite)
-**Meta:** aluno vê produtos e “solicita” para o professor (sem e-commerce).
+### Fase 5 - Loja da academia (MVP-lite)
+**Meta:** aluno vê produtos e "solicita" para o professor (sem e-commerce).
 
 **Backlog dessa fase**
 - Tabela `academy_products` (nome, preço, estoque opcional, imagem)
-- Tela “Loja” (grid/cards)
-- “Solicitar”:
+- Tela "Loja" (grid/cards)
+- "Solicitar":
   - opção A: abre link `wa.me` com mensagem preformatada (mais barato e rápido)
   - opção B: cria tabela `product_requests` para o professor ver depois (para fase professor)
 
 **Critérios de aceite**
 - Produto lista corretamente por `academy_id`.
-- Botão “Solicitar” gera mensagem WhatsApp com dados do produto.
+- Botão "Solicitar" gera mensagem WhatsApp com dados do produto.
 
 ---
 
-### Fase 6 — Competições do usuário (perfil enriquecido)
+### Fase 6 - Competições do usuário (perfil enriquecido)
 **Meta:** aluno registra e visualiza histórico de competições (simples).
 
 **Backlog dessa fase**
@@ -135,7 +135,7 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
   - `competitions` (id, name, date, city, organizer)
   - `profile_competitions` (user_id, competition_id, category, result, notes)
 - UI:
-  - bloco no perfil “Competições” (listar + adicionar)
+  - bloco no perfil "Competições" (listar + adicionar)
   - (opcional) upload de foto/medalha depois
 
 **Critérios de aceite**
@@ -143,12 +143,12 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 
 ---
 
-### Fase 7 — Lado dono/professor (pós-MVP)
-**Meta:** definir o escopo real do “painel de dono” e validar necessidade de 2º app.
+### Fase 7 - Lado dono/professor (pós-MVP)
+**Meta:** definir o escopo real do "painel de dono" e validar necessidade de 2º app.
 
 **Recomendação de produto**
-- **Não criar 2º aplicativo agora.**  
-  Use **o mesmo app** com **rotas condicionais por role** (student/professor/owner).  
+- **Não criar 2º aplicativo agora.**
+  Use **o mesmo app** com **rotas condicionais por role** (student/professor/owner).
   Só considere outro app se:
   - houver necessidade de distribuição separada (loja/MDM), ou
   - UX e permissões ficarem confusas demais.
@@ -164,7 +164,7 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 
 ---
 
-## Revisão do Supabase (tabelas e colunas) — proposta prática
+## Revisão do Supabase (tabelas e colunas) - proposta prática
 
 > Ajuste nomes conforme o que você já tem; a ideia é evitar rework.
 
@@ -190,10 +190,10 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 ### `academy_class_schedule` (agenda)
 - `id uuid` PK
 - `academy_id uuid`
-- `weekday int` (0–6) ou `text` ('mon'...'sun')
+- `weekday int` (0-6) ou `text` ('mon'...'sun')
 - `start_time time`
 - `end_time time`
-- `title text` (ex: “Jiu-Jitsu”)
+- `title text` (ex: "Jiu-Jitsu")
 - `instructor_name text` (por enquanto)
 - `capacity int` (nullable)
 - `location text` (nullable)
@@ -262,9 +262,21 @@ Este plano organiza o que falta fazer em **fases incrementais**, priorizando **v
 - [ ] Definir escopo mínimo do painel do dono
 - [ ] CRUD schedule + editar faixa do aluno + ver check-ins
 
+### Sprint 8 (Pagamentos: Fundação) — Pós-MVP
+- [ ] Backend Go + estrutura base
+- [ ] Client Efí com mTLS + OAuth2
+- [ ] Migrations de pagamentos
+- [ ] Webhook handler
+
+### Sprint 9 (Pagamentos: Planos e Assinaturas) — Pós-MVP
+- [ ] Onboarding financeiro academia
+- [ ] CRUD planos
+- [ ] Fluxo assinatura PIX Automático
+- [ ] Processamento de pagamentos
+
 ---
 
-## Definição de “MVP Finalizado” (sua regra)
+## Definição de "MVP Finalizado" (sua regra)
 
 O MVP está finalizado quando:
 - ✅ dono/professor consegue **cadastrar academia** e **grade de horários**
@@ -274,8 +286,65 @@ O MVP está finalizado quando:
 
 ---
 
+---
+
+## Fase Pós-MVP: Sistema de Pagamentos
+
+> **Épico completo:** [/docs/epics/EPIC-PAYMENTS.md](/docs/epics/EPIC-PAYMENTS.md)
+
+### Visão Geral
+
+Monetização do BlackBelt através de:
+1. **B2B:** Assinatura das academias para usar a plataforma
+2. **Facilitação:** Academias cobram alunos via PIX recorrente (BlackBelt facilita)
+
+**Provedor:** Efí Bank (ex-Gerencianet)
+- API Abertura de Contas (criar conta Efí para cada academia)
+- PIX Automático (cobrança recorrente)
+- Split de Pagamento (divide entre academia + BlackBelt)
+
+### Sprint 8 — Pagamentos: Fundação
+> [Detalhes](/docs/sprints/SPRINT-08-payments-foundation.md)
+
+- [ ] Backend Go — estrutura base
+- [ ] Client Efí com mTLS
+- [ ] OAuth2 token management
+- [ ] Migrations (academy_efi_accounts, academy_plans, subscriptions, payments)
+- [ ] Webhook handler base
+
+### Sprint 9 — Pagamentos: Planos e Assinaturas
+> [Detalhes](/docs/sprints/SPRINT-09-payments-subscriptions.md)
+
+- [ ] Onboarding financeiro da academia
+- [ ] CRUD de planos de mensalidade
+- [ ] Fluxo de assinatura (PIX Automático)
+- [ ] Processamento de webhooks
+- [ ] Lógica de split
+
+### Sprint 10 — Pagamentos: Dashboard (futuro)
+
+- [ ] Tela de pagamentos recebidos (dono)
+- [ ] Lista de assinaturas ativas
+- [ ] Alunos inadimplentes
+- [ ] Resumo financeiro
+
+### Pré-requisitos de Pagamentos
+
+- [ ] Criar conta Efí Empresas para BlackBelt
+- [ ] Contatar comercial Efí para liberar API Abertura de Contas
+- [ ] Gerar certificado .p12/.pem
+- [ ] Testar em sandbox
+
+### Documentação Técnica
+
+- [Integração Efí Bank](/docs/payments/EFI-BANK.md)
+- [Comparação de Provedores](/docs/payments/PROVIDERS-COMPARISON.md)
+
+---
+
 ## Riscos e decisões (importantes)
 
 - **Abandonar Supabase depois:** mantenha ports/adapters rígidos; não acople UI ao Supabase.
 - **RLS complexa:** comece simples e expanda quando entrar no painel do dono.
-- **Check-in real:** se for QR/geo, vira fase 2.0; MVP pode ser “confirmar presença” com validações simples.
+- **Check-in real:** se for QR/geo, vira fase 2.0; MVP pode ser "confirmar presença" com validações simples.
+- **API Abertura de Contas Efí:** é restrita, precisa aprovação comercial. Fallback: onboarding manual.

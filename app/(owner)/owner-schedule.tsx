@@ -1,48 +1,44 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Platform, ScrollView, Text, View } from "react-native";
+import { Platform, ScrollView, Text, useWindowDimensions, View } from "react-native";
 
-import { DayChips } from "../../components/home/DayChips";
-import { ClassCard } from "../../components/owner/ClassCard";
+import { OwnerSidebar } from "../../components/owner/OwnerSidebar";
+import { ClassList } from "../../components/owner/ClassList";
+import { CreateClassModal } from "../../components/owner/CreateClassModal";
+import { EditClassModal } from "../../components/owner/EditClassModal";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import { Select } from "../../components/ui/Select";
-import { TextField } from "../../components/ui/TextField";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
+import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
 import type { AcademyClass } from "../../src/core/ports/blackbelt-ports";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 import { supabase } from "../../src/infra/supabase/client";
 
-const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+type InstructorOption = {
+  value: string;
+  label: string;
+  name: string | null;
+};
 
 export default function OwnerSchedule() {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+
   const { academy, profileId, isLoading, error } = useOwnerAcademy();
+  const { profile } = useAuthProfile();
+
   const [classes, setClasses] = useState<AcademyClass[]>([]);
   const [isClassesLoading, setIsClassesLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
-  const [title, setTitle] = useState("");
-  const [instructorId, setInstructorId] = useState<string | null>(null);
-  const [instructorName, setInstructorName] = useState("");
-  const [weekday, setWeekday] = useState(1);
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [level, setLevel] = useState("");
-  const [notes, setNotes] = useState("");
-  const [isRecurring, setIsRecurring] = useState(true);
-  const [startDate, setStartDate] = useState("");
-  const [instructorOptions, setInstructorOptions] = useState<
-    { label: string; value: string; name: string | null }[]
-  >([]);
+  // Modal states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingClass, setEditingClass] = useState<AcademyClass | null>(null);
+
+  // Instructor options
+  const [instructorOptions, setInstructorOptions] = useState<InstructorOption[]>([]);
   const [isInstructorsLoading, setIsInstructorsLoading] = useState(false);
 
-  const dayOptions = useMemo(
-    () => WEEKDAY_LABELS.map((label, value) => ({ label, value })),
-    []
-  );
-
+  // Load instructors
   useEffect(() => {
     if (!academy) return;
     let isActive = true;
@@ -76,11 +72,6 @@ export default function OwnerSchedule() {
 
         if (!isActive) return;
         setInstructorOptions(options);
-
-        // Default to the current owner when creating new classes.
-        if (!editingId && !instructorId && profileId) {
-          setInstructorId(profileId);
-        }
       } catch {
         if (!isActive) return;
         setInstructorOptions([]);
@@ -94,8 +85,9 @@ export default function OwnerSchedule() {
     return () => {
       isActive = false;
     };
-  }, [academy, editingId, instructorId, profileId]);
+  }, [academy]);
 
+  // Load classes
   useEffect(() => {
     if (!academy) return;
     let isActive = true;
@@ -109,7 +101,9 @@ export default function OwnerSchedule() {
         setClasses(list);
       } catch (err) {
         if (!isActive) return;
-        setLocalError(err instanceof Error ? err.message : "Nao foi possivel carregar a agenda.");
+        setLocalError(
+          err instanceof Error ? err.message : "Não foi possível carregar a agenda."
+        );
       } finally {
         if (isActive) setIsClassesLoading(false);
       }
@@ -122,322 +116,194 @@ export default function OwnerSchedule() {
     };
   }, [academy]);
 
-  const resetForm = () => {
-    setEditingId(null);
-    setTitle("");
-    setInstructorId(profileId ?? null);
-    setInstructorName("");
-    setWeekday(1);
-    setStartTime("");
-    setEndTime("");
-    setLocation("");
-    setLevel("");
-    setNotes("");
-    setIsRecurring(true);
-    setStartDate("");
-  };
+  // Handle create class
+  const handleCreateClass = async (data: {
+    title: string;
+    weekday: number;
+    start_time: string;
+    end_time: string;
+    instructor_id?: string | null;
+    instructor_name?: string;
+    location?: string;
+    level?: string;
+    notes?: string;
+    is_recurring?: boolean;
+    start_date?: string;
+  }) => {
+    if (!academy) throw new Error("Academia não encontrada");
 
-  const handleEdit = (item: AcademyClass) => {
-    setEditingId(item.id);
-    setTitle(item.title);
-    setInstructorId(item.instructorId ?? profileId ?? null);
-    setInstructorName(item.instructorName ?? "");
-    setWeekday(item.weekday);
-    setStartTime(item.startTime);
-    setEndTime(item.endTime);
-    setLocation(item.location ?? "");
-    setLevel(item.level ?? "");
-    setNotes(item.notes ?? "");
-    setIsRecurring(item.isRecurring);
-    setStartDate(item.startDate ?? "");
-  };
-
-  const confirmAndDelete = async (item: AcademyClass) => {
-    setIsSaving(true);
-    setLocalError(null);
-    try {
-      await blackBeltAdapters.classes.deleteClass(item.id);
-      setClasses((prev) => prev.filter((entry) => entry.id !== item.id));
-      if (editingId === item.id) resetForm();
-    } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Nao foi possivel remover a aula.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDelete = (item: AcademyClass) => {
-    if (Platform.OS === "web") {
-      if (window.confirm(`Remover a aula "${item.title}"?`)) {
-        void confirmAndDelete(item);
-      }
-    } else {
-      Alert.alert(
-        "Remover aula",
-        `Deseja remover a aula "${item.title}"?`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Remover", style: "destructive", onPress: () => void confirmAndDelete(item) },
-        ]
-      );
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!academy) return;
-    if (!title.trim() || !startTime.trim() || !endTime.trim()) {
-      setLocalError("Preencha titulo e horario.");
-      return;
-    }
-    const timeRegex = /^\d{2}:\d{2}$/;
-    if (!timeRegex.test(startTime.trim()) || !timeRegex.test(endTime.trim())) {
-      setLocalError("Horario deve estar no formato HH:MM.");
-      return;
-    }
-    if (startTime.trim() >= endTime.trim()) {
-      setLocalError("O horario de inicio deve ser anterior ao de fim.");
-      return;
-    }
-    if (!isRecurring && startDate.trim()) {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(startDate.trim())) {
-        setLocalError("Data deve estar no formato AAAA-MM-DD.");
-        return;
-      }
-    }
-    setIsSaving(true);
-    setLocalError(null);
-    try {
-      const resolvedInstructorId = instructorId ?? profileId ?? null;
-      if (editingId) {
-        const updated = await blackBeltAdapters.classes.updateClass({
-          id: editingId,
-          title: title.trim(),
-          instructorId: resolvedInstructorId,
-          instructorName: instructorName.trim() || null,
-          weekday,
-          startTime: startTime.trim(),
-          endTime: endTime.trim(),
-          location: location.trim() || null,
-          level: level.trim() || null,
-          notes: notes.trim() || null,
-          isRecurring,
-          startDate: startDate.trim() || null,
-        });
-        setClasses((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      } else {
-        const created = await blackBeltAdapters.classes.createClass({
-          academyId: academy.id,
-          title: title.trim(),
-          instructorId: resolvedInstructorId,
-          instructorName: instructorName.trim() || null,
-          weekday,
-          startTime: startTime.trim(),
-          endTime: endTime.trim(),
-          location: location.trim() || null,
-          level: level.trim() || null,
-          notes: notes.trim() || null,
-          isRecurring,
-          startDate: startDate.trim() || null,
-        });
-        setClasses((prev) => [...prev, created]);
-      }
-      resetForm();
-    } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Nao foi possivel salvar a aula.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const sorted = useMemo(() => {
-    return [...classes].sort((a, b) => {
-      if (a.weekday !== b.weekday) return a.weekday - b.weekday;
-      return a.startTime.localeCompare(b.startTime);
+    const created = await blackBeltAdapters.classes.createClass({
+      academyId: academy.id,
+      title: data.title,
+      instructorId: data.instructor_id ?? profileId ?? null,
+      instructorName: data.instructor_name ?? null,
+      weekday: data.weekday,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      location: data.location ?? null,
+      level: data.level ?? null,
+      notes: data.notes ?? null,
+      isRecurring: data.is_recurring ?? true,
+      startDate: data.start_date ?? null,
     });
-  }, [classes]);
+
+    setClasses((prev) => [...prev, created]);
+  };
+
+  // Handle update class
+  const handleUpdateClass = async (
+    id: string,
+    data: {
+      title: string;
+      weekday: number;
+      start_time: string;
+      end_time: string;
+      instructor_id?: string | null;
+      instructor_name?: string;
+      location?: string;
+      level?: string;
+      notes?: string;
+      is_recurring?: boolean;
+      start_date?: string;
+    }
+  ) => {
+    const updated = await blackBeltAdapters.classes.updateClass({
+      id,
+      title: data.title,
+      instructorId: data.instructor_id ?? profileId ?? null,
+      instructorName: data.instructor_name ?? null,
+      weekday: data.weekday,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      location: data.location ?? null,
+      level: data.level ?? null,
+      notes: data.notes ?? null,
+      isRecurring: data.is_recurring ?? true,
+      startDate: data.start_date ?? null,
+    });
+
+    setClasses((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
+  // Handle delete class
+  const handleDeleteClass = async (item: AcademyClass) => {
+    await blackBeltAdapters.classes.deleteClass(item.id);
+    setClasses((prev) => prev.filter((entry) => entry.id !== item.id));
+  };
+
+  // Handle edit click
+  const handleEditClick = (item: AcademyClass) => {
+    setEditingClass(item);
+  };
+
+  // Handle delete click (from ClassCard)
+  const handleDeleteClick = (item: AcademyClass) => {
+    // Open edit modal so user can see the delete button
+    setEditingClass(item);
+  };
+
+  const totalClasses = classes.length;
 
   return (
     <ScrollView className="flex-1">
       <View className="px-page pb-10 pt-6 web:px-10">
-        <View className="mx-auto w-full max-w-[1100px]">
-          <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
-            Agenda
-          </Text>
-          <Text className="mt-2 font-display text-3xl text-strong-light dark:text-strong-dark">
-            Grade de aulas
-          </Text>
-          <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
-            Cadastre aulas recorrentes ou avulsas.
-          </Text>
+        <View className="mx-auto w-full max-w-[1200px]">
+          {/* Desktop: Two column layout */}
+          <View className={isDesktop ? "flex-row gap-8" : ""}>
+            {/* Sidebar - Desktop only */}
+            {isDesktop ? (
+              <View className="w-72">
+                <OwnerSidebar profile={profile} academy={academy} />
+              </View>
+            ) : null}
 
-          {error ? (
-            <Card className="mt-6" variant="outline">
-              <Text className="text-sm text-red-500">{error}</Text>
-            </Card>
-          ) : null}
-          {localError ? (
-            <Card className="mt-6" variant="outline">
-              <Text className="text-sm text-red-500">{localError}</Text>
-            </Card>
-          ) : null}
+            {/* Main Content */}
+            <View className="flex-1">
+              {/* Header */}
+              <View className="flex-row items-start justify-between">
+                <View>
+                  <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
+                    Agenda
+                  </Text>
+                  <Text className="mt-2 font-display text-3xl text-strong-light dark:text-strong-dark">
+                    Grade de aulas
+                  </Text>
+                  <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
+                    Gerencie as aulas da sua academia
+                  </Text>
+                </View>
 
-          <Card className="mt-6 gap-4">
-            <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
-              {editingId ? "Editar aula" : "Nova aula"}
-            </Text>
-
-          <TextField
-            label="Titulo"
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Ex: Jiu-Jitsu NoGi"
-          />
-
-            <Select
-              label="Instrutor (conta)"
-              placeholder={isInstructorsLoading ? "Carregando..." : "Selecione..."}
-              value={instructorId ?? undefined}
-              options={instructorOptions.map((opt) => ({ label: opt.label, value: opt.value }))}
-              onValueChange={(value) => {
-                setInstructorId(value);
-                const selected = instructorOptions.find((opt) => opt.value === value);
-                if (selected?.name) setInstructorName(selected.name);
-              }}
-              errorMessage={
-                !isInstructorsLoading && instructorOptions.length === 0
-                  ? "Nenhum instrutor disponivel. Cadastre professores em 'Professores'."
-                  : null
-              }
-              className="mt-2"
-            />
-
-            <TextField
-              label="Nome do instrutor (opcional)"
-              value={instructorName}
-              onChangeText={setInstructorName}
-              placeholder="Ex: Professor Carlos"
-            />
-
-            <View>
-              <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
-                Dia da semana
-              </Text>
-              <DayChips days={dayOptions} selected={weekday} onSelect={setWeekday} />
-            </View>
-
-            <View className="gap-3 web:flex-row">
-              <TextField
-                label="Inicio"
-                value={startTime}
-                onChangeText={setStartTime}
-                placeholder="19:00"
-              />
-              <TextField
-                label="Fim"
-                value={endTime}
-                onChangeText={setEndTime}
-                placeholder="20:30"
-              />
-            </View>
-
-            <View className="gap-3 web:flex-row">
-              <TextField
-                label="Local"
-                value={location}
-                onChangeText={setLocation}
-                placeholder="Tatame 1"
-              />
-              <TextField
-                label="Nivel"
-                value={level}
-                onChangeText={setLevel}
-                placeholder="Iniciante"
-              />
-            </View>
-
-            <TextField
-              label="Notas"
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Observacoes"
-            />
-
-            <View className="gap-2">
-              <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
-                Recorrencia
-              </Text>
-              <View className="flex-row gap-2">
                 <Button
-                  label="Recorrente"
-                  variant={isRecurring ? "primary" : "secondary"}
-                  size="sm"
-                  onPress={() => setIsRecurring(true)}
-                  className="flex-1"
-                />
-                <Button
-                  label="Aula unica"
-                  variant={!isRecurring ? "primary" : "secondary"}
-                  size="sm"
-                  onPress={() => setIsRecurring(false)}
-                  className="flex-1"
+                  label="➕ Nova Aula"
+                  onPress={() => setIsCreateModalOpen(true)}
+                  size="md"
                 />
               </View>
-              {!isRecurring ? (
-                <TextField
-                  label="Data da aula"
-                  value={startDate}
-                  onChangeText={setStartDate}
-                  placeholder="AAAA-MM-DD"
-                />
-              ) : null}
-            </View>
 
-            <View className="flex-row gap-2">
-              <Button
-                label={isSaving ? "Salvando..." : editingId ? "Salvar" : "Cadastrar"}
-                onPress={handleSubmit}
-                disabled={isSaving}
-                className="flex-1"
+              {/* Error Messages */}
+              {error ? (
+                <Card className="mt-6" variant="outline">
+                  <Text className="text-sm text-red-500">{error}</Text>
+                </Card>
+              ) : null}
+              {localError ? (
+                <Card className="mt-6" variant="outline">
+                  <Text className="text-sm text-red-500">{localError}</Text>
+                </Card>
+              ) : null}
+
+              {/* Quick Stats */}
+              <View className="mt-6 flex-row gap-4">
+                <Card className="flex-1" variant="outline">
+                  <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
+                    Total de aulas
+                  </Text>
+                  <Text className="mt-1 font-display text-2xl text-strong-light dark:text-strong-dark">
+                    {totalClasses}
+                  </Text>
+                </Card>
+                <Card className="flex-1" variant="outline">
+                  <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
+                    Professores
+                  </Text>
+                  <Text className="mt-1 font-display text-2xl text-strong-light dark:text-strong-dark">
+                    {instructorOptions.length}
+                  </Text>
+                </Card>
+              </View>
+
+              {/* Class List */}
+              <ClassList
+                classes={classes}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+                isLoading={isLoading || isClassesLoading}
               />
-              {editingId ? (
-                <Button
-                  label="Cancelar"
-                  variant="secondary"
-                  onPress={resetForm}
-                  disabled={isSaving}
-                  className="flex-1"
-                />
-              ) : null}
             </View>
-          </Card>
-
-          {isLoading || isClassesLoading ? (
-            <Card className="mt-6">
-              <Text className="text-sm text-muted-light dark:text-muted-dark">
-                Carregando aulas...
-              </Text>
-            </Card>
-          ) : sorted.length === 0 ? (
-            <Card className="mt-6">
-              <Text className="text-sm text-muted-light dark:text-muted-dark">
-                Nenhuma aula cadastrada.
-              </Text>
-            </Card>
-          ) : (
-            <View className="mt-6 gap-4">
-              {sorted.map((item) => (
-                <ClassCard
-                  key={item.id}
-                  item={item}
-                  onEdit={() => handleEdit(item)}
-                  onDelete={() => handleDelete(item)}
-                />
-              ))}
-            </View>
-          )}
+          </View>
         </View>
       </View>
+
+      {/* Create Modal */}
+      <CreateClassModal
+        visible={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateClass}
+        instructorOptions={instructorOptions}
+        defaultInstructorId={profileId}
+        isInstructorsLoading={isInstructorsLoading}
+      />
+
+      {/* Edit Modal */}
+      <EditClassModal
+        visible={editingClass !== null}
+        classItem={editingClass}
+        onClose={() => setEditingClass(null)}
+        onSubmit={handleUpdateClass}
+        onDelete={handleDeleteClass}
+        instructorOptions={instructorOptions}
+        isInstructorsLoading={isInstructorsLoading}
+      />
     </ScrollView>
   );
 }

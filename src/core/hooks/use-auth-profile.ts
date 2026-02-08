@@ -40,5 +40,17 @@ export const useAuthProfile = (): AuthProfileState => {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const { unsubscribe } = blackBeltAdapters.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        setSession(null);
+        setProfile(null);
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        void refresh();
+      }
+    });
+    return () => unsubscribe();
+  }, [refresh]);
+
   return { isLoading, session, profile, error, refresh };
 };

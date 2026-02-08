@@ -1,10 +1,8 @@
-import "react-native-url-polyfill/auto";
-
-import { Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { supabase } from "./client";
 import { createSupabaseAdapters } from "./blackbelt-supabase";
 
-const storage = Platform.OS === "web" ? undefined : AsyncStorage;
-
-export const blackBeltAdapters = createSupabaseAdapters({ storage });
+/**
+ * Single adapter instance backed by the singleton Supabase client.
+ * Never create a second client — always use this or import `supabase` from ./client.
+ */
+export const blackBeltAdapters = createSupabaseAdapters({ client: supabase });

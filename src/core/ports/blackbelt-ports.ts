@@ -175,6 +175,9 @@ export interface AuthPort {
   signOut(): Promise<void>;
   getSession(): Promise<AuthSession | null>;
   getCurrentUser(): Promise<AuthUser | null>;
+  onAuthStateChange(
+    callback: (event: string, session: AuthSession | null) => void
+  ): { unsubscribe: () => void };
 }
 
 export interface ProfilesPort {
@@ -229,6 +232,10 @@ export interface ProgressPort {
   getByStudent(studentId: string): Promise<StudentProgress | null>;
 }
 
+export interface StoragePort {
+  uploadAvatar(userId: string, blob: Blob, fileExt: string): Promise<string>;
+}
+
 export type BlackBeltPorts = {
   auth: AuthPort;
   profiles: ProfilesPort;
@@ -238,4 +245,5 @@ export type BlackBeltPorts = {
   checkins: CheckinsPort;
   schedules: SchedulesPort;
   progress: ProgressPort;
+  storage: StoragePort;
 };

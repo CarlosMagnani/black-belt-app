@@ -588,6 +588,21 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
       if (!data.user) return null;
       return { id: data.user.id, email: data.user.email ?? null };
     },
+    onAuthStateChange(
+      callback: (event: string, session: AuthSession | null) => void
+    ): { unsubscribe: () => void } {
+      const { data } = client.auth.onAuthStateChange((event, session) => {
+        const mapped: AuthSession | null = session
+          ? {
+              user: { id: session.user.id, email: session.user.email ?? null },
+              accessToken: session.access_token,
+              expiresAt: session.expires_at ?? null,
+            }
+          : null;
+        callback(event, mapped);
+      });
+      return { unsubscribe: () => data.subscription.unsubscribe() };
+    },
   };
 
   const progress = {
@@ -607,5 +622,31 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     },
   };
 
-  return { auth, profiles, academies, memberships, classes, checkins, schedules, progress };
+  const fileStorage = {
+    async uploadAvatar(userId: string, blob: Blob, fileExt: string): Promise<string> {
+      const fileName = `${userId}/avatar.${fileExt}`;
+      const { error: uploadError } = await client.storage
+        .from("avatars")
+        .upload(fileName, blob, {
+          cacheControl: "3600",
+          upsert: true,
+          contentType: `image/${fileExt}`,
+        });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = client.storage.from("avatars").getPublicUrl(fileName);
+      return `${urlData.publicUrl}?t=${Date.now()}`;
+    },
+  };
+
+  return {
+    auth,
+    profiles,
+    academies,
+    memberships,
+    classes,
+    checkins,
+    schedules,
+    progress,
+    storage: fileStorage,
+  };
 };

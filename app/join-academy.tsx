@@ -18,8 +18,11 @@ import type { Academy } from "../src/core/ports/blackbelt-ports";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
 import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 
+/** Invite code length without hyphen (e.g., "ABC1234" = 7 chars) */
+const INVITE_CODE_LENGTH = 7;
+
 const normalizeCode = (value: string) =>
-  value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
+  value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, INVITE_CODE_LENGTH);
 
 const formatCode = (code: string): string => {
   // Format as XXX-XXXX
@@ -40,7 +43,7 @@ export default function JoinAcademy() {
 
   // Search for academy when code has enough characters
   const searchAcademy = useCallback(async (code: string) => {
-    if (code.length < 7) {
+    if (code.length < INVITE_CODE_LENGTH) {
       setAcademy(null);
       setSearchError(null);
       return;
@@ -73,7 +76,7 @@ export default function JoinAcademy() {
   useEffect(() => {
     const timer = setTimeout(() => {
       const normalized = normalizeCode(inviteCode);
-      if (normalized.length >= 7) {
+      if (normalized.length >= INVITE_CODE_LENGTH) {
         searchAcademy(normalized);
       } else {
         setAcademy(null);
@@ -175,7 +178,7 @@ export default function JoinAcademy() {
                   Entrar em uma academia
                 </Text>
                 <Text className="mt-2 text-base text-text-secondary-dark">
-                  Digite o código de 7 caracteres fornecido pelo seu professor.
+                  Digite o código de {INVITE_CODE_LENGTH} caracteres fornecido pelo seu professor.
                 </Text>
               </View>
 
@@ -192,7 +195,7 @@ export default function JoinAcademy() {
                     placeholderTextColor="#64748B"
                     autoCapitalize="characters"
                     autoCorrect={false}
-                    maxLength={8} // 7 chars + hyphen
+                    maxLength={INVITE_CODE_LENGTH + 1} // +1 for hyphen
                     className="rounded-xl border border-subtle-dark bg-surface-dark px-5 py-4 text-xl font-mono text-center text-text-primary-dark tracking-widest"
                     style={{ letterSpacing: 4 }}
                   />
@@ -208,7 +211,7 @@ export default function JoinAcademy() {
               </View>
 
               {/* Search Error */}
-              {searchError && !isSearching && normalizeCode(inviteCode).length >= 7 && (
+              {searchError && !isSearching && normalizeCode(inviteCode).length >= INVITE_CODE_LENGTH && (
                 <View className="mt-4 rounded-xl bg-error-dark/20 p-4 flex-row items-center gap-3">
                   <Search size={18} color="#F87171" />
                   <Text className="flex-1 text-sm text-error-dark">{searchError}</Text>

@@ -162,7 +162,7 @@ export default function CreateAcademy() {
               )}
 
               {/* Header */}
-              <View className={academy ? "mt-8" : "mt-8"}>
+              <View className="mt-8">
                 <Text className="text-xs uppercase tracking-[4px] text-brand-400 mb-3">
                   {academy ? "Academia criada!" : "Última etapa"}
                 </Text>

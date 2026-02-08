@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -259,7 +260,17 @@ export default function Auth() {
 
               {/* Forgot password (only for signin) */}
               {mode === "signin" && (
-                <Pressable className="mt-4 self-center py-2">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    Alert.alert(
+                      "Recuperar senha",
+                      "Entre em contato com o suporte para redefinir sua senha.",
+                      [{ text: "OK" }]
+                    );
+                  }}
+                  className="mt-4 self-center py-2"
+                >
                   <Text className="text-sm text-brand-400">Esqueci minha senha</Text>
                 </Pressable>
               )}

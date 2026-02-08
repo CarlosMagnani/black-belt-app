@@ -1,4 +1,4 @@
-export type UserRole = "professor" | "student";
+export type UserRole = "owner" | "professor" | "student";
 export type Belt = "Branca" | "Azul" | "Roxa" | "Marrom" | "Preta" | "Coral" | "Vermelha";
 export type AuthUser = {
   id: string;
@@ -55,6 +55,7 @@ export type ClassScheduleItem = {
   id: string;
   academyId: string;
   title: string;
+  instructorId: string | null;
   instructorName: string | null;
   weekday: number;
   startTime: string;
@@ -125,6 +126,7 @@ export type ProfileUpsertInput = {
 export type CreateClassInput = {
   academyId: string;
   title: string;
+  instructorId?: string | null;
   instructorName?: string | null;
   weekday: number;
   startTime: string;
@@ -139,6 +141,7 @@ export type CreateClassInput = {
 export type UpdateClassInput = {
   id: string;
   title?: string;
+  instructorId?: string | null;
   instructorName?: string | null;
   weekday?: number;
   startTime?: string;
@@ -214,6 +217,8 @@ export interface ClassesPort {
 export interface CheckinsPort {
   createCheckin(input: CreateCheckinInput): Promise<ClassCheckin>;
   listPendingByAcademy(academyId: string): Promise<CheckinListItem[]>;
+  /** RLS filters results to the current instructor's classes. */
+  listPendingMine(): Promise<CheckinListItem[]>;
   updateStatus(input: UpdateCheckinStatusInput): Promise<ClassCheckin>;
 }
 

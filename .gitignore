@@ -7,3 +7,6 @@ agent.md
 agent*.md
 /docs/agent/*.mddocs/obsidian
 /docs/agent/*.md
+/docs/*/*.md
+/supabase/
+/docs/epics/*.md

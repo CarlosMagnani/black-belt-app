@@ -31,8 +31,8 @@ export const useOwnerAcademy = (): OwnerAcademyState => {
       router.replace("/onboarding");
       return;
     }
-    if (profile.role !== "professor") {
-      router.replace("/home");
+    if (profile.role !== "owner") {
+      router.replace("/");
       return;
     }
     if (hasNoAcademy) {
@@ -41,7 +41,7 @@ export const useOwnerAcademy = (): OwnerAcademyState => {
   }, [isBooting, session, profile, router, hasNoAcademy]);
 
   const refresh = useCallback(async () => {
-    if (!profile?.id || profile.role !== "professor") return;
+    if (!profile?.id || profile.role !== "owner") return;
     setIsLoading(true);
     setError(null);
     try {

@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -21,6 +21,7 @@ import { RoleCard } from "../components/RoleCard";
 import { TextField } from "../components/ui/TextField";
 import type { UserRole, Sex } from "../src/core/ports/blackbelt-ports";
 import type { BeltName } from "../src/core/belts/belts";
+import { getErrorMessage } from "../src/core/errors/get-error-message";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
 import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 import { supabase } from "../src/infra/supabase/client";
@@ -59,6 +60,8 @@ const initialData: OnboardingData = {
 
 export default function Onboarding() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ pendingEmail?: string | string[] }>();
+  const pendingEmail = Array.isArray(params.pendingEmail) ? params.pendingEmail[0] : params.pendingEmail;
   const { isLoading, session, profile, refresh } = useAuthProfile();
   
   const [step, setStep] = useState(1);
@@ -67,11 +70,13 @@ export default function Onboarding() {
   const [isUploading, setIsUploading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const roleLocked = !!profile?.role;
 
   // Redirect logic
   useEffect(() => {
     if (isLoading) return;
     if (!session) {
+      if (pendingEmail) return;
       router.replace("/auth");
       return;
     }
@@ -79,11 +84,18 @@ export default function Onboarding() {
     if (profile?.role && profile?.firstName && profile?.currentBelt) {
       if (profile.role === "student") {
         router.replace("/join-academy");
-      } else {
+      } else if (profile.role === "owner") {
         router.replace("/create-academy");
+      } else {
+        router.replace("/professor-checkins");
       }
     }
-  }, [isLoading, session, profile, router]);
+  }, [isLoading, session, profile, router, pendingEmail]);
+
+  useEffect(() => {
+    if (!profile?.role) return;
+    setData((prev) => (prev.role ? prev : { ...prev, role: profile.role }));
+  }, [profile?.role]);
 
   const updateData = (updates: Partial<OnboardingData>) => {
     setData((prev) => ({ ...prev, ...updates }));
@@ -121,7 +133,7 @@ export default function Onboarding() {
       updateData({ avatarUrl: publicUrl });
     } catch (err) {
       console.error("Upload error:", err);
-      setSaveError("Não foi possível fazer upload da foto. Tente novamente.");
+      setSaveError(getErrorMessage(err, "Nao foi possivel fazer upload da foto. Tente novamente."));
       updateData({ avatarUri: "" });
     } finally {
       setIsUploading(false);
@@ -138,7 +150,7 @@ export default function Onboarding() {
       await blackBeltAdapters.profiles.upsertProfile({
         id: session.user.id,
         email: session.user.email,
-        role: data.role,
+        role: profile?.role ?? data.role,
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
         birthDate: data.birthDate || null,
@@ -159,12 +171,14 @@ export default function Onboarding() {
         // Redirect based on role
         if (data.role === "student") {
           router.replace("/join-academy");
-        } else {
+        } else if (data.role === "owner") {
           router.replace("/create-academy");
+        } else {
+          router.replace("/professor-checkins");
         }
       }
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Não foi possível salvar seu perfil.");
+      setSaveError(getErrorMessage(err, "Nao foi possivel salvar seu perfil."));
     } finally {
       setIsSaving(false);
     }
@@ -179,8 +193,10 @@ export default function Onboarding() {
       if (emailConfirmed) {
         if (data.role === "student") {
           router.replace("/join-academy");
-        } else {
+        } else if (data.role === "owner") {
           router.replace("/create-academy");
+        } else {
+          router.replace("/professor-checkins");
         }
       }
     } catch (err) {
@@ -254,15 +270,21 @@ export default function Onboarding() {
           description="Quero treinar e acompanhar minha evolução no Jiu-Jitsu"
           icon={Users}
           selected={data.role === "student"}
-          onPress={() => updateData({ role: "student" })}
+          onPress={() => {
+            if (roleLocked) return;
+            updateData({ role: "student" });
+          }}
         />
         <RoleCard
-          title="Sou Professor / Dono"
+          title="Sou Dono"
           description="Quero gerenciar minha academia e meus alunos"
           icon={GraduationCap}
           accent="brand"
-          selected={data.role === "professor"}
-          onPress={() => updateData({ role: "professor" })}
+          selected={data.role === "owner"}
+          onPress={() => {
+            if (roleLocked) return;
+            updateData({ role: "owner" });
+          }}
         />
       </View>
     </View>
@@ -413,6 +435,85 @@ export default function Onboarding() {
     </View>
   );
 
+  // Pending Email Confirmation (no session yet)
+  const renderPendingEmailConfirmation = () => (
+    <SafeAreaView className="flex-1 bg-app-dark">
+      <View className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl" />
+      <View className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-brand-500/10 blur-3xl" />
+      
+      <View className="flex-1 justify-center px-6">
+        <View className="mx-auto w-full max-w-[400px] items-center">
+          {/* Icon */}
+          <View className="h-20 w-20 rounded-full bg-brand-600/20 items-center justify-center mb-6">
+            <Mail size={40} color="#8B5CF6" />
+          </View>
+
+          <Text className="text-xs uppercase tracking-[6px] text-brand-400 mb-3">
+            Ultimo passo
+          </Text>
+          <Text className="font-display text-3xl font-bold text-text-primary-dark text-center">
+            Verifique seu email
+          </Text>
+          <Text className="mt-4 text-base text-text-secondary-dark text-center">
+            Enviamos um link de confirmacao para{"\n"}
+            <Text className="font-semibold text-text-primary-dark">
+              {pendingEmail}
+            </Text>
+          </Text>
+          <Text className="mt-2 text-sm text-text-muted-dark text-center">
+            Clique no link do email para ativar sua conta.
+          </Text>
+
+          {/* Check button */}
+          <Pressable
+            onPress={() => {
+              void refresh();
+            }}
+            className="mt-8 w-full overflow-hidden rounded-2xl"
+          >
+            <LinearGradient
+              colors={["#7C3AED", "#6366F1"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="px-8 py-4"
+            >
+              <Text className="text-center text-base font-semibold text-white">
+                Ja confirmei, continuar
+              </Text>
+            </LinearGradient>
+          </Pressable>
+
+          {/* Resend link */}
+          <Pressable
+            onPress={async () => {
+              if (pendingEmail) {
+                await supabase.auth.resend({
+                  type: "signup",
+                  email: pendingEmail,
+                });
+              }
+            }}
+            className="mt-4 py-2"
+          >
+            <Text className="text-sm text-text-secondary-dark">
+              Nao recebeu? <Text className="text-brand-400">Reenviar email</Text>
+            </Text>
+          </Pressable>
+
+          {/* Back */}
+          <Pressable
+            onPress={() => router.replace("/auth")}
+            className="mt-4 py-2"
+          >
+            <Text className="text-sm text-text-secondary-dark">
+              Voltar para login
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+
   // Email Confirmation Screen
   const renderEmailConfirmation = () => (
     <SafeAreaView className="flex-1 bg-app-dark">
@@ -501,6 +602,10 @@ export default function Onboarding() {
         <ActivityIndicator size="large" color="#8B5CF6" />
       </SafeAreaView>
     );
+  }
+
+  if (!session && pendingEmail) {
+    return renderPendingEmailConfirmation();
   }
 
   if (showEmailConfirmation) {

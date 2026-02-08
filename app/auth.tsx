@@ -38,14 +38,17 @@ export default function Auth() {
     setIsLoading(true);
     setError(null);
     try {
+      const trimmedEmail = email.trim();
       if (mode === "signin") {
-        await blackBeltAdapters.auth.signIn(email.trim(), password);
+        await blackBeltAdapters.auth.signIn(trimmedEmail, password);
         router.replace("/");
       } else {
         // Sign up and go directly to onboarding
         // Email confirmation will be handled at the end of onboarding
-        await blackBeltAdapters.auth.signUp(email.trim(), password);
-        router.replace("/onboarding");
+        const { hasSession } = await blackBeltAdapters.auth.signUp(trimmedEmail, password);
+        router.replace(
+          hasSession ? "/onboarding" : "/onboarding?pendingEmail=" + encodeURIComponent(trimmedEmail)
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível autenticar.");

@@ -21,7 +21,7 @@ export default function Index() {
         }
 
         const profile = await blackBeltAdapters.profiles.getProfile(session.user.id);
-        if (!profile?.role) {
+        if (!profile?.role || !profile.firstName || !profile.currentBelt) {
           router.replace("/onboarding");
           return;
         }
@@ -36,12 +36,22 @@ export default function Index() {
           return;
         }
 
-        const academy = await blackBeltAdapters.academies.getByOwnerId(profile.id);
-        if (!academy) {
-          router.replace("/create-academy");
+        if (profile.role === "owner") {
+          const academy = await blackBeltAdapters.academies.getByOwnerId(profile.id);
+          if (!academy) {
+            router.replace("/create-academy");
+            return;
+          }
+          router.replace("/owner-home");
           return;
         }
-        router.replace("/owner-home");
+
+        if (profile.role === "professor") {
+          router.replace("/professor-checkins");
+          return;
+        }
+
+        router.replace("/onboarding");
       } catch (err) {
         if (!isActive) return;
         setError(err instanceof Error ? err.message : "Erro ao carregar o app.");

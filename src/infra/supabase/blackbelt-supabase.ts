@@ -38,7 +38,7 @@ export type SupabaseConfig = {
 };
 
 const BELT_VALUES: Belt[] = ["Branca", "Azul", "Roxa", "Marrom", "Preta", "Coral", "Vermelha"];
-const ROLE_VALUES: UserRole[] = ["professor", "student"];
+const ROLE_VALUES: UserRole[] = ["owner", "professor", "student"];
 
 const toBelt = (value: string | null): Belt | null =>
   BELT_VALUES.includes(value as Belt) ? (value as Belt) : null;
@@ -122,6 +122,7 @@ const toScheduleItem = (
   id: row.id,
   academyId: row.academy_id,
   title: row.title,
+  instructorId: row.instructor_id,
   instructorName: row.instructor_name,
   weekday: row.weekday,
   startTime: row.start_time,
@@ -210,7 +211,7 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     async upsertProfile(input: ProfileUpsertInput): Promise<Profile> {
       const { data, error } = await client
         .from("profiles")
-        .upsert(toProfilePayload(input))
+        .upsert(toProfilePayload(input), { onConflict: "id" })
         .select("*")
         .single();
       if (error) throw error;
@@ -372,6 +373,7 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
           weekday: input.weekday,
           start_time: input.startTime,
           end_time: input.endTime,
+          ...(input.instructorId !== undefined ? { instructor_id: input.instructorId } : {}),
           ...(input.instructorName !== undefined ? { instructor_name: input.instructorName } : {}),
           ...(input.location !== undefined ? { location: input.location } : {}),
           ...(input.level !== undefined ? { level: input.level } : {}),
@@ -392,6 +394,7 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
           ...(input.weekday !== undefined ? { weekday: input.weekday } : {}),
           ...(input.startTime !== undefined ? { start_time: input.startTime } : {}),
           ...(input.endTime !== undefined ? { end_time: input.endTime } : {}),
+          ...(input.instructorId !== undefined ? { instructor_id: input.instructorId } : {}),
           ...(input.instructorName !== undefined ? { instructor_name: input.instructorName } : {}),
           ...(input.location !== undefined ? { location: input.location } : {}),
           ...(input.level !== undefined ? { level: input.level } : {}),
@@ -465,16 +468,42 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         createdAt: row.created_at,
       }));
     },
-    async updateStatus(input: UpdateCheckinStatusInput): Promise<ClassCheckin> {
-      const { data: current, error: currentError } = await client
+    async listPendingMine(): Promise<CheckinListItem[]> {
+      type PendingRow = {
+        id: string;
+        academy_id: string;
+        class_id: string;
+        student_id: string;
+        status: string;
+        created_at: string | null;
+        profiles: { full_name: string | null; avatar_url: string | null } | null;
+        academy_class_schedule: { title: string | null; weekday: number | null; start_time: string | null } | null;
+      };
+
+      const { data, error } = await client
         .from("class_checkins")
-        .select("status, student_id, academy_id")
-        .eq("id", input.id)
-        .single();
-      if (currentError) throw currentError;
-
-      const previousStatus = current.status;
-
+        .select(
+          "id, academy_id, class_id, student_id, status, created_at, profiles:profiles!class_checkins_student_id_fkey (full_name, avatar_url), academy_class_schedule:academy_class_schedule (title, weekday, start_time)"
+        )
+        .eq("status", "pending")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data as PendingRow[] | null) ?? [];
+      return rows.map((row) => ({
+        id: row.id,
+        academyId: row.academy_id,
+        classId: row.class_id,
+        classTitle: row.academy_class_schedule?.title ?? null,
+        classWeekday: row.academy_class_schedule?.weekday ?? null,
+        classStartTime: row.academy_class_schedule?.start_time ?? null,
+        studentId: row.student_id,
+        studentName: row.profiles?.full_name ?? null,
+        studentAvatarUrl: row.profiles?.avatar_url ?? null,
+        status: row.status as ClassCheckin["status"],
+        createdAt: row.created_at,
+      }));
+    },
+    async updateStatus(input: UpdateCheckinStatusInput): Promise<ClassCheckin> {
       const { data, error } = await client
         .from("class_checkins")
         .update({
@@ -486,36 +515,6 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         .select("*")
         .single();
       if (error) throw error;
-
-      if (input.status === "approved" && previousStatus !== "approved") {
-        try {
-          const { data: progressRow, error: progressSelectError } = await client
-            .from("student_progress")
-            .select("approved_classes_count")
-            .eq("student_id", current.student_id)
-            .maybeSingle();
-          if (progressSelectError) throw progressSelectError;
-          const nextCount = (progressRow?.approved_classes_count ?? 0) + 1;
-          const { error: progressError } = await client
-            .from("student_progress")
-            .upsert({
-              student_id: current.student_id,
-              academy_id: current.academy_id,
-              approved_classes_count: nextCount,
-              updated_at: new Date().toISOString(),
-            })
-            .select("*")
-            .single();
-          if (progressError) throw progressError;
-        } catch (progressErr) {
-          // Rollback checkin status to avoid inconsistency
-          await client
-            .from("class_checkins")
-            .update({ status: previousStatus, validated_by: null, validated_at: null })
-            .eq("id", input.id);
-          throw progressErr;
-        }
-      }
 
       return toCheckin(data);
     },

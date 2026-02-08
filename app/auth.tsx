@@ -25,7 +25,6 @@ export default function Auth() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showConfirmEmail, setShowConfirmEmail] = useState(false);
 
   const canSubmit = useMemo(() => {
     if (!email || !password) return false;
@@ -43,12 +42,10 @@ export default function Auth() {
         await blackBeltAdapters.auth.signIn(email.trim(), password);
         router.replace("/");
       } else {
-        const result = await blackBeltAdapters.auth.signUp(email.trim(), password);
-        if (result.hasSession) {
-          router.replace("/");
-        } else {
-          setShowConfirmEmail(true);
-        }
+        // Sign up and go directly to onboarding
+        // Email confirmation will be handled at the end of onboarding
+        await blackBeltAdapters.auth.signUp(email.trim(), password);
+        router.replace("/onboarding");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível autenticar.");
@@ -56,53 +53,6 @@ export default function Auth() {
       setIsLoading(false);
     }
   };
-
-  if (showConfirmEmail) {
-    return (
-      <SafeAreaView className="flex-1 bg-app-dark">
-        <View className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl" />
-        <View className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-brand-500/10 blur-3xl" />
-        <View className="flex-1 justify-center px-6">
-          <View className="mx-auto w-full max-w-[400px] items-center">
-            <Text className="text-xs uppercase tracking-[6px] text-brand-400 mb-3">
-              BlackBelt
-            </Text>
-            <Text className="font-display text-3xl font-bold text-text-primary-dark text-center">
-              Verifique seu email
-            </Text>
-            <Text className="mt-4 text-base text-text-secondary-dark text-center">
-              Enviamos um link de confirmação para{"\n"}
-              <Text className="font-semibold text-text-primary-dark">{email}</Text>
-            </Text>
-            <Text className="mt-2 text-sm text-text-muted-dark text-center">
-              Confirme seu email e depois volte aqui para entrar.
-            </Text>
-            <Pressable
-              onPress={() => {
-                setShowConfirmEmail(false);
-                setMode("signin");
-                setPassword("");
-                setConfirmPassword("");
-                setError(null);
-              }}
-              className="mt-8 overflow-hidden rounded-2xl"
-            >
-              <LinearGradient
-                colors={["#7C3AED", "#6366F1"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="px-8 py-4"
-              >
-                <Text className="text-center text-base font-semibold text-white">
-                  Ir para Login
-                </Text>
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView className="flex-1 bg-app-dark">

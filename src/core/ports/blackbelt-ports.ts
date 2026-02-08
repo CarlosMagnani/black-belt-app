@@ -5,6 +5,12 @@ export type AuthUser = {
   email: string | null;
 };
 
+export type SignUpResult = {
+  user: AuthUser;
+  /** True if session was created immediately (email confirmation disabled) */
+  hasSession: boolean;
+};
+
 export type AuthSession = {
   user: AuthUser;
   accessToken: string;

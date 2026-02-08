@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { GraduationCap, Users, ChevronLeft, ChevronRight } from "lucide-react-native";
+import { GraduationCap, Users, ChevronLeft, ChevronRight, Mail } from "lucide-react-native";
 
 import { Avatar } from "../components/ui/Avatar";
 import { BeltSelector } from "../components/ui/BeltSelector";
@@ -28,8 +28,8 @@ import { supabase } from "../src/infra/supabase/client";
 const TOTAL_STEPS = 4;
 
 const SEX_OPTIONS: { label: string; value: Sex }[] = [
-  { label: "M", value: "M" },
-  { label: "F", value: "F" },
+  { label: "Masculino", value: "M" },
+  { label: "Feminino", value: "F" },
   { label: "Outro", value: "O" },
 ];
 
@@ -59,13 +59,14 @@ const initialData: OnboardingData = {
 
 export default function Onboarding() {
   const router = useRouter();
-  const { isLoading, session, profile, error } = useAuthProfile();
+  const { isLoading, session, profile, refresh } = useAuthProfile();
   
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
 
   // Redirect logic
   useEffect(() => {
@@ -147,16 +148,43 @@ export default function Onboarding() {
         beltDegree: data.degree,
       });
 
-      // Redirect based on role
-      if (data.role === "student") {
-        router.replace("/join-academy");
+      // Check if email is confirmed
+      const { data: userData } = await supabase.auth.getUser();
+      const emailConfirmed = userData?.user?.email_confirmed_at != null;
+
+      if (!emailConfirmed) {
+        // Show email confirmation screen
+        setShowEmailConfirmation(true);
       } else {
-        router.replace("/create-academy");
+        // Redirect based on role
+        if (data.role === "student") {
+          router.replace("/join-academy");
+        } else {
+          router.replace("/create-academy");
+        }
       }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Não foi possível salvar seu perfil.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCheckEmailConfirmed = async () => {
+    try {
+      await refresh();
+      const { data: userData } = await supabase.auth.getUser();
+      const emailConfirmed = userData?.user?.email_confirmed_at != null;
+      
+      if (emailConfirmed) {
+        if (data.role === "student") {
+          router.replace("/join-academy");
+        } else {
+          router.replace("/create-academy");
+        }
+      }
+    } catch (err) {
+      // Ignore - will stay on confirmation screen
     }
   };
 
@@ -208,31 +236,33 @@ export default function Onboarding() {
     </View>
   );
 
-  // Step 1: Role Selection
+  // Step 1: Role Selection (First screen as in Lovable mockup)
   const renderStep1 = () => (
-    <View>
-      <Text className="text-2xl font-bold text-text-primary-dark">
-        Como você vai usar o BlackBelt?
-      </Text>
-      <Text className="mt-2 text-text-secondary-dark">
-        Escolha seu perfil para personalizar sua experiência.
-      </Text>
+    <View className="flex-1 justify-center">
+      <View className="items-center mb-10">
+        <Text className="text-2xl font-bold text-text-primary-dark text-center">
+          Como você vai usar o{"\n"}BlackBelt?
+        </Text>
+        <Text className="mt-3 text-text-secondary-dark text-center">
+          Selecione seu perfil para continuar
+        </Text>
+      </View>
 
-      <View className="mt-8 gap-4">
+      <View className="gap-4">
+        <RoleCard
+          title="Sou Aluno"
+          description="Quero treinar e acompanhar minha evolução no Jiu-Jitsu"
+          icon={Users}
+          selected={data.role === "student"}
+          onPress={() => updateData({ role: "student" })}
+        />
         <RoleCard
           title="Sou Professor / Dono"
-          description="Crie sua academia, gere códigos de convite e gerencie seus alunos."
+          description="Quero gerenciar minha academia e meus alunos"
           icon={GraduationCap}
           accent="brand"
           selected={data.role === "professor"}
           onPress={() => updateData({ role: "professor" })}
-        />
-        <RoleCard
-          title="Sou Aluno"
-          description="Entre com o código da academia e acompanhe seu progresso."
-          icon={Users}
-          selected={data.role === "student"}
-          onPress={() => updateData({ role: "student" })}
         />
       </View>
     </View>
@@ -245,30 +275,25 @@ export default function Onboarding() {
         Dados pessoais
       </Text>
       <Text className="mt-2 text-text-secondary-dark">
-        Preencha suas informações básicas.
+        Conte-nos um pouco sobre você
       </Text>
 
       <View className="mt-6 gap-5">
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <TextField
-              label="Primeiro nome"
-              value={data.firstName}
-              onChangeText={(v) => updateData({ firstName: v })}
-              placeholder="Seu nome"
-              autoCapitalize="words"
-            />
-          </View>
-          <View className="flex-1">
-            <TextField
-              label="Sobrenome"
-              value={data.lastName}
-              onChangeText={(v) => updateData({ lastName: v })}
-              placeholder="Sobrenome"
-              autoCapitalize="words"
-            />
-          </View>
-        </View>
+        <TextField
+          label="Primeiro nome"
+          value={data.firstName}
+          onChangeText={(v) => updateData({ firstName: v })}
+          placeholder="Seu nome"
+          autoCapitalize="words"
+        />
+
+        <TextField
+          label="Sobrenome"
+          value={data.lastName}
+          onChangeText={(v) => updateData({ lastName: v })}
+          placeholder="Seu sobrenome"
+          autoCapitalize="words"
+        />
 
         <DateInput
           label="Data de nascimento"
@@ -295,7 +320,7 @@ export default function Onboarding() {
               >
                 <Text
                   className={[
-                    "text-center font-medium",
+                    "text-center font-medium text-sm",
                     data.sex === option.value
                       ? "text-brand-400"
                       : "text-text-secondary-dark",
@@ -318,7 +343,7 @@ export default function Onboarding() {
         Sua faixa
       </Text>
       <Text className="mt-2 text-text-secondary-dark">
-        Selecione sua faixa atual e quantidade de graus.
+        Selecione sua faixa atual e grau
       </Text>
 
       <View className="mt-8">
@@ -331,7 +356,7 @@ export default function Onboarding() {
 
       <View className="mt-8">
         <DegreeSelector
-          label="Graus"
+          label="Grau (número de listras)"
           value={data.degree}
           belt={data.belt}
           onSelect={(v) => updateData({ degree: v })}
@@ -347,7 +372,7 @@ export default function Onboarding() {
         Foto de perfil
       </Text>
       <Text className="mt-2 text-text-secondary-dark text-center">
-        Adicione uma foto para que outros praticantes te reconheçam.
+        Adicione uma foto para os colegas te reconhecerem
       </Text>
 
       <View className="mt-10">
@@ -377,36 +402,82 @@ export default function Onboarding() {
           const avatar = document.querySelector('[data-avatar-picker]');
           if (avatar) (avatar as HTMLElement).click();
         }}
-        className="mt-6 py-3 px-6 rounded-xl border border-subtle-dark bg-surface-dark"
+        className="mt-6 py-3 px-6 rounded-xl border border-subtle-dark bg-surface-dark flex-row items-center gap-2"
       >
-        <Text className="text-brand-400 font-medium">Escolher foto</Text>
+        <Text className="text-brand-400 font-medium">📷 Escolher foto</Text>
       </Pressable>
 
       <Text className="mt-4 text-center text-xs text-text-muted-dark">
-        Você pode pular e adicionar depois
+        Opcional — você pode adicionar depois
       </Text>
+    </View>
+  );
 
-      {/* Summary card */}
-      <View className="mt-8 w-full rounded-2xl bg-surface-dark-elevated border border-subtle-dark p-5">
-        <Text className="text-sm font-medium text-text-primary-dark mb-3">
-          📋 Resumo do seu perfil
-        </Text>
-        <View className="gap-1.5">
-          <Text className="text-sm text-text-secondary-dark">
-            <Text className="text-text-muted-dark">Nome: </Text>
-            {data.firstName} {data.lastName}
+  // Email Confirmation Screen
+  const renderEmailConfirmation = () => (
+    <SafeAreaView className="flex-1 bg-app-dark">
+      <View className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl" />
+      <View className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-brand-500/10 blur-3xl" />
+      
+      <View className="flex-1 justify-center px-6">
+        <View className="mx-auto w-full max-w-[400px] items-center">
+          {/* Icon */}
+          <View className="h-20 w-20 rounded-full bg-brand-600/20 items-center justify-center mb-6">
+            <Mail size={40} color="#8B5CF6" />
+          </View>
+
+          <Text className="text-xs uppercase tracking-[6px] text-brand-400 mb-3">
+            Último passo
           </Text>
-          <Text className="text-sm text-text-secondary-dark">
-            <Text className="text-text-muted-dark">Faixa: </Text>
-            {data.belt} {data.degree > 0 ? `(${data.degree} graus)` : ""}
+          <Text className="font-display text-3xl font-bold text-text-primary-dark text-center">
+            Verifique seu email
           </Text>
-          <Text className="text-sm text-text-secondary-dark">
-            <Text className="text-text-muted-dark">Perfil: </Text>
-            {data.role === "professor" ? "Professor/Dono" : "Aluno"}
+          <Text className="mt-4 text-base text-text-secondary-dark text-center">
+            Enviamos um link de confirmação para{"\n"}
+            <Text className="font-semibold text-text-primary-dark">
+              {session?.user.email}
+            </Text>
           </Text>
+          <Text className="mt-2 text-sm text-text-muted-dark text-center">
+            Clique no link do email para ativar sua conta.
+          </Text>
+
+          {/* Check button */}
+          <Pressable
+            onPress={handleCheckEmailConfirmed}
+            className="mt-8 w-full overflow-hidden rounded-2xl"
+          >
+            <LinearGradient
+              colors={["#7C3AED", "#6366F1"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="px-8 py-4"
+            >
+              <Text className="text-center text-base font-semibold text-white">
+                Já confirmei, continuar
+              </Text>
+            </LinearGradient>
+          </Pressable>
+
+          {/* Resend link */}
+          <Pressable
+            onPress={async () => {
+              if (session?.user.email) {
+                await supabase.auth.resend({
+                  type: "signup",
+                  email: session.user.email,
+                });
+              }
+            }}
+            className="mt-4 py-2"
+          >
+            <Text className="text-sm text-text-secondary-dark">
+              Não recebeu? <Text className="text-brand-400">Reenviar email</Text>
+            </Text>
+          </Pressable>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 
   const renderCurrentStep = () => {
@@ -432,6 +503,10 @@ export default function Onboarding() {
     );
   }
 
+  if (showEmailConfirmation) {
+    return renderEmailConfirmation();
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-app-dark">
       {/* Background effects */}
@@ -442,26 +517,32 @@ export default function Onboarding() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
-        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
-          <View className="px-6 py-6">
-            <View className="mx-auto w-full max-w-[500px]">
-              {/* Header */}
-              <Text className="text-xs uppercase tracking-[4px] text-brand-400">
-                Passo {step} de {TOTAL_STEPS}
-              </Text>
-
-              {/* Progress */}
-              <View className="mt-4">{renderProgress()}</View>
+        <ScrollView 
+          className="flex-1" 
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          <View className="flex-1 px-6 py-6">
+            <View className="mx-auto w-full max-w-[500px] flex-1">
+              {/* Header with progress (not on step 1) */}
+              {step > 1 && (
+                <>
+                  <Text className="text-xs uppercase tracking-[4px] text-brand-400">
+                    Criar Perfil
+                  </Text>
+                  <View className="mt-4">{renderProgress()}</View>
+                </>
+              )}
 
               {/* Content */}
-              <View className="mt-4">{renderCurrentStep()}</View>
+              <View className={step === 1 ? "flex-1" : "mt-4"}>
+                {renderCurrentStep()}
+              </View>
 
               {/* Error */}
-              {(error || saveError) && (
+              {saveError && (
                 <View className="mt-4 rounded-xl bg-error-dark/20 p-4">
-                  <Text className="text-sm text-error-dark">
-                    {error || saveError}
-                  </Text>
+                  <Text className="text-sm text-error-dark">{saveError}</Text>
                 </View>
               )}
 
@@ -506,8 +587,8 @@ export default function Onboarding() {
                       {isSaving
                         ? "Salvando..."
                         : step === TOTAL_STEPS
-                        ? "Finalizar"
-                        : "Continuar"}
+                        ? "Concluir"
+                        : "Próximo"}
                     </Text>
                     {step < TOTAL_STEPS && canProceed() && (
                       <ChevronRight size={18} color="#fff" />

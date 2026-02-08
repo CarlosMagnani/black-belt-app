@@ -171,7 +171,7 @@ export type AddMemberInput = {
 
 export interface AuthPort {
   signIn(email: string, password: string): Promise<AuthUser>;
-  signUp(email: string, password: string, role: UserRole): Promise<AuthUser>;
+  signUp(email: string, password: string): Promise<{ user: AuthUser; hasSession: boolean }>;
   signOut(): Promise<void>;
   getSession(): Promise<AuthSession | null>;
   getCurrentUser(): Promise<AuthUser | null>;

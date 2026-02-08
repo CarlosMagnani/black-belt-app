@@ -553,20 +553,25 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
 
       return { id: data.user.id, email: data.user.email ?? null };
     },
-    async signUp(email: string, password: string, role: UserRole): Promise<AuthUser> {
+    async signUp(email: string, password: string): Promise<{ user: AuthUser; hasSession: boolean }> {
       const { data, error } = await client.auth.signUp({ email, password });
       if (error) throw error;
       if (!data.user) throw new Error("Missing user from sign-up response.");
 
-      if (data.session?.user) {
+      const hasSession = !!data.session?.user;
+
+      if (hasSession) {
         await profiles.upsertProfile({
           id: data.user.id,
           email: data.user.email ?? email,
-          role,
+          role: null,
         });
       }
 
-      return { id: data.user.id, email: data.user.email ?? null };
+      return {
+        user: { id: data.user.id, email: data.user.email ?? null },
+        hasSession,
+      };
     },
     async signOut(): Promise<void> {
       const { error } = await client.auth.signOut();

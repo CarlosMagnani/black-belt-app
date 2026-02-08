@@ -2,19 +2,22 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import { ArrowLeft } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { ArrowLeft, Building2, Copy, Check } from "lucide-react-native";
+import * as Clipboard from "expo-clipboard";
 
+import { TextField } from "../components/ui/TextField";
 import type { Academy } from "../src/core/ports/blackbelt-ports";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
 import { blackBeltAdapters } from "../src/infra/supabase/adapters";
-import { useTheme } from "../src/ui/theme/ThemeProvider";
 
 const generateInviteCode = () => {
   const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -28,17 +31,18 @@ const generateInviteCode = () => {
 export default function CreateAcademy() {
   const router = useRouter();
   const { isLoading: isBooting, session, profile } = useAuthProfile();
+  
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingExisting, setIsCheckingExisting] = useState(true);
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const { theme } = useTheme();
-  const iconColor = theme === "dark" ? "#E5E7EB" : "#0F172A";
+  const [copied, setCopied] = useState(false);
 
-  const canCreate = useMemo(() => name.trim().length > 2 && !isLoading, [name, isLoading]);
+  const canCreate = useMemo(() => name.trim().length >= 3 && !isLoading, [name, isLoading]);
 
+  // Auth/Profile guards
   useEffect(() => {
     if (isBooting) return;
     if (!session) {
@@ -54,25 +58,21 @@ export default function CreateAcademy() {
     }
   }, [isBooting, session, profile, router]);
 
+  // Check for existing academy
   useEffect(() => {
-    if (!profile?.id) return;
-    if (profile.role !== "professor") return;
+    if (!profile?.id || profile.role !== "professor") return;
 
     const loadAcademy = async () => {
-      setIsLoading(true);
-      setError(null);
+      setIsCheckingExisting(true);
       try {
         const existing = await blackBeltAdapters.academies.getByOwnerId(profile.id);
-        if (!existing) {
-          setAcademy(null);
-          return;
+        if (existing) {
+          setAcademy(existing);
         }
-        setAcademy(existing);
-        router.replace("/owner-home");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Nao foi possivel carregar a academia.");
+        // Ignore - will show create form
       } finally {
-        setIsLoading(false);
+        setIsCheckingExisting(false);
       }
     };
 
@@ -85,126 +85,234 @@ export default function CreateAcademy() {
       const existing = await blackBeltAdapters.academies.getByInviteCode(code);
       if (!existing) return code;
     }
-    throw new Error("Nao foi possivel gerar um codigo unico.");
+    throw new Error("Não foi possível gerar um código único.");
   };
 
   const handleCreateAcademy = async () => {
     if (!profile?.id || profile.role !== "professor") return;
+    
     setIsLoading(true);
     setError(null);
+
     try {
       const inviteCode = await generateUniqueCode();
       const created = await blackBeltAdapters.academies.createAcademy({
         ownerId: profile.id,
         name: name.trim(),
         city: city.trim() || null,
-        logoUrl: logoUrl.trim() || null,
+        logoUrl: null,
         inviteCode,
       });
       setAcademy(created);
-      router.replace("/owner-home");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nao foi possivel criar a academia.");
+      setError(err instanceof Error ? err.message : "Não foi possível criar a academia.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleCopyCode = async () => {
+    if (!academy?.inviteCode) return;
+    await Clipboard.setStringAsync(academy.inviteCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleContinue = () => {
+    router.replace("/(owner)/owner-home");
+  };
+
+  // Loading state
+  if (isBooting || isCheckingExisting) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-app-dark">
+        <ActivityIndicator size="large" color="#8B5CF6" />
+        <Text className="mt-4 text-sm text-text-muted-dark">Carregando...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView className="flex-1 bg-app-light dark:bg-app-dark">
-      <ScrollView className="flex-1">
-        <View className="px-5 pb-10">
-          <View className="mx-auto w-full max-w-[520px]">
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.back()}
-              className="mt-4 flex-row items-center gap-2 self-start"
-            >
-              <ArrowLeft size={18} color={iconColor} strokeWidth={2.2} />
-              <Text className="text-sm text-strong-light dark:text-strong-dark">Voltar</Text>
-            </Pressable>
+    <SafeAreaView className="flex-1 bg-app-dark">
+      {/* Background effects */}
+      <View className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-brand-600/15" />
+      <View className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-brand-500/10" />
 
-            <Text className="mt-6 font-display text-2xl text-strong-light dark:text-strong-dark">
-              {academy ? "Sua academia" : "Criar academia"}
-            </Text>
-            <Text className="mt-2 text-base text-muted-light dark:text-muted-dark">
-              {academy
-                ? "Voce ja tem uma academia cadastrada."
-                : "Cadastre sua academia e gere o codigo de acesso."}
-            </Text>
-
-            {isBooting || isLoading ? (
-              <View className="mt-6 flex-row items-center gap-3">
-                <ActivityIndicator />
-                <Text className="text-sm text-muted-light dark:text-muted-dark">
-                  Carregando dados...
-                </Text>
-              </View>
-            ) : null}
-
-            {error ? <Text className="mt-4 text-sm text-red-500">{error}</Text> : null}
-
-            {!academy ? (
-              <View className="mt-6 rounded-card border border-subtle-light bg-surface-light p-card shadow-card dark:border-subtle-dark dark:bg-surface-dark">
-                <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
-                  Nome
-                </Text>
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Ex: Dojo Central"
-                  placeholderTextColor="#94A3B8"
-                  className="mt-2 rounded-input border border-subtle-light bg-app-light px-4 py-4 text-base text-strong-light dark:border-subtle-dark dark:bg-app-dark dark:text-strong-dark"
-                />
-
-                <Text className="mt-5 text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
-                  Cidade
-                </Text>
-                <TextInput
-                  value={city}
-                  onChangeText={setCity}
-                  placeholder="Ex: Sao Paulo"
-                  placeholderTextColor="#94A3B8"
-                  className="mt-2 rounded-input border border-subtle-light bg-app-light px-4 py-4 text-base text-strong-light dark:border-subtle-dark dark:bg-app-dark dark:text-strong-dark"
-                />
-
-                <Text className="mt-5 text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
-                  Logo (URL)
-                </Text>
-                <TextInput
-                  value={logoUrl}
-                  onChangeText={setLogoUrl}
-                  placeholder="https://..."
-                  placeholderTextColor="#94A3B8"
-                  autoCapitalize="none"
-                  className="mt-2 rounded-input border border-subtle-light bg-app-light px-4 py-4 text-base text-strong-light dark:border-subtle-dark dark:bg-app-dark dark:text-strong-dark"
-                />
-
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.select({ ios: "padding", android: undefined })}
+      >
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="flex-1 px-6 py-6">
+            <View className="mx-auto w-full max-w-[450px]">
+              {/* Back button */}
+              {!academy && (
                 <Pressable
                   accessibilityRole="button"
-                  disabled={!canCreate}
-                  onPress={handleCreateAcademy}
-                  className={[
-                    "mt-6 rounded-2xl px-5 py-4",
-                    canCreate ? "bg-brand-600" : "bg-subtle-light dark:bg-subtle-dark",
-                  ].join(" ")}
-                  style={({ pressed }) => (pressed && canCreate ? { opacity: 0.9 } : undefined)}
+                  onPress={() => router.back()}
+                  className="flex-row items-center gap-2 self-start py-2"
                 >
-                  <Text
-                    className={
-                      canCreate
-                        ? "text-center text-white"
-                        : "text-center text-muted-light dark:text-muted-dark"
-                    }
-                  >
-                    Gerar codigo
-                  </Text>
+                  <ArrowLeft size={18} color="#94A3B8" strokeWidth={2.2} />
+                  <Text className="text-sm text-text-secondary-dark">Voltar</Text>
                 </Pressable>
+              )}
+
+              {/* Header */}
+              <View className={academy ? "mt-8" : "mt-8"}>
+                <Text className="text-xs uppercase tracking-[4px] text-brand-400 mb-3">
+                  {academy ? "Academia criada!" : "Última etapa"}
+                </Text>
+                <Text className="font-display text-2xl font-bold text-text-primary-dark">
+                  {academy ? "Sua academia está pronta" : "Criar sua academia"}
+                </Text>
+                <Text className="mt-2 text-base text-text-secondary-dark">
+                  {academy
+                    ? "Compartilhe o código abaixo com seus alunos para eles entrarem."
+                    : "Configure sua academia e gere um código de acesso para seus alunos."}
+                </Text>
               </View>
-            ) : null}
+
+              {/* Create Form */}
+              {!academy && (
+                <View className="mt-8 gap-5">
+                  <TextField
+                    label="Nome da academia"
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Ex: Gracie Barra Centro"
+                    autoCapitalize="words"
+                    helperText="Mínimo 3 caracteres"
+                  />
+
+                  <TextField
+                    label="Cidade (opcional)"
+                    value={city}
+                    onChangeText={setCity}
+                    placeholder="Ex: São Paulo"
+                    autoCapitalize="words"
+                  />
+
+                  {error && (
+                    <View className="rounded-xl bg-error-dark/20 p-4">
+                      <Text className="text-sm text-error-dark">{error}</Text>
+                    </View>
+                  )}
+
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={!canCreate}
+                    onPress={handleCreateAcademy}
+                    className="mt-4 overflow-hidden rounded-2xl"
+                    style={({ pressed }) => ({
+                      opacity: pressed && canCreate ? 0.9 : 1,
+                    })}
+                  >
+                    <LinearGradient
+                      colors={canCreate ? ["#7C3AED", "#6366F1"] : ["#374151", "#374151"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      className="px-6 py-4"
+                    >
+                      <Text
+                        className={[
+                          "text-center text-base font-semibold",
+                          canCreate ? "text-white" : "text-text-muted-dark",
+                        ].join(" ")}
+                      >
+                        {isLoading ? "Criando..." : "Criar Academia"}
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Success - Academy Created */}
+              {academy && (
+                <View className="mt-8">
+                  {/* Academy Card */}
+                  <View className="rounded-2xl border border-brand-500/30 bg-surface-dark-elevated p-6">
+                    <View className="flex-row items-center gap-4 mb-6">
+                      <View className="h-16 w-16 items-center justify-center rounded-xl bg-brand-600/20">
+                        <Building2 size={32} color="#8B5CF6" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="font-display text-xl font-semibold text-text-primary-dark">
+                          {academy.name}
+                        </Text>
+                        {academy.city && (
+                          <Text className="mt-1 text-sm text-text-secondary-dark">
+                            📍 {academy.city}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Invite Code */}
+                    <View className="rounded-xl bg-app-dark p-5 border border-subtle-dark">
+                      <Text className="text-xs uppercase tracking-widest text-text-muted-dark text-center mb-3">
+                        Código de acesso
+                      </Text>
+                      <Text className="font-mono text-3xl font-bold text-brand-400 text-center tracking-widest">
+                        {academy.inviteCode}
+                      </Text>
+                    </View>
+
+                    {/* Copy Button */}
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={handleCopyCode}
+                      className="mt-4 flex-row items-center justify-center gap-2 py-3 rounded-xl border border-subtle-dark bg-surface-dark"
+                      style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+                    >
+                      {copied ? (
+                        <>
+                          <Check size={18} color="#34D399" />
+                          <Text className="text-success-dark font-medium">Copiado!</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={18} color="#8B5CF6" />
+                          <Text className="text-brand-400 font-medium">Copiar código</Text>
+                        </>
+                      )}
+                    </Pressable>
+                  </View>
+
+                  {/* Info */}
+                  <View className="mt-6 rounded-xl bg-surface-dark p-4 border border-subtle-dark">
+                    <Text className="text-sm text-text-secondary-dark">
+                      💡 <Text className="font-medium">Dica:</Text> Compartilhe este código com seus alunos no WhatsApp, na academia ou nas redes sociais.
+                    </Text>
+                  </View>
+
+                  {/* Continue Button */}
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={handleContinue}
+                    className="mt-8 overflow-hidden rounded-2xl"
+                    style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+                  >
+                    <LinearGradient
+                      colors={["#7C3AED", "#6366F1"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      className="px-6 py-4"
+                    >
+                      <Text className="text-center text-base font-semibold text-white">
+                        Ir para o Dashboard
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

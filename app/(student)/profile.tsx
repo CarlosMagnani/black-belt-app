@@ -1,8 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -11,7 +8,7 @@ import { Select } from "../../components/ui/Select";
 import { TextField } from "../../components/ui/TextField";
 import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
-import { supabase } from "../../src/infra/supabase/client";
+
 import { BeltBadge } from "../../src/ui/belts/BeltBadge";
 
 const SEX_OPTIONS = [
@@ -30,7 +27,6 @@ const splitFullName = (fullName?: string | null) => {
 };
 
 export default function Profile() {
-  const router = useRouter();
   const {
     isBooting,
     profile,
@@ -81,31 +77,15 @@ export default function Profile() {
     setSaveError(null);
 
     try {
-      // Read file and upload to Supabase Storage
       const response = await fetch(localUri);
       const blob = await response.blob();
-      
       const fileExt = localUri.split(".").pop()?.toLowerCase() ?? "jpg";
-      const fileName = `${profile.id}/avatar.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(fileName, blob, {
-          cacheControl: "3600",
-          upsert: true,
-          contentType: `image/${fileExt}`,
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(fileName);
-
-      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      const publicUrl = await blackBeltAdapters.storage.uploadAvatar(
+        profile.id,
+        blob,
+        fileExt
+      );
       setAvatarUrl(publicUrl);
 
       // Save to profile
@@ -158,7 +138,7 @@ export default function Profile() {
   const handleSignOut = async () => {
     try {
       await blackBeltAdapters.auth.signOut();
-      router.replace("/auth");
+      // AuthGate handles redirect
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Não foi possível sair.");
     }
@@ -167,7 +147,7 @@ export default function Profile() {
   const isLoading = isBooting || isAcademyLoading;
 
   return (
-    <ScrollView className="flex-1 bg-app-dark">
+    <ScrollView className="flex-1 bg-app-light dark:bg-app-dark">
       <View className="px-page pb-10 pt-6">
         <View className="mx-auto w-full max-w-[600px]">
           {/* Header */}
@@ -182,33 +162,33 @@ export default function Profile() {
             {isUploading && (
               <Text className="mt-2 text-sm text-brand-400">Enviando foto...</Text>
             )}
-            <Text className="mt-4 font-display text-2xl font-semibold text-text-primary-dark">
+            <Text className="mt-4 font-display text-2xl font-semibold text-strong-light dark:text-strong-dark">
               {displayName}
             </Text>
-            <Text className="mt-1 text-sm text-text-secondary-dark">
+            <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
               {profile?.email ?? "Email não informado"}
             </Text>
           </View>
 
           {/* Belt Card */}
-          <Card className="mt-6 items-center bg-surface-dark">
-            <Text className="mb-3 text-xs uppercase tracking-widest text-text-muted-dark">
+          <Card className="mt-6 items-center bg-surface-light dark:bg-surface-dark">
+            <Text className="mb-3 text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
               Faixa atual
             </Text>
             <BeltBadge
               belt={profile?.currentBelt ?? "Branca"}
               degree={profile?.beltDegree ?? undefined}
             />
-            <Text className="mt-3 text-xs text-text-muted-dark">
+            <Text className="mt-3 text-xs text-muted-light dark:text-muted-dark">
               Alterada apenas pelo professor
             </Text>
           </Card>
 
           {/* Loading State */}
           {isLoading && (
-            <Card className="mt-6 flex-row items-center gap-3 bg-surface-dark">
+            <Card className="mt-6 flex-row items-center gap-3 bg-surface-light dark:bg-surface-dark">
               <ActivityIndicator color="#6366F1" />
-              <Text className="text-sm text-text-secondary-dark">
+              <Text className="text-sm text-muted-light dark:text-muted-dark">
                 Carregando informações...
               </Text>
             </Card>
@@ -222,12 +202,12 @@ export default function Profile() {
           )}
 
           {/* Personal Data Form */}
-          <Card className="mt-6 gap-5 bg-surface-dark">
+          <Card className="mt-6 gap-5 bg-surface-light dark:bg-surface-dark">
             <View>
-              <Text className="text-lg font-semibold text-text-primary-dark">
+              <Text className="text-lg font-semibold text-strong-light dark:text-strong-dark">
                 Dados pessoais
               </Text>
-              <Text className="mt-1 text-sm text-text-secondary-dark">
+              <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
                 Mantenha suas informações atualizadas
               </Text>
             </View>
@@ -296,15 +276,15 @@ export default function Profile() {
           </Card>
 
           {/* Academy Card */}
-          <Card className="mt-6 bg-surface-dark">
-            <Text className="text-xs uppercase tracking-widest text-text-muted-dark">
+          <Card className="mt-6 bg-surface-light dark:bg-surface-dark">
+            <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
               Academia
             </Text>
-            <Text className="mt-2 font-display text-xl font-semibold text-text-primary-dark">
+            <Text className="mt-2 font-display text-xl font-semibold text-strong-light dark:text-strong-dark">
               {academy?.name ?? "Não vinculada"}
             </Text>
             {academy?.city && (
-              <Text className="mt-1 text-sm text-text-secondary-dark">
+              <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
                 📍 {academy.city}
               </Text>
             )}

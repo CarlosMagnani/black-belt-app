@@ -1,11 +1,25 @@
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 
+import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
+import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
 export default function OwnerSettings() {
+  const router = useRouter();
   const { academy, isLoading, error } = useOwnerAcademy();
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    try {
+      await blackBeltAdapters.auth.signOut();
+      // AuthGate handles redirect
+    } catch (err) {
+      setSignOutError(err instanceof Error ? err.message : "Não foi possível sair.");
+    }
+  };
 
   return (
     <ScrollView className="flex-1">
@@ -49,6 +63,21 @@ export default function OwnerSettings() {
               </Text>
             </Card>
           ) : null}
+
+          {/* Sign Out */}
+          {signOutError && (
+            <View className="mt-4 rounded-lg bg-red-500/10 p-3">
+              <Text className="text-sm text-red-400">{signOutError}</Text>
+            </View>
+          )}
+          <View className="mt-6">
+            <Button
+              label="Sair da conta"
+              variant="ghost"
+              onPress={handleSignOut}
+              textClassName="text-red-400"
+            />
+          </View>
         </View>
       </View>
     </ScrollView>

@@ -6,6 +6,7 @@ import { Card } from "../../components/ui/Card";
 import { DateInput } from "../../components/ui/DateInput";
 import { Select } from "../../components/ui/Select";
 import { TextField } from "../../components/ui/TextField";
+import { getErrorMessage } from "../../src/core/errors/get-error-message";
 import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
@@ -99,9 +100,7 @@ export default function Profile() {
       setTimeout(() => setSaveSuccess(null), 3000);
     } catch (err) {
       console.error("Upload error:", err);
-      setSaveError(
-        err instanceof Error ? err.message : "Não foi possível fazer upload da foto."
-      );
+      setSaveError(getErrorMessage(err, "Nao foi possivel fazer upload da foto."));
     } finally {
       setIsUploading(false);
     }
@@ -127,9 +126,7 @@ export default function Profile() {
       setSaveSuccess("Perfil atualizado com sucesso!");
       setTimeout(() => setSaveSuccess(null), 3000);
     } catch (err) {
-      setSaveError(
-        err instanceof Error ? err.message : "Não foi possível salvar seu perfil."
-      );
+      setSaveError(getErrorMessage(err, "Nao foi possivel salvar seu perfil."));
     } finally {
       setIsSaving(false);
     }
@@ -140,7 +137,7 @@ export default function Profile() {
       await blackBeltAdapters.auth.signOut();
       // AuthGate handles redirect
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Não foi possível sair.");
+      setSaveError(getErrorMessage(err, "Nao foi possivel sair."));
     }
   };
 

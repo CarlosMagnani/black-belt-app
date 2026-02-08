@@ -118,11 +118,46 @@ export type Database = {
           }
         ];
       };
+      academy_staff: {
+        Row: {
+          academy_id: string;
+          user_id: string;
+          role: Database["public"]["Enums"]["academy_staff_role"];
+          created_at: string | null;
+        };
+        Insert: {
+          academy_id: string;
+          user_id: string;
+          role: Database["public"]["Enums"]["academy_staff_role"];
+          created_at?: string | null;
+        };
+        Update: {
+          academy_id?: string;
+          user_id?: string;
+          role?: Database["public"]["Enums"]["academy_staff_role"];
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "academy_staff_academy_id_fkey";
+            columns: ["academy_id"];
+            referencedRelation: "academies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "academy_staff_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       academy_class_schedule: {
         Row: {
           id: string;
           academy_id: string;
           title: string;
+          instructor_id: string | null;
           instructor_name: string | null;
           weekday: number;
           start_time: string;
@@ -138,6 +173,7 @@ export type Database = {
           id?: string;
           academy_id: string;
           title: string;
+          instructor_id?: string | null;
           instructor_name?: string | null;
           weekday: number;
           start_time: string;
@@ -153,6 +189,7 @@ export type Database = {
           id?: string;
           academy_id?: string;
           title?: string;
+          instructor_id?: string | null;
           instructor_name?: string | null;
           weekday?: number;
           start_time?: string;
@@ -169,6 +206,13 @@ export type Database = {
             foreignKeyName: "academy_class_schedule_academy_id_fkey";
             columns: ["academy_id"];
             referencedRelation: "academies";
+            referencedColumns: ["id"];
+          }
+          ,
+          {
+            foreignKeyName: "academy_class_schedule_instructor_id_fkey";
+            columns: ["instructor_id"];
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           }
         ];
@@ -268,6 +312,13 @@ export type Database = {
     };
     Views: {};
     Functions: {
+      add_professor_to_academy: {
+        Args: {
+          p_academy_id: string;
+          p_email: string;
+        };
+        Returns: string;
+      };
       get_academy_by_invite_code: {
         Args: {
           p_code: string;
@@ -284,7 +335,8 @@ export type Database = {
       };
     };
     Enums: {
-      user_role: "professor" | "student";
+      academy_staff_role: "owner" | "professor";
+      user_role: "owner" | "professor" | "student";
     };
     CompositeTypes: {};
   };

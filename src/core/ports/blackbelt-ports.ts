@@ -1,8 +1,14 @@
-export type UserRole = "professor" | "student";
+export type UserRole = "owner" | "professor" | "student";
 export type Belt = "Branca" | "Azul" | "Roxa" | "Marrom" | "Preta" | "Coral" | "Vermelha";
 export type AuthUser = {
   id: string;
   email: string | null;
+};
+
+export type SignUpResult = {
+  user: AuthUser;
+  /** True if session was created immediately (email confirmation disabled) */
+  hasSession: boolean;
 };
 
 export type AuthSession = {
@@ -49,6 +55,7 @@ export type ClassScheduleItem = {
   id: string;
   academyId: string;
   title: string;
+  instructorId: string | null;
   instructorName: string | null;
   weekday: number;
   startTime: string;
@@ -119,6 +126,7 @@ export type ProfileUpsertInput = {
 export type CreateClassInput = {
   academyId: string;
   title: string;
+  instructorId?: string | null;
   instructorName?: string | null;
   weekday: number;
   startTime: string;
@@ -133,6 +141,7 @@ export type CreateClassInput = {
 export type UpdateClassInput = {
   id: string;
   title?: string;
+  instructorId?: string | null;
   instructorName?: string | null;
   weekday?: number;
   startTime?: string;
@@ -171,7 +180,7 @@ export type AddMemberInput = {
 
 export interface AuthPort {
   signIn(email: string, password: string): Promise<AuthUser>;
-  signUp(email: string, password: string, role: UserRole): Promise<AuthUser>;
+  signUp(email: string, password: string): Promise<{ user: AuthUser; hasSession: boolean }>;
   signOut(): Promise<void>;
   getSession(): Promise<AuthSession | null>;
   getCurrentUser(): Promise<AuthUser | null>;
@@ -211,6 +220,8 @@ export interface ClassesPort {
 export interface CheckinsPort {
   createCheckin(input: CreateCheckinInput): Promise<ClassCheckin>;
   listPendingByAcademy(academyId: string): Promise<CheckinListItem[]>;
+  /** RLS filters results to the current instructor's classes. */
+  listPendingMine(): Promise<CheckinListItem[]>;
   updateStatus(input: UpdateCheckinStatusInput): Promise<ClassCheckin>;
 }
 

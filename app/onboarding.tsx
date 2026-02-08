@@ -1,37 +1,37 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   SafeAreaView,
   ScrollView,
   Text,
   View,
 } from "react-native";
-import { GraduationCap, Users, ChevronLeft, ChevronRight } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { GraduationCap, Users, ChevronLeft, ChevronRight, Mail } from "lucide-react-native";
 
 import { Avatar } from "../components/ui/Avatar";
 import { BeltSelector } from "../components/ui/BeltSelector";
-import { Button } from "../components/ui/Button";
 import { DateInput } from "../components/ui/DateInput";
 import { DegreeSelector } from "../components/ui/DegreeSelector";
 import { RoleCard } from "../components/RoleCard";
-import { Select } from "../components/ui/Select";
 import { TextField } from "../components/ui/TextField";
-import type { UserRole } from "../src/core/ports/blackbelt-ports";
+import type { UserRole, Sex } from "../src/core/ports/blackbelt-ports";
 import type { BeltName } from "../src/core/belts/belts";
+import { getErrorMessage } from "../src/core/errors/get-error-message";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
 import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 import { supabase } from "../src/infra/supabase/client";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
-const SEX_OPTIONS = [
+const SEX_OPTIONS: { label: string; value: Sex }[] = [
   { label: "Masculino", value: "M" },
   { label: "Feminino", value: "F" },
   { label: "Outro", value: "O" },
-  { label: "Prefiro não informar", value: "N" },
 ];
 
 type OnboardingData = {
@@ -39,12 +39,11 @@ type OnboardingData = {
   firstName: string;
   lastName: string;
   birthDate: string;
-  sex: string;
+  sex: Sex | null;
   avatarUri: string;
   avatarUrl: string;
   belt: BeltName;
   degree: number;
-  federationNumber: string;
 };
 
 const initialData: OnboardingData = {
@@ -52,36 +51,51 @@ const initialData: OnboardingData = {
   firstName: "",
   lastName: "",
   birthDate: "",
-  sex: "",
+  sex: null,
   avatarUri: "",
   avatarUrl: "",
   belt: "Branca",
   degree: 0,
-  federationNumber: "",
 };
 
 export default function Onboarding() {
   const router = useRouter();
-  const { isLoading, session, profile, error } = useAuthProfile();
+  const params = useLocalSearchParams<{ pendingEmail?: string | string[] }>();
+  const pendingEmail = Array.isArray(params.pendingEmail) ? params.pendingEmail[0] : params.pendingEmail;
+  const { isLoading, session, profile, refresh } = useAuthProfile();
   
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const roleLocked = !!profile?.role;
 
   // Redirect logic
   useEffect(() => {
     if (isLoading) return;
     if (!session) {
+      if (pendingEmail) return;
       router.replace("/auth");
       return;
     }
-    // If profile is complete, go to app
+    // If profile is complete, go to appropriate route
     if (profile?.role && profile?.firstName && profile?.currentBelt) {
-      router.replace("/");
+      if (profile.role === "student") {
+        router.replace("/join-academy");
+      } else if (profile.role === "owner") {
+        router.replace("/create-academy");
+      } else {
+        router.replace("/professor-checkins");
+      }
     }
-  }, [isLoading, session, profile, router]);
+  }, [isLoading, session, profile, router, pendingEmail]);
+
+  useEffect(() => {
+    if (!profile?.role) return;
+    setData((prev) => (prev.role ? prev : { ...prev, role: profile.role }));
+  }, [profile?.role]);
 
   const updateData = (updates: Partial<OnboardingData>) => {
     setData((prev) => ({ ...prev, ...updates }));
@@ -119,7 +133,7 @@ export default function Onboarding() {
       updateData({ avatarUrl: publicUrl });
     } catch (err) {
       console.error("Upload error:", err);
-      setSaveError("Não foi possível fazer upload da foto. Tente novamente.");
+      setSaveError(getErrorMessage(err, "Nao foi possivel fazer upload da foto. Tente novamente."));
       updateData({ avatarUri: "" });
     } finally {
       setIsUploading(false);
@@ -136,22 +150,57 @@ export default function Onboarding() {
       await blackBeltAdapters.profiles.upsertProfile({
         id: session.user.id,
         email: session.user.email,
-        role: data.role,
+        role: profile?.role ?? data.role,
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
         birthDate: data.birthDate || null,
-        sex: (data.sex as "M" | "F" | "O" | "N") || null,
+        sex: data.sex,
         avatarUrl: data.avatarUrl || null,
         currentBelt: data.belt,
         beltDegree: data.degree,
-        federationNumber: data.federationNumber.trim() || null,
       });
 
-      router.replace("/");
+      // Check if email is confirmed
+      const { data: userData } = await supabase.auth.getUser();
+      const emailConfirmed = userData?.user?.email_confirmed_at != null;
+
+      if (!emailConfirmed) {
+        // Show email confirmation screen
+        setShowEmailConfirmation(true);
+      } else {
+        // Redirect based on role
+        if (data.role === "student") {
+          router.replace("/join-academy");
+        } else if (data.role === "owner") {
+          router.replace("/create-academy");
+        } else {
+          router.replace("/professor-checkins");
+        }
+      }
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Não foi possível salvar seu perfil.");
+      setSaveError(getErrorMessage(err, "Nao foi possivel salvar seu perfil."));
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCheckEmailConfirmed = async () => {
+    try {
+      await refresh();
+      const { data: userData } = await supabase.auth.getUser();
+      const emailConfirmed = userData?.user?.email_confirmed_at != null;
+      
+      if (emailConfirmed) {
+        if (data.role === "student") {
+          router.replace("/join-academy");
+        } else if (data.role === "owner") {
+          router.replace("/create-academy");
+        } else {
+          router.replace("/professor-checkins");
+        }
+      }
+    } catch (err) {
+      // Ignore - will stay on confirmation screen
     }
   };
 
@@ -164,14 +213,12 @@ export default function Onboarding() {
           data.firstName.trim().length > 0 &&
           data.lastName.trim().length > 0 &&
           data.birthDate.length > 0 &&
-          data.sex.length > 0
+          data.sex !== null
         );
       case 3:
-        return data.avatarUrl.length > 0 || data.avatarUri.length > 0;
-      case 4:
         return data.belt !== null;
-      case 5:
-        return true; // Federation number is optional
+      case 4:
+        return true; // Avatar is optional
       default:
         return false;
     }
@@ -197,7 +244,7 @@ export default function Onboarding() {
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <View
           key={i}
-          className={`h-1 flex-1 rounded-full ${
+          className={`h-1.5 flex-1 rounded-full ${
             i < step ? "bg-brand-500" : "bg-subtle-dark"
           }`}
         />
@@ -205,31 +252,39 @@ export default function Onboarding() {
     </View>
   );
 
-  // Step 1: Role Selection
+  // Step 1: Role Selection (First screen as in Lovable mockup)
   const renderStep1 = () => (
-    <View>
-      <Text className="text-2xl font-semibold text-text-primary-dark">
-        Como você vai usar o BlackBelt?
-      </Text>
-      <Text className="mt-2 text-text-secondary-dark">
-        Escolha seu perfil para personalizar sua experiência.
-      </Text>
+    <View className="flex-1 justify-center">
+      <View className="items-center mb-10">
+        <Text className="text-2xl font-bold text-text-primary-dark text-center">
+          Como você vai usar o{"\n"}BlackBelt?
+        </Text>
+        <Text className="mt-3 text-text-secondary-dark text-center">
+          Selecione seu perfil para continuar
+        </Text>
+      </View>
 
-      <View className="mt-8 gap-4">
+      <View className="gap-4">
         <RoleCard
-          title="Professor / Dono"
-          description="Crie sua academia, gere convites e gerencie alunos."
-          icon={GraduationCap}
-          accent="brand"
-          selected={data.role === "professor"}
-          onPress={() => updateData({ role: "professor" })}
-        />
-        <RoleCard
-          title="Aluno"
-          description="Entre com o código da academia e acompanhe seu progresso."
+          title="Sou Aluno"
+          description="Quero treinar e acompanhar minha evolução no Jiu-Jitsu"
           icon={Users}
           selected={data.role === "student"}
-          onPress={() => updateData({ role: "student" })}
+          onPress={() => {
+            if (roleLocked) return;
+            updateData({ role: "student" });
+          }}
+        />
+        <RoleCard
+          title="Sou Dono"
+          description="Quero gerenciar minha academia e meus alunos"
+          icon={GraduationCap}
+          accent="brand"
+          selected={data.role === "owner"}
+          onPress={() => {
+            if (roleLocked) return;
+            updateData({ role: "owner" });
+          }}
         />
       </View>
     </View>
@@ -238,34 +293,29 @@ export default function Onboarding() {
   // Step 2: Personal Data
   const renderStep2 = () => (
     <View>
-      <Text className="text-2xl font-semibold text-text-primary-dark">
-        Seus dados pessoais
+      <Text className="text-2xl font-bold text-text-primary-dark">
+        Dados pessoais
       </Text>
       <Text className="mt-2 text-text-secondary-dark">
-        Preencha suas informações básicas.
+        Conte-nos um pouco sobre você
       </Text>
 
-      <View className="mt-6 gap-4">
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <TextField
-              label="Nome"
-              value={data.firstName}
-              onChangeText={(v) => updateData({ firstName: v })}
-              placeholder="Seu nome"
-              autoCapitalize="words"
-            />
-          </View>
-          <View className="flex-1">
-            <TextField
-              label="Sobrenome"
-              value={data.lastName}
-              onChangeText={(v) => updateData({ lastName: v })}
-              placeholder="Seu sobrenome"
-              autoCapitalize="words"
-            />
-          </View>
-        </View>
+      <View className="mt-6 gap-5">
+        <TextField
+          label="Primeiro nome"
+          value={data.firstName}
+          onChangeText={(v) => updateData({ firstName: v })}
+          placeholder="Seu nome"
+          autoCapitalize="words"
+        />
+
+        <TextField
+          label="Sobrenome"
+          value={data.lastName}
+          onChangeText={(v) => updateData({ lastName: v })}
+          placeholder="Seu sobrenome"
+          autoCapitalize="words"
+        />
 
         <DateInput
           label="Data de nascimento"
@@ -273,24 +323,78 @@ export default function Onboarding() {
           onChangeDate={(v) => updateData({ birthDate: v })}
         />
 
-        <Select
-          label="Sexo"
-          value={data.sex}
-          options={SEX_OPTIONS}
-          onValueChange={(v) => updateData({ sex: v })}
+        {/* Sex selector as chips */}
+        <View>
+          <Text className="mb-3 text-xs uppercase tracking-widest text-text-muted-dark">
+            Sexo
+          </Text>
+          <View className="flex-row gap-3">
+            {SEX_OPTIONS.map((option) => (
+              <Pressable
+                key={option.value}
+                onPress={() => updateData({ sex: option.value })}
+                className={[
+                  "flex-1 py-3.5 rounded-xl border",
+                  data.sex === option.value
+                    ? "border-brand-500 bg-brand-500/20"
+                    : "border-subtle-dark bg-surface-dark",
+                ].join(" ")}
+              >
+                <Text
+                  className={[
+                    "text-center font-medium text-sm",
+                    data.sex === option.value
+                      ? "text-brand-400"
+                      : "text-text-secondary-dark",
+                  ].join(" ")}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  // Step 3: Belt and Degree
+  const renderStep3 = () => (
+    <View>
+      <Text className="text-2xl font-bold text-text-primary-dark">
+        Sua faixa
+      </Text>
+      <Text className="mt-2 text-text-secondary-dark">
+        Selecione sua faixa atual e grau
+      </Text>
+
+      <View className="mt-8">
+        <BeltSelector
+          label="Faixa"
+          value={data.belt}
+          onSelect={(v) => updateData({ belt: v, degree: 0 })}
+        />
+      </View>
+
+      <View className="mt-8">
+        <DegreeSelector
+          label="Grau (número de listras)"
+          value={data.degree}
+          belt={data.belt}
+          onSelect={(v) => updateData({ degree: v })}
         />
       </View>
     </View>
   );
 
-  // Step 3: Avatar
-  const renderStep3 = () => (
+  // Step 4: Avatar
+  const renderStep4 = () => (
     <View className="items-center">
-      <Text className="text-2xl font-semibold text-text-primary-dark">
-        Sua foto de perfil
+      <Text className="text-2xl font-bold text-text-primary-dark text-center">
+        Foto de perfil
       </Text>
-      <Text className="mt-2 text-center text-text-secondary-dark">
-        Adicione uma foto para que outros praticantes te reconheçam.
+      <Text className="mt-2 text-text-secondary-dark text-center">
+        Adicione uma foto para os colegas te reconhecerem
       </Text>
 
       <View className="mt-10">
@@ -305,7 +409,7 @@ export default function Onboarding() {
 
       {isUploading && (
         <View className="mt-4 flex-row items-center gap-2">
-          <ActivityIndicator size="small" color="#6366F1" />
+          <ActivityIndicator size="small" color="#8B5CF6" />
           <Text className="text-sm text-brand-400">Enviando foto...</Text>
         </View>
       )}
@@ -314,79 +418,167 @@ export default function Onboarding() {
         <Text className="mt-4 text-sm text-success-dark">✓ Foto salva!</Text>
       )}
 
-      <Text className="mt-6 text-center text-xs text-text-muted-dark">
-        Toque no avatar para escolher uma foto da galeria
+      <Pressable
+        onPress={() => {
+          // Trigger avatar picker
+          const avatar = document.querySelector('[data-avatar-picker]');
+          if (avatar) (avatar as HTMLElement).click();
+        }}
+        className="mt-6 py-3 px-6 rounded-xl border border-subtle-dark bg-surface-dark flex-row items-center gap-2"
+      >
+        <Text className="text-brand-400 font-medium">📷 Escolher foto</Text>
+      </Pressable>
+
+      <Text className="mt-4 text-center text-xs text-text-muted-dark">
+        Opcional — você pode adicionar depois
       </Text>
     </View>
   );
 
-  // Step 4: Belt and Degree
-  const renderStep4 = () => (
-    <View>
-      <Text className="text-2xl font-semibold text-text-primary-dark">
-        Sua faixa atual
-      </Text>
-      <Text className="mt-2 text-text-secondary-dark">
-        Selecione sua faixa e quantidade de graus.
-      </Text>
+  // Pending Email Confirmation (no session yet)
+  const renderPendingEmailConfirmation = () => (
+    <SafeAreaView className="flex-1 bg-app-dark">
+      <View className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl" />
+      <View className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-brand-500/10 blur-3xl" />
+      
+      <View className="flex-1 justify-center px-6">
+        <View className="mx-auto w-full max-w-[400px] items-center">
+          {/* Icon */}
+          <View className="h-20 w-20 rounded-full bg-brand-600/20 items-center justify-center mb-6">
+            <Mail size={40} color="#8B5CF6" />
+          </View>
 
-      <View className="mt-8">
-        <BeltSelector
-          label="Faixa"
-          value={data.belt}
-          onSelect={(v) => updateData({ belt: v, degree: 0 })}
-        />
-      </View>
-
-      <View className="mt-6">
-        <DegreeSelector
-          label="Graus"
-          value={data.degree}
-          belt={data.belt}
-          onSelect={(v) => updateData({ degree: v })}
-        />
-      </View>
-    </View>
-  );
-
-  // Step 5: Federation (optional)
-  const renderStep5 = () => (
-    <View>
-      <Text className="text-2xl font-semibold text-text-primary-dark">
-        Número da federação
-      </Text>
-      <Text className="mt-2 text-text-secondary-dark">
-        Opcional. Informe seu registro na CBJJ, IBJJF ou outra federação.
-      </Text>
-
-      <View className="mt-6">
-        <TextField
-          label="Número de registro"
-          value={data.federationNumber}
-          onChangeText={(v) => updateData({ federationNumber: v })}
-          placeholder="Ex: CBJJ12345"
-          autoCapitalize="characters"
-          helperText="Você pode adicionar isso depois nas configurações"
-        />
-      </View>
-
-      <View className="mt-8 rounded-xl bg-surface-dark-elevated p-4">
-        <Text className="text-sm font-medium text-text-primary-dark">
-          📋 Resumo do perfil
-        </Text>
-        <View className="mt-3 gap-1">
-          <Text className="text-sm text-text-secondary-dark">
-            Nome: {data.firstName} {data.lastName}
+          <Text className="text-xs uppercase tracking-[6px] text-brand-400 mb-3">
+            Ultimo passo
           </Text>
-          <Text className="text-sm text-text-secondary-dark">
-            Faixa: {data.belt} {data.degree > 0 ? `(${data.degree} graus)` : ""}
+          <Text className="font-display text-3xl font-bold text-text-primary-dark text-center">
+            Verifique seu email
           </Text>
-          <Text className="text-sm text-text-secondary-dark">
-            Tipo: {data.role === "professor" ? "Professor/Dono" : "Aluno"}
+          <Text className="mt-4 text-base text-text-secondary-dark text-center">
+            Enviamos um link de confirmacao para{"\n"}
+            <Text className="font-semibold text-text-primary-dark">
+              {pendingEmail}
+            </Text>
           </Text>
+          <Text className="mt-2 text-sm text-text-muted-dark text-center">
+            Clique no link do email para ativar sua conta.
+          </Text>
+
+          {/* Check button */}
+          <Pressable
+            onPress={() => {
+              void refresh();
+            }}
+            className="mt-8 w-full overflow-hidden rounded-2xl"
+          >
+            <LinearGradient
+              colors={["#7C3AED", "#6366F1"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="px-8 py-4"
+            >
+              <Text className="text-center text-base font-semibold text-white">
+                Ja confirmei, continuar
+              </Text>
+            </LinearGradient>
+          </Pressable>
+
+          {/* Resend link */}
+          <Pressable
+            onPress={async () => {
+              if (pendingEmail) {
+                await supabase.auth.resend({
+                  type: "signup",
+                  email: pendingEmail,
+                });
+              }
+            }}
+            className="mt-4 py-2"
+          >
+            <Text className="text-sm text-text-secondary-dark">
+              Nao recebeu? <Text className="text-brand-400">Reenviar email</Text>
+            </Text>
+          </Pressable>
+
+          {/* Back */}
+          <Pressable
+            onPress={() => router.replace("/auth")}
+            className="mt-4 py-2"
+          >
+            <Text className="text-sm text-text-secondary-dark">
+              Voltar para login
+            </Text>
+          </Pressable>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
+  );
+
+  // Email Confirmation Screen
+  const renderEmailConfirmation = () => (
+    <SafeAreaView className="flex-1 bg-app-dark">
+      <View className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl" />
+      <View className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-brand-500/10 blur-3xl" />
+      
+      <View className="flex-1 justify-center px-6">
+        <View className="mx-auto w-full max-w-[400px] items-center">
+          {/* Icon */}
+          <View className="h-20 w-20 rounded-full bg-brand-600/20 items-center justify-center mb-6">
+            <Mail size={40} color="#8B5CF6" />
+          </View>
+
+          <Text className="text-xs uppercase tracking-[6px] text-brand-400 mb-3">
+            Último passo
+          </Text>
+          <Text className="font-display text-3xl font-bold text-text-primary-dark text-center">
+            Verifique seu email
+          </Text>
+          <Text className="mt-4 text-base text-text-secondary-dark text-center">
+            Enviamos um link de confirmação para{"\n"}
+            <Text className="font-semibold text-text-primary-dark">
+              {session?.user.email}
+            </Text>
+          </Text>
+          <Text className="mt-2 text-sm text-text-muted-dark text-center">
+            Clique no link do email para ativar sua conta.
+          </Text>
+
+          {/* Check button */}
+          <Pressable
+            onPress={handleCheckEmailConfirmed}
+            className="mt-8 w-full overflow-hidden rounded-2xl"
+          >
+            <LinearGradient
+              colors={["#7C3AED", "#6366F1"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="px-8 py-4"
+            >
+              <Text className="text-center text-base font-semibold text-white">
+                Já confirmei, continuar
+              </Text>
+            </LinearGradient>
+          </Pressable>
+
+          {/* Resend link */}
+          <Pressable
+            onPress={async () => {
+              if (session?.user.email) {
+                await supabase.auth.resend({
+                  type: "signup",
+                  email: session.user.email,
+                });
+              }
+            }}
+            className="mt-4 py-2"
+          >
+            <Text className="text-sm text-text-secondary-dark">
+              Não recebeu? <Text className="text-brand-400">Reenviar email</Text>
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 
   const renderCurrentStep = () => {
@@ -399,8 +591,6 @@ export default function Onboarding() {
         return renderStep3();
       case 4:
         return renderStep4();
-      case 5:
-        return renderStep5();
       default:
         return null;
     }
@@ -409,76 +599,108 @@ export default function Onboarding() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-app-dark">
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#8B5CF6" />
       </SafeAreaView>
     );
   }
 
+  if (!session && pendingEmail) {
+    return renderPendingEmailConfirmation();
+  }
+
+  if (showEmailConfirmation) {
+    return renderEmailConfirmation();
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-app-dark">
+      {/* Background effects */}
+      <View className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-brand-600/15" />
+      <View className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-brand-500/10" />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
-        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
-          <View className="px-page py-6">
-            <View className="mx-auto w-full max-w-[500px]">
-              {/* Header */}
-              <Text className="text-xs uppercase tracking-widest text-brand-400">
-                BlackBelt • Passo {step} de {TOTAL_STEPS}
-              </Text>
-
-              {/* Progress */}
-              <View className="mt-4">{renderProgress()}</View>
+        <ScrollView 
+          className="flex-1" 
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          <View className="flex-1 px-6 py-6">
+            <View className="mx-auto w-full max-w-[500px] flex-1">
+              {/* Header with progress (not on step 1) */}
+              {step > 1 && (
+                <>
+                  <Text className="text-xs uppercase tracking-[4px] text-brand-400">
+                    Criar Perfil
+                  </Text>
+                  <View className="mt-4">{renderProgress()}</View>
+                </>
+              )}
 
               {/* Content */}
-              <View className="mt-2">{renderCurrentStep()}</View>
+              <View className={step === 1 ? "flex-1" : "mt-4"}>
+                {renderCurrentStep()}
+              </View>
 
               {/* Error */}
-              {(error || saveError) && (
-                <View className="mt-4 rounded-lg bg-error-dark/20 p-3">
-                  <Text className="text-sm text-error-dark">
-                    {error || saveError}
-                  </Text>
+              {saveError && (
+                <View className="mt-4 rounded-xl bg-error-dark/20 p-4">
+                  <Text className="text-sm text-error-dark">{saveError}</Text>
                 </View>
               )}
 
               {/* Navigation */}
               <View className="mt-8 flex-row gap-3">
                 {step > 1 && (
-                  <Button
-                    variant="secondary"
+                  <Pressable
                     onPress={handleBack}
                     disabled={isSaving}
-                    className="flex-row items-center gap-1"
+                    className="flex-row items-center justify-center gap-1 px-5 py-4 rounded-xl border border-subtle-dark bg-surface-dark"
+                    style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
                   >
                     <ChevronLeft size={18} color="#F8FAFC" />
-                    <Text className="text-text-primary-dark">Voltar</Text>
-                  </Button>
+                    <Text className="text-text-primary-dark font-medium">Voltar</Text>
+                  </Pressable>
                 )}
 
-                <Button
-                  variant="primary"
+                <Pressable
                   onPress={handleNext}
                   disabled={!canProceed() || isSaving || isUploading}
-                  className="flex-1 flex-row items-center justify-center gap-1"
+                  className="flex-1 overflow-hidden rounded-xl"
+                  style={({ pressed }) => ({
+                    opacity: pressed && canProceed() ? 0.9 : 1,
+                  })}
                 >
-                  <Text className="font-medium text-white">
-                    {isSaving
-                      ? "Salvando..."
-                      : step === TOTAL_STEPS
-                      ? "Finalizar"
-                      : "Continuar"}
-                  </Text>
-                  {step < TOTAL_STEPS && <ChevronRight size={18} color="#fff" />}
-                </Button>
+                  <LinearGradient
+                    colors={
+                      canProceed() && !isSaving && !isUploading
+                        ? ["#7C3AED", "#6366F1"]
+                        : ["#374151", "#374151"]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    className="flex-row items-center justify-center gap-1 px-6 py-4"
+                  >
+                    <Text
+                      className={[
+                        "font-semibold",
+                        canProceed() ? "text-white" : "text-text-muted-dark",
+                      ].join(" ")}
+                    >
+                      {isSaving
+                        ? "Salvando..."
+                        : step === TOTAL_STEPS
+                        ? "Concluir"
+                        : "Próximo"}
+                    </Text>
+                    {step < TOTAL_STEPS && canProceed() && (
+                      <ChevronRight size={18} color="#fff" />
+                    )}
+                  </LinearGradient>
+                </Pressable>
               </View>
-
-              {step === 5 && (
-                <Text className="mt-4 text-center text-xs text-text-muted-dark">
-                  Ao finalizar, você concorda com os termos de uso.
-                </Text>
-              )}
             </View>
           </View>
         </ScrollView>

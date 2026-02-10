@@ -28,7 +28,7 @@ function RootShell() {
   const isDark = theme === "dark";
 
   return (
-    <View className={["flex-1 bg-app-light dark:bg-app-dark", isDark ? "dark" : ""].join(" ")}>
+    <View className="flex-1 bg-app-light dark:bg-app-dark">
       <StatusBar style={isDark ? "light" : "dark"} />
       <AuthGate>
         <Stack screenOptions={{ headerShown: false }} />

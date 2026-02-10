@@ -8,5 +8,7 @@ agent*.md
 /docs/agent/*.mddocs/obsidian
 /docs/agent/*.md
 /docs/*/*.md
-/supabase/
+/supabase/*
+!/supabase/migrations/
+!/supabase/migrations/**
 /docs/epics/*.md

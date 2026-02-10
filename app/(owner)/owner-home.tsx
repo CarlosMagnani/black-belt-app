@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Platform, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
+import { HomeHeader } from "../../components/home/HomeHeader";
 import { InviteCodeCard } from "../../components/owner/InviteCodeCard";
 import { KpiCard } from "../../components/owner/KpiCard";
 import { OverdueCounter } from "../../components/owner/OverdueCounter";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
@@ -29,6 +31,7 @@ const calculateOverdueCount = (membersCount: number): number => {
 export default function OwnerHome() {
   const router = useRouter();
   const { academy, isLoading, error } = useOwnerAcademy();
+  const { profile } = useAuthProfile();
   const [membersCount, setMembersCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
@@ -92,17 +95,17 @@ export default function OwnerHome() {
 
   return (
     <ScrollView className="flex-1">
-      <View className="px-page pb-10 pt-6 web:px-10">
-        <View className="mx-auto w-full max-w-[1100px]">
-          <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
-            Dashboard
-          </Text>
-          <Text className="mt-2 font-display text-3xl text-strong-light dark:text-strong-dark">
-            Painel do owner
-          </Text>
-          <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
-            Visao geral da academia e acessos rapidos.
-          </Text>
+      <View className="pb-10 pt-6">
+        <View className="w-full px-page web:mx-auto web:max-w-6xl web:px-10">
+          <HomeHeader
+            displayName={profile?.fullName ?? profile?.email ?? "Mestre"}
+            belt={profile?.currentBelt ?? 'Preta'}
+            beltDegree={profile?.beltDegree ?? null}
+            userName={profile?.fullName ?? profile?.email ?? "Mestre"}
+            userAvatarUrl={profile?.avatarUrl ?? null}
+            academyName={academy?.name ?? "Academia"}
+            academyLogoUrl={academy?.logoUrl ?? null}
+          />
 
           {error ? (
             <Card className="mt-6" variant="outline">

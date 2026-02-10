@@ -27,6 +27,31 @@ const splitFullName = (fullName?: string | null) => {
   return { firstName: first, lastName: rest.join(" ") };
 };
 
+const guessImageExt = (localUri: string, mimeType?: string | null): string => {
+  const guessFromMime = (mime?: string | null): string | null => {
+    const value = (mime ?? "").toLowerCase();
+    if (!value.startsWith("image/")) return null;
+    const subtype = value.slice("image/".length);
+    if (subtype === "jpeg" || subtype === "jpg") return "jpg";
+    if (subtype === "png") return "png";
+    if (subtype === "webp") return "webp";
+    if (subtype === "gif") return "gif";
+    if (subtype === "heic") return "heic";
+    if (subtype === "heif") return "heif";
+    return null;
+  };
+
+  const guessFromUri = (uri: string): string | null => {
+    const match = uri.toLowerCase().match(/\.([a-z0-9]{1,10})(?:$|[?#])/);
+    if (!match?.[1]) return null;
+    const ext = match[1] === "jpeg" ? "jpg" : match[1];
+    if (!/^[a-z0-9]{1,10}$/.test(ext)) return null;
+    return ext;
+  };
+
+  return guessFromMime(mimeType) ?? guessFromUri(localUri) ?? "jpg";
+};
+
 export default function Profile() {
   const {
     isBooting,
@@ -80,7 +105,7 @@ export default function Profile() {
     try {
       const response = await fetch(localUri);
       const blob = await response.blob();
-      const fileExt = localUri.split(".").pop()?.toLowerCase() ?? "jpg";
+      const fileExt = guessImageExt(localUri, (blob as unknown as { type?: string }).type ?? null);
 
       const publicUrl = await blackBeltAdapters.storage.uploadAvatar(
         profile.id,

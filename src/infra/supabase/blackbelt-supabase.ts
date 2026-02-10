@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { SupportedStorage } from "@supabase/auth-js";
+import * as Linking from "expo-linking";
 
 import type {
   Academy,
@@ -553,7 +554,14 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
       return { id: data.user.id, email: data.user.email ?? null };
     },
     async signUp(email: string, password: string): Promise<{ user: AuthUser; hasSession: boolean }> {
-      const { data, error } = await client.auth.signUp({ email, password });
+      const emailRedirectTo =
+        process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL ?? Linking.createURL("auth-callback");
+
+      const { data, error } = await client.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo },
+      });
       if (error) throw error;
       if (!data.user) throw new Error("Missing user from sign-up response.");
 
@@ -628,13 +636,49 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
 
   const fileStorage = {
     async uploadAvatar(userId: string, blob: Blob, fileExt: string): Promise<string> {
-      const fileName = `${userId}/avatar.${fileExt}`;
+      const guessExtFromMime = (mime?: string | null): string | null => {
+        const value = (mime ?? "").toLowerCase();
+        if (!value.startsWith("image/")) return null;
+        const subtype = value.slice("image/".length);
+        if (subtype === "jpeg") return "jpg";
+        if (subtype === "jpg") return "jpg";
+        if (subtype === "png") return "png";
+        if (subtype === "webp") return "webp";
+        if (subtype === "gif") return "gif";
+        if (subtype === "heic") return "heic";
+        if (subtype === "heif") return "heif";
+        return null;
+      };
+
+      const normalizeExt = (value?: string | null, mime?: string | null): string => {
+        const raw = (value ?? "").toLowerCase().trim().replace(/^\./, "");
+        const safe = /^[a-z0-9]{1,10}$/.test(raw) ? raw : "";
+        const normalized = safe === "jpeg" ? "jpg" : safe;
+        const allowed = new Set(["jpg", "png", "webp", "gif", "heic", "heif"]);
+        if (allowed.has(normalized)) return normalized;
+        return guessExtFromMime(mime) ?? "jpg";
+      };
+
+      const toContentType = (ext: string, mime?: string | null) => {
+        const safeMime = (mime ?? "").toLowerCase();
+        if (safeMime.startsWith("image/")) return safeMime;
+        if (ext === "jpg") return "image/jpeg";
+        if (ext === "png") return "image/png";
+        if (ext === "webp") return "image/webp";
+        if (ext === "gif") return "image/gif";
+        if (ext === "heic") return "image/heic";
+        if (ext === "heif") return "image/heif";
+        return "image/jpeg";
+      };
+
+      const ext = normalizeExt(fileExt, (blob as unknown as { type?: string }).type ?? null);
+      const fileName = `${userId}/avatar.${ext}`;
       const { error: uploadError } = await client.storage
         .from("avatars")
         .upload(fileName, blob, {
           cacheControl: "3600",
           upsert: true,
-          contentType: `image/${fileExt}`,
+          contentType: toContentType(ext, (blob as unknown as { type?: string }).type ?? null),
         });
       if (uploadError) throw uploadError;
       const { data: urlData } = client.storage.from("avatars").getPublicUrl(fileName);

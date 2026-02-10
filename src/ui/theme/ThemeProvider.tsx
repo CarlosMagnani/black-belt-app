@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { useColorScheme } from "react-native";
+import { useColorScheme as useSystemColorScheme } from "react-native";
+import { useColorScheme as useNativeWindColorScheme } from "nativewind";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Theme = "light" | "dark";
@@ -19,12 +20,23 @@ const STORAGE_KEY = "themePreference";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemScheme = useColorScheme();
+  const systemScheme = useSystemColorScheme();
+  const { setColorScheme } = useNativeWindColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>("system");
   const [isReady, setIsReady] = useState(false);
 
   const theme: Theme =
     preference === "system" ? (systemScheme === "dark" ? "dark" : "light") : preference;
+
+  useEffect(() => {
+    // Keep NativeWind's global color scheme in sync so `dark:` works everywhere
+    // (including React Native `Modal`, which renders outside the normal tree).
+    try {
+      setColorScheme(preference);
+    } catch {
+      // NativeWind throws if darkMode isn't configured as "class". Ignore to avoid crashing.
+    }
+  }, [preference, setColorScheme]);
 
   useEffect(() => {
     let isActive = true;

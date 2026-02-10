@@ -152,6 +152,49 @@ export type Database = {
           }
         ];
       };
+      academy_plans: {
+        Row: {
+          id: string;
+          academy_id: string;
+          name: string;
+          description: string | null;
+          price_cents: number;
+          periodicity: Database["public"]["Enums"]["plan_periodicity"];
+          is_active: boolean;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          academy_id: string;
+          name: string;
+          description?: string | null;
+          price_cents: number;
+          periodicity: Database["public"]["Enums"]["plan_periodicity"];
+          is_active?: boolean;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          academy_id?: string;
+          name?: string;
+          description?: string | null;
+          price_cents?: number;
+          periodicity?: Database["public"]["Enums"]["plan_periodicity"];
+          is_active?: boolean;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "academy_plans_academy_id_fkey";
+            columns: ["academy_id"];
+            referencedRelation: "academies";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       academy_class_schedule: {
         Row: {
           id: string;
@@ -336,6 +379,7 @@ export type Database = {
     };
     Enums: {
       academy_staff_role: "owner" | "professor";
+      plan_periodicity: "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
       user_role: "owner" | "professor" | "student";
     };
     CompositeTypes: {};

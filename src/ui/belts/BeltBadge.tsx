@@ -40,20 +40,25 @@ const getBaseSegments = (belt: BeltName, degree?: number, coralVariant?: CoralVa
     return [BASE_COLORS.Coral, "#FFFFFF"];
   }
 
-  return [BASE_COLORS.Coral, "#111827"];
+  return [BASE_COLORS.Coral, "#000"];
 };
 
 export function BeltBadge({ belt, degree, coralVariant, className }: BeltBadgeProps) {
   const normalized = normalizeDegree(belt, degree);
   const stripeCount = normalized ?? 0;
+  const resolvedCoralVariant = belt === "Coral" ? getCoralVariant(normalized, coralVariant) : null;
   const baseSegments = useMemo(
     () => getBaseSegments(belt, normalized, coralVariant),
     [belt, normalized, coralVariant]
   );
   const tailColor = baseSegments[baseSegments.length - 1] ?? BASE_COLORS[belt];
-  const tipColor = belt === "Preta" ? "#DC2626" : "#111827";
+  const tipColor = belt === "Preta" ? "#DC2626" : "#000";
   const stripeColor = "#F8FAFC";
-  const borderColor = belt === "Branca" ? "#CBD5E1" : "transparent";
+  // Faixas com partes bem escuras (preta / coral red-black) somem no fundo escuro.
+  // Um contorno sutil resolve sem mexer na paleta do cinto.
+  const needsOutline = belt === "Preta" || (belt === "Coral" && resolvedCoralVariant === "red-black");
+  const borderColor =
+    belt === "Branca" ? "#CBD5E1" : needsOutline ? "rgba(248, 250, 252, 0.22)" : "transparent";
 
   return (
     <View

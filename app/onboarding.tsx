@@ -70,6 +70,7 @@ export default function Onboarding() {
   const [isUploading, setIsUploading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [pendingEmailMessage, setPendingEmailMessage] = useState<string | null>(null);
   const roleLocked = !!profile?.role;
 
   // Redirect logic
@@ -101,6 +102,31 @@ export default function Onboarding() {
     setData((prev) => ({ ...prev, ...updates }));
   };
 
+  const guessImageExt = (localUri: string, mimeType?: string | null): string => {
+    const guessFromMime = (mime?: string | null): string | null => {
+      const value = (mime ?? "").toLowerCase();
+      if (!value.startsWith("image/")) return null;
+      const subtype = value.slice("image/".length);
+      if (subtype === "jpeg" || subtype === "jpg") return "jpg";
+      if (subtype === "png") return "png";
+      if (subtype === "webp") return "webp";
+      if (subtype === "gif") return "gif";
+      if (subtype === "heic") return "heic";
+      if (subtype === "heif") return "heif";
+      return null;
+    };
+
+    const guessFromUri = (uri: string): string | null => {
+      const match = uri.toLowerCase().match(/\.([a-z0-9]{1,10})(?:$|[?#])/);
+      if (!match?.[1]) return null;
+      const ext = match[1] === "jpeg" ? "jpg" : match[1];
+      if (!/^[a-z0-9]{1,10}$/.test(ext)) return null;
+      return ext;
+    };
+
+    return guessFromMime(mimeType) ?? guessFromUri(localUri) ?? "jpg";
+  };
+
   const handleAvatarSelected = async (localUri: string) => {
     if (!session?.user.id) return;
     
@@ -111,25 +137,9 @@ export default function Onboarding() {
     try {
       const response = await fetch(localUri);
       const blob = await response.blob();
-      
-      const fileExt = localUri.split(".").pop()?.toLowerCase() ?? "jpg";
-      const fileName = `${session.user.id}/avatar.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(fileName, blob, {
-          cacheControl: "3600",
-          upsert: true,
-          contentType: `image/${fileExt}`,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(fileName);
-
-      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      const ext = guessImageExt(localUri, (blob as unknown as { type?: string }).type ?? null);
+      const publicUrl = await blackBeltAdapters.storage.uploadAvatar(session.user.id, blob, ext);
       updateData({ avatarUrl: publicUrl });
     } catch (err) {
       console.error("Upload error:", err);
@@ -200,7 +210,8 @@ export default function Onboarding() {
         }
       }
     } catch (err) {
-      // Ignore - will stay on confirmation screen
+      console.log(err);
+      
     }
   };
 
@@ -466,8 +477,19 @@ export default function Onboarding() {
 
           {/* Check button */}
           <Pressable
-            onPress={() => {
-              void refresh();
+            onPress={async () => {
+              setPendingEmailMessage(null);
+              try {
+                await refresh();
+                const { data: sessionData } = await supabase.auth.getSession();
+                if (!sessionData.session) {
+                  setPendingEmailMessage(
+                    "Ainda nao ha sessao. Abra o link de confirmacao no mesmo dispositivo/app ou faca login."
+                  );
+                }
+              } catch {
+                setPendingEmailMessage("Nao foi possivel verificar a sessao. Faca login.");
+              }
             }}
             className="mt-8 w-full overflow-hidden rounded-2xl"
           >
@@ -478,10 +500,16 @@ export default function Onboarding() {
               className="px-8 py-4"
             >
               <Text className="text-center text-base font-semibold text-white">
-                Ja confirmei, continuar
+                Ja confirmei, verificar novamente
               </Text>
             </LinearGradient>
           </Pressable>
+
+          {pendingEmailMessage ? (
+            <View className="mt-4 w-full rounded-xl bg-error-dark/20 p-4">
+              <Text className="text-center text-sm text-error-dark">{pendingEmailMessage}</Text>
+            </View>
+          ) : null}
 
           {/* Resend link */}
           <Pressable

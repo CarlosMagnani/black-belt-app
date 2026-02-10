@@ -26,6 +26,8 @@ export default function OwnerProfessors() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => email.trim().includes("@") && !isSaving, [email, isSaving]);
+  const master = useMemo(() => members.find((m) => m.role === "owner") ?? null, [members]);
+  const professors = useMemo(() => members.filter((m) => m.role === "professor"), [members]);
 
   const loadStaff = async () => {
     if (!academy) return;
@@ -125,7 +127,7 @@ export default function OwnerProfessors() {
             Equipe da academia
           </Text>
           <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
-            Adicione professores para validarem check-ins nas aulas atribuidas a eles.
+            Adicione professores para validarem check-ins nas aulas atribuidas a eles. O mestre (dono) tambem pode ser professor.
           </Text>
 
           {error ? (
@@ -169,40 +171,73 @@ export default function OwnerProfessors() {
                 Carregando professores...
               </Text>
             </Card>
-          ) : members.filter((m) => m.role === "professor").length === 0 ? (
-            <Card className="mt-6">
-              <Text className="text-sm text-muted-light dark:text-muted-dark">
-                Nenhum professor cadastrado ainda.
-              </Text>
-            </Card>
           ) : (
-            <View className="mt-6 gap-3">
-              {members
-                .filter((m) => m.role === "professor")
-                .map((member) => (
-                  <Card key={member.userId} className="gap-2">
+            <>
+              {master ? (
+                <View className="mt-6 gap-3">
+                  <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
+                    Mestre
+                  </Text>
+                  <Card className="gap-2">
                     <View className="flex-row items-center justify-between gap-3">
                       <View className="flex-1">
                         <Text className="font-display text-base text-strong-light dark:text-strong-dark">
-                          {member.fullName ?? member.email ?? "Professor"}
+                          {master.fullName ?? master.email ?? "Mestre"}
                         </Text>
-                        {member.email ? (
+                        {master.email ? (
                           <Text className="text-xs text-muted-light dark:text-muted-dark">
-                            {member.email}
+                            {master.email}
                           </Text>
                         ) : null}
                       </View>
-                      <Button
-                        label="Remover"
-                        variant="ghost"
-                        size="sm"
-                        disabled={isSaving}
-                        onPress={() => handleRemove(member.userId)}
-                      />
+                      <View className="rounded bg-brand-50 px-2 py-1 dark:bg-brand-600/20">
+                        <Text className="text-xs text-brand-700 dark:text-brand-50">Mestre</Text>
+                      </View>
                     </View>
                   </Card>
-                ))}
-            </View>
+                </View>
+              ) : null}
+
+              <View className="mt-6 gap-3">
+                <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
+                  Professores
+                </Text>
+
+                {professors.length === 0 ? (
+                  <Card>
+                    <Text className="text-sm text-muted-light dark:text-muted-dark">
+                      Nenhum professor cadastrado ainda.
+                    </Text>
+                  </Card>
+                ) : (
+                  <View className="gap-3">
+                    {professors.map((member) => (
+                      <Card key={member.userId} className="gap-2">
+                        <View className="flex-row items-center justify-between gap-3">
+                          <View className="flex-1">
+                            <Text className="font-display text-base text-strong-light dark:text-strong-dark">
+                              {member.fullName ?? member.email ?? "Professor"}
+                            </Text>
+                            {member.email ? (
+                              <Text className="text-xs text-muted-light dark:text-muted-dark">
+                                {member.email}
+                              </Text>
+                            ) : null}
+                          </View>
+                          <Button
+                            label="Remover"
+                            variant="ghost"
+                            size="sm"
+                            disabled={isSaving}
+                            onPress={() => handleRemove(member.userId)}
+                          />
+                        </View>
+                      </Card>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </>
           )}
         </View>
       </View>

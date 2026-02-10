@@ -66,7 +66,7 @@ export default function OwnerSchedule() {
           const name = row.profiles?.full_name ?? null;
           const email = row.profiles?.email ?? null;
           const labelBase = name ?? email ?? row.user_id.slice(0, 8);
-          const label = row.role === "owner" ? `${labelBase} (Dono)` : `${labelBase} (Professor)`;
+          const label = row.role === "owner" ? `${labelBase} (Mestre)` : `${labelBase} (Professor)`;
           return { value: row.user_id, label, name: name ?? email };
         });
 

@@ -13,9 +13,9 @@ type BeltBadgeProps = {
 
 const BELT_WIDTH = 250;
 const BELT_HEIGHT = 30;
-const TIP_WIDTH = 60;
+const TIP_WIDTH = 90;
 const TIP_END_WIDTH = 16;
-const STRIPE_WIDTH = 10;
+const STRIPE_WIDTH = 9;
 const STRIPE_HEIGHT = 40;
 const STRIPE_GAP = 5;
 
@@ -91,8 +91,8 @@ export function BeltBadge({ belt, degree, coralVariant, className }: BeltBadgePr
           justifyContent: "flex-start",
         }}
       >
-        {stripeCount > 0
-          ? Array.from({ length: stripeCount }).map((_, index) => (
+        {6 > 0
+          ? Array.from({ length: 6 }).map((_, index) => (
               <View
                 key={`${belt}-stripe-${index}`}
                 style={{

@@ -190,7 +190,7 @@ export type WebhookStatus = "pending" | "processing" | "processed" | "failed" | 
 export type SubscriptionPlan = {
   id: string;
   name: string;
-  slug: "starter" | "pro" | "business";
+  slug: SubscriptionPlanSlug;
   description: string | null;
   priceMonthly: number;
   priceYearly: number | null;
@@ -286,6 +286,166 @@ export type WebhookEvent = {
   createdAt: string | null;
 };
 
+export type SubscriptionPlanSlug = "starter" | "pro" | "business";
+
+export type CreateSubscriptionPlanInput = {
+  name: string;
+  slug: SubscriptionPlanSlug;
+  description?: string | null;
+  priceMonthly: number;
+  priceYearly?: number | null;
+  currency?: string | null;
+  maxStudents?: number | null;
+  maxProfessors?: number | null;
+  maxLocations?: number | null;
+  features?: unknown[];
+  isActive?: boolean;
+  stripePriceIdMonthly?: string | null;
+  stripePriceIdYearly?: string | null;
+};
+
+export type UpdateSubscriptionPlanInput = {
+  id: string;
+  name?: string;
+  slug?: SubscriptionPlanSlug;
+  description?: string | null;
+  priceMonthly?: number;
+  priceYearly?: number | null;
+  currency?: string | null;
+  maxStudents?: number | null;
+  maxProfessors?: number | null;
+  maxLocations?: number | null;
+  features?: unknown[];
+  isActive?: boolean;
+  stripePriceIdMonthly?: string | null;
+  stripePriceIdYearly?: string | null;
+};
+
+export type CreateSubscriptionInput = {
+  academyId: string;
+  planId: string;
+  status?: SubscriptionStatus;
+  trialStartDate?: string | null;
+  trialEndDate?: string | null;
+  paymentGateway?: PaymentGateway | null;
+  pixAuthorizationId?: string | null;
+  pixRecurrenceId?: string | null;
+  pixCustomerCpf?: string | null;
+  pixCustomerName?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripePriceId?: string | null;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  canceledAt?: string | null;
+  cancelAtPeriodEnd?: boolean;
+  cancelReason?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type UpdateSubscriptionInput = {
+  id: string;
+  planId?: string;
+  status?: SubscriptionStatus;
+  trialStartDate?: string | null;
+  trialEndDate?: string | null;
+  paymentGateway?: PaymentGateway | null;
+  pixAuthorizationId?: string | null;
+  pixRecurrenceId?: string | null;
+  pixCustomerCpf?: string | null;
+  pixCustomerName?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripePriceId?: string | null;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  canceledAt?: string | null;
+  cancelAtPeriodEnd?: boolean;
+  cancelReason?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type CreatePaymentHistoryInput = {
+  subscriptionId: string;
+  academyId: string;
+  amount: number;
+  currency?: string | null;
+  paymentGateway: PaymentGateway;
+  gatewayPaymentId?: string | null;
+  gatewayChargeId?: string | null;
+  gatewayInvoiceId?: string | null;
+  status?: PaymentStatus;
+  paymentMethod?: string | null;
+  failureReason?: string | null;
+  failureCode?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  paidAt?: string | null;
+};
+
+export type UpdatePaymentHistoryInput = {
+  id: string;
+  status?: PaymentStatus;
+  gatewayPaymentId?: string | null;
+  gatewayChargeId?: string | null;
+  gatewayInvoiceId?: string | null;
+  paymentMethod?: string | null;
+  failureReason?: string | null;
+  failureCode?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  paidAt?: string | null;
+};
+
+export type CreateWebhookEventInput = {
+  gateway: PaymentGateway;
+  eventId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  headers?: Record<string, unknown> | null;
+  status?: WebhookStatus;
+  processedAt?: string | null;
+  errorMessage?: string | null;
+  retryCount?: number;
+  nextRetryAt?: string | null;
+  receivedAt?: string | null;
+};
+
+export type UpdateWebhookEventInput = {
+  id: string;
+  status?: WebhookStatus;
+  processedAt?: string | null;
+  errorMessage?: string | null;
+  retryCount?: number;
+  nextRetryAt?: string | null;
+};
+
+export interface SubscriptionPlansPort {
+  listActive(): Promise<SubscriptionPlan[]>;
+  getById(id: string): Promise<SubscriptionPlan | null>;
+  getBySlug(slug: SubscriptionPlanSlug): Promise<SubscriptionPlan | null>;
+  createPlan?(input: CreateSubscriptionPlanInput): Promise<SubscriptionPlan>;
+  updatePlan?(input: UpdateSubscriptionPlanInput): Promise<SubscriptionPlan>;
+}
+
+export interface SubscriptionsPort {
+  getByAcademyId(academyId: string): Promise<Subscription | null>;
+  createSubscription?(input: CreateSubscriptionInput): Promise<Subscription>;
+  updateSubscription?(input: UpdateSubscriptionInput): Promise<Subscription>;
+}
+
+export interface PaymentHistoryPort {
+  listByAcademy(academyId: string): Promise<PaymentHistory[]>;
+  createPayment?(input: CreatePaymentHistoryInput): Promise<PaymentHistory>;
+  updatePayment?(input: UpdatePaymentHistoryInput): Promise<PaymentHistory>;
+}
+
+export interface WebhookEventsPort {
+  getByEventId(eventId: string): Promise<WebhookEvent | null>;
+  createEvent?(input: CreateWebhookEventInput): Promise<WebhookEvent>;
+  updateEvent?(input: UpdateWebhookEventInput): Promise<WebhookEvent>;
+}
+
 export interface AuthPort {
   signIn(email: string, password: string): Promise<AuthUser>;
   signUp(email: string, password: string): Promise<{ user: AuthUser; hasSession: boolean }>;
@@ -365,4 +525,8 @@ export type BlackBeltPorts = {
   schedules: SchedulesPort;
   progress: ProgressPort;
   storage: StoragePort;
+  subscriptionPlans?: SubscriptionPlansPort;
+  subscriptions?: SubscriptionsPort;
+  paymentHistory?: PaymentHistoryPort;
+  webhookEvents?: WebhookEventsPort;
 };

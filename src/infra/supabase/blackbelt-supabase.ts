@@ -25,6 +25,19 @@ import type {
   UpdateCheckinStatusInput,
   UpdateClassInput,
   UserRole,
+  SubscriptionPlan,
+  SubscriptionPlanSlug,
+  Subscription,
+  PaymentHistory,
+  WebhookEvent,
+  CreateSubscriptionPlanInput,
+  UpdateSubscriptionPlanInput,
+  CreateSubscriptionInput,
+  UpdateSubscriptionInput,
+  CreatePaymentHistoryInput,
+  UpdatePaymentHistoryInput,
+  CreateWebhookEventInput,
+  UpdateWebhookEventInput,
 } from "../../core/ports/blackbelt-ports";
 import type { Database } from "./database.types";
 
@@ -153,6 +166,188 @@ const toCheckin = (
   validatedBy: row.validated_by,
   validatedAt: row.validated_at,
   createdAt: row.created_at,
+});
+
+const toSubscriptionPlan = (
+  row: Database["public"]["Tables"]["subscription_plans"]["Row"]
+): SubscriptionPlan => ({
+  id: row.id,
+  name: row.name,
+  slug: row.slug as SubscriptionPlanSlug,
+  description: row.description,
+  priceMonthly: row.price_monthly,
+  priceYearly: row.price_yearly,
+  currency: row.currency,
+  maxStudents: row.max_students,
+  maxProfessors: row.max_professors,
+  maxLocations: row.max_locations,
+  features: Array.isArray(row.features) ? row.features : [],
+  isActive: row.is_active,
+  stripePriceIdMonthly: row.stripe_price_id_monthly,
+  stripePriceIdYearly: row.stripe_price_id_yearly,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const toSubscriptionPlanPayload = (
+  input: CreateSubscriptionPlanInput | UpdateSubscriptionPlanInput
+): Partial<Database["public"]["Tables"]["subscription_plans"]["Insert"]> => ({
+  ...("name" in input && input.name !== undefined ? { name: input.name } : {}),
+  ...("slug" in input && input.slug !== undefined ? { slug: input.slug } : {}),
+  ...(input.description !== undefined ? { description: input.description } : {}),
+  ...(input.priceMonthly !== undefined ? { price_monthly: input.priceMonthly } : {}),
+  ...(input.priceYearly !== undefined ? { price_yearly: input.priceYearly } : {}),
+  ...(input.currency !== undefined ? { currency: input.currency } : {}),
+  ...(input.maxStudents !== undefined ? { max_students: input.maxStudents } : {}),
+  ...(input.maxProfessors !== undefined ? { max_professors: input.maxProfessors } : {}),
+  ...(input.maxLocations !== undefined ? { max_locations: input.maxLocations } : {}),
+  ...(input.features !== undefined ? { features: input.features } : {}),
+  ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
+  ...(input.stripePriceIdMonthly !== undefined
+    ? { stripe_price_id_monthly: input.stripePriceIdMonthly }
+    : {}),
+  ...(input.stripePriceIdYearly !== undefined
+    ? { stripe_price_id_yearly: input.stripePriceIdYearly }
+    : {}),
+});
+
+const toSubscription = (
+  row: Database["public"]["Tables"]["subscriptions"]["Row"]
+): Subscription => ({
+  id: row.id,
+  academyId: row.academy_id,
+  planId: row.plan_id,
+  status: row.status,
+  trialStartDate: row.trial_start_date,
+  trialEndDate: row.trial_end_date,
+  paymentGateway: row.payment_gateway,
+  pixAuthorizationId: row.pix_authorization_id,
+  pixRecurrenceId: row.pix_recurrence_id,
+  pixCustomerCpf: row.pix_customer_cpf,
+  pixCustomerName: row.pix_customer_name,
+  stripeCustomerId: row.stripe_customer_id,
+  stripeSubscriptionId: row.stripe_subscription_id,
+  stripePriceId: row.stripe_price_id,
+  currentPeriodStart: row.current_period_start,
+  currentPeriodEnd: row.current_period_end,
+  canceledAt: row.canceled_at,
+  cancelAtPeriodEnd: row.cancel_at_period_end,
+  cancelReason: row.cancel_reason,
+  metadata: (row.metadata as Record<string, unknown> | null) ?? null,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const toSubscriptionPayload = (
+  input: CreateSubscriptionInput | UpdateSubscriptionInput
+): Partial<Database["public"]["Tables"]["subscriptions"]["Insert"]> => ({
+  ...(input.academyId !== undefined ? { academy_id: input.academyId } : {}),
+  ...(input.planId !== undefined ? { plan_id: input.planId } : {}),
+  ...(input.status !== undefined ? { status: input.status } : {}),
+  ...(input.trialStartDate !== undefined ? { trial_start_date: input.trialStartDate } : {}),
+  ...(input.trialEndDate !== undefined ? { trial_end_date: input.trialEndDate } : {}),
+  ...(input.paymentGateway !== undefined ? { payment_gateway: input.paymentGateway } : {}),
+  ...(input.pixAuthorizationId !== undefined
+    ? { pix_authorization_id: input.pixAuthorizationId }
+    : {}),
+  ...(input.pixRecurrenceId !== undefined ? { pix_recurrence_id: input.pixRecurrenceId } : {}),
+  ...(input.pixCustomerCpf !== undefined ? { pix_customer_cpf: input.pixCustomerCpf } : {}),
+  ...(input.pixCustomerName !== undefined ? { pix_customer_name: input.pixCustomerName } : {}),
+  ...(input.stripeCustomerId !== undefined ? { stripe_customer_id: input.stripeCustomerId } : {}),
+  ...(input.stripeSubscriptionId !== undefined
+    ? { stripe_subscription_id: input.stripeSubscriptionId }
+    : {}),
+  ...(input.stripePriceId !== undefined ? { stripe_price_id: input.stripePriceId } : {}),
+  ...(input.currentPeriodStart !== undefined
+    ? { current_period_start: input.currentPeriodStart }
+    : {}),
+  ...(input.currentPeriodEnd !== undefined
+    ? { current_period_end: input.currentPeriodEnd }
+    : {}),
+  ...(input.canceledAt !== undefined ? { canceled_at: input.canceledAt } : {}),
+  ...(input.cancelAtPeriodEnd !== undefined
+    ? { cancel_at_period_end: input.cancelAtPeriodEnd }
+    : {}),
+  ...(input.cancelReason !== undefined ? { cancel_reason: input.cancelReason } : {}),
+  ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+});
+
+const toPaymentHistory = (
+  row: Database["public"]["Tables"]["payment_history"]["Row"]
+): PaymentHistory => ({
+  id: row.id,
+  subscriptionId: row.subscription_id,
+  academyId: row.academy_id,
+  amount: row.amount,
+  currency: row.currency,
+  paymentGateway: row.payment_gateway,
+  gatewayPaymentId: row.gateway_payment_id,
+  gatewayChargeId: row.gateway_charge_id,
+  gatewayInvoiceId: row.gateway_invoice_id,
+  status: row.status,
+  paymentMethod: row.payment_method,
+  failureReason: row.failure_reason,
+  failureCode: row.failure_code,
+  periodStart: row.period_start,
+  periodEnd: row.period_end,
+  paidAt: row.paid_at,
+  createdAt: row.created_at,
+});
+
+const toPaymentHistoryPayload = (
+  input: CreatePaymentHistoryInput | UpdatePaymentHistoryInput
+): Partial<Database["public"]["Tables"]["payment_history"]["Insert"]> => ({
+  ...(input.subscriptionId !== undefined ? { subscription_id: input.subscriptionId } : {}),
+  ...(input.academyId !== undefined ? { academy_id: input.academyId } : {}),
+  ...(input.amount !== undefined ? { amount: input.amount } : {}),
+  ...(input.currency !== undefined ? { currency: input.currency } : {}),
+  ...(input.paymentGateway !== undefined ? { payment_gateway: input.paymentGateway } : {}),
+  ...(input.gatewayPaymentId !== undefined
+    ? { gateway_payment_id: input.gatewayPaymentId }
+    : {}),
+  ...(input.gatewayChargeId !== undefined ? { gateway_charge_id: input.gatewayChargeId } : {}),
+  ...(input.gatewayInvoiceId !== undefined ? { gateway_invoice_id: input.gatewayInvoiceId } : {}),
+  ...(input.status !== undefined ? { status: input.status } : {}),
+  ...(input.paymentMethod !== undefined ? { payment_method: input.paymentMethod } : {}),
+  ...(input.failureReason !== undefined ? { failure_reason: input.failureReason } : {}),
+  ...(input.failureCode !== undefined ? { failure_code: input.failureCode } : {}),
+  ...(input.periodStart !== undefined ? { period_start: input.periodStart } : {}),
+  ...(input.periodEnd !== undefined ? { period_end: input.periodEnd } : {}),
+  ...(input.paidAt !== undefined ? { paid_at: input.paidAt } : {}),
+});
+
+const toWebhookEvent = (
+  row: Database["public"]["Tables"]["webhook_events"]["Row"]
+): WebhookEvent => ({
+  id: row.id,
+  gateway: row.gateway as WebhookEvent["gateway"],
+  eventId: row.event_id,
+  eventType: row.event_type,
+  payload: (row.payload as Record<string, unknown>) ?? {},
+  headers: (row.headers as Record<string, unknown> | null) ?? null,
+  status: row.status,
+  processedAt: row.processed_at,
+  errorMessage: row.error_message,
+  retryCount: row.retry_count,
+  nextRetryAt: row.next_retry_at,
+  receivedAt: row.received_at,
+  createdAt: row.created_at,
+});
+
+const toWebhookEventPayload = (
+  input: CreateWebhookEventInput | UpdateWebhookEventInput
+): Partial<Database["public"]["Tables"]["webhook_events"]["Insert"]> => ({
+  ...("gateway" in input && input.gateway !== undefined ? { gateway: input.gateway } : {}),
+  ...("eventId" in input && input.eventId !== undefined ? { event_id: input.eventId } : {}),
+  ...("eventType" in input && input.eventType !== undefined ? { event_type: input.eventType } : {}),
+  ...("payload" in input && input.payload !== undefined ? { payload: input.payload } : {}),
+  ...(input.headers !== undefined ? { headers: input.headers } : {}),
+  ...(input.status !== undefined ? { status: input.status } : {}),
+  ...(input.processedAt !== undefined ? { processed_at: input.processedAt } : {}),
+  ...(input.errorMessage !== undefined ? { error_message: input.errorMessage } : {}),
+  ...(input.retryCount !== undefined ? { retry_count: input.retryCount } : {}),
+  ...(input.nextRetryAt !== undefined ? { next_retry_at: input.nextRetryAt } : {}),
+  ...(input.receivedAt !== undefined ? { received_at: input.receivedAt } : {}),
 });
 
 const resolveSupabaseConfig = (config?: SupabaseConfig) => {
@@ -634,6 +829,148 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     },
   };
 
+  const subscriptionPlans = {
+    async listActive(): Promise<SubscriptionPlan[]> {
+      const { data, error } = await client
+        .from("subscription_plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("price_monthly", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map(toSubscriptionPlan);
+    },
+    async getById(id: string): Promise<SubscriptionPlan | null> {
+      const { data, error } = await client
+        .from("subscription_plans")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? toSubscriptionPlan(data) : null;
+    },
+    async getBySlug(slug: SubscriptionPlanSlug): Promise<SubscriptionPlan | null> {
+      const { data, error } = await client
+        .from("subscription_plans")
+        .select("*")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? toSubscriptionPlan(data) : null;
+    },
+    async createPlan(input: CreateSubscriptionPlanInput): Promise<SubscriptionPlan> {
+      const { data, error } = await client
+        .from("subscription_plans")
+        .insert(toSubscriptionPlanPayload(input))
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toSubscriptionPlan(data);
+    },
+    async updatePlan(input: UpdateSubscriptionPlanInput): Promise<SubscriptionPlan> {
+      const { data, error } = await client
+        .from("subscription_plans")
+        .update(toSubscriptionPlanPayload(input))
+        .eq("id", input.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toSubscriptionPlan(data);
+    },
+  };
+
+  const subscriptions = {
+    async getByAcademyId(academyId: string): Promise<Subscription | null> {
+      const { data, error } = await client
+        .from("subscriptions")
+        .select("*")
+        .eq("academy_id", academyId)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? toSubscription(data) : null;
+    },
+    async createSubscription(input: CreateSubscriptionInput): Promise<Subscription> {
+      const { data, error } = await client
+        .from("subscriptions")
+        .insert(toSubscriptionPayload(input))
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toSubscription(data);
+    },
+    async updateSubscription(input: UpdateSubscriptionInput): Promise<Subscription> {
+      const { data, error } = await client
+        .from("subscriptions")
+        .update(toSubscriptionPayload(input))
+        .eq("id", input.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toSubscription(data);
+    },
+  };
+
+  const paymentHistory = {
+    async listByAcademy(academyId: string): Promise<PaymentHistory[]> {
+      const { data, error } = await client
+        .from("payment_history")
+        .select("*")
+        .eq("academy_id", academyId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map(toPaymentHistory);
+    },
+    async createPayment(input: CreatePaymentHistoryInput): Promise<PaymentHistory> {
+      const { data, error } = await client
+        .from("payment_history")
+        .insert(toPaymentHistoryPayload(input))
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toPaymentHistory(data);
+    },
+    async updatePayment(input: UpdatePaymentHistoryInput): Promise<PaymentHistory> {
+      const { data, error } = await client
+        .from("payment_history")
+        .update(toPaymentHistoryPayload(input))
+        .eq("id", input.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toPaymentHistory(data);
+    },
+  };
+
+  const webhookEvents = {
+    async getByEventId(eventId: string): Promise<WebhookEvent | null> {
+      const { data, error } = await client
+        .from("webhook_events")
+        .select("*")
+        .eq("event_id", eventId)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? toWebhookEvent(data) : null;
+    },
+    async createEvent(input: CreateWebhookEventInput): Promise<WebhookEvent> {
+      const { data, error } = await client
+        .from("webhook_events")
+        .insert(toWebhookEventPayload(input))
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toWebhookEvent(data);
+    },
+    async updateEvent(input: UpdateWebhookEventInput): Promise<WebhookEvent> {
+      const { data, error } = await client
+        .from("webhook_events")
+        .update(toWebhookEventPayload(input))
+        .eq("id", input.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return toWebhookEvent(data);
+    },
+  };
+
   const fileStorage = {
     async uploadAvatar(userId: string, blob: Blob, fileExt: string): Promise<string> {
       const guessExtFromMime = (mime?: string | null): string | null => {
@@ -696,5 +1033,9 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     schedules,
     progress,
     storage: fileStorage,
+    subscriptionPlans,
+    subscriptions,
+    paymentHistory,
+    webhookEvents,
   };
 };

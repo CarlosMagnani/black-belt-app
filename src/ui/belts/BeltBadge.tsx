@@ -24,7 +24,7 @@ const BASE_COLORS: Record<BeltName, string> = {
   Azul: "#2563EB",
   Roxa: "#7C3AED",
   Marrom: "#92400E",
-  Preta: "#111827",
+  Preta: "#1F2937",
   Coral: "#DC2626",
   Vermelha: "#B91C1C",
 };
@@ -58,7 +58,7 @@ export function BeltBadge({ belt, degree, coralVariant, className }: BeltBadgePr
   // Um contorno sutil resolve sem mexer na paleta do cinto.
   const needsOutline = belt === "Preta" || (belt === "Coral" && resolvedCoralVariant === "red-black");
   const borderColor =
-    belt === "Branca" ? "#CBD5E1" : needsOutline ? "rgba(248, 250, 252, 0.22)" : "transparent";
+    belt === "Branca" ? "#CBD5E1" : needsOutline ? "rgba(248, 250, 252, 0.55)" : "transparent";
 
   return (
     <View

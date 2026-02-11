@@ -82,7 +82,8 @@ export default function Onboarding() {
       return;
     }
     // If profile is complete, go to appropriate route
-    if (profile?.role && profile?.firstName && profile?.currentBelt) {
+    const hasProfileName = !!(profile?.firstName?.trim() || profile?.fullName?.trim());
+    if (profile?.role && hasProfileName && profile?.currentBelt) {
       if (profile.role === "student") {
         router.replace("/join-academy");
       } else if (profile.role === "owner") {

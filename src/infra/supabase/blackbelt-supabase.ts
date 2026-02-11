@@ -760,6 +760,15 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
       if (error) throw error;
       if (!data.user) throw new Error("Missing user from sign-up response.");
 
+      // Supabase may return an obfuscated user (without identities) when this
+      // email is already registered. In this case we should not continue to
+      // onboarding as if this were a brand-new account.
+      const isExistingUser =
+        Array.isArray(data.user.identities) && data.user.identities.length === 0;
+      if (isExistingUser) {
+        throw new Error("Este email já está cadastrado. Faça login para continuar.");
+      }
+
       const hasSession = !!data.session?.user;
 
       if (hasSession) {

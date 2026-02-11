@@ -21,7 +21,8 @@ export default function Index() {
         }
 
         const profile = await blackBeltAdapters.profiles.getProfile(session.user.id);
-        if (!profile?.role || !profile.firstName || !profile.currentBelt) {
+        const hasProfileName = !!(profile?.firstName?.trim() || profile?.fullName?.trim());
+        if (!profile?.role || !profile.currentBelt || !hasProfileName) {
           router.replace("/onboarding");
           return;
         }

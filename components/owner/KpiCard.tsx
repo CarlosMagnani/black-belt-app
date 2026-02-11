@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 
 import { Card } from "../ui/Card";
 
@@ -12,7 +12,7 @@ type KpiCardProps = {
 
 export function KpiCard({ label, value, helper, className }: KpiCardProps) {
   return (
-    <Card className={["gap-2", className ?? ""].join(" ")}> 
+    <Card className={["min-h-[132px] justify-between gap-2", className ?? ""].join(" ")}>
       <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
         {label}
       </Text>

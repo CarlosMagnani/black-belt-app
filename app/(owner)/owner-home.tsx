@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Platform, ScrollView, Text, View } from "react-native";
+import { Platform, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { HomeHeader } from "../../components/home/HomeHeader";
@@ -28,8 +28,36 @@ const calculateOverdueCount = (membersCount: number): number => {
   return Math.round(membersCount * 0.12);
 };
 
+type MetricCardData = {
+  key: string;
+  label: string;
+  value: string | number;
+  helper?: string;
+};
+
+type ActionItem = {
+  key: string;
+  label: string;
+  href: string;
+  variant?: "primary" | "secondary" | "ghost";
+};
+
+const chunkItems = <T,>(items: T[], size: number): T[][] => {
+  if (size <= 1) return items.map((item) => [item]);
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+};
+
 export default function OwnerHome() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1180;
+  const isTablet = width >= 760;
+  const gridColumns = isDesktop ? 3 : isTablet ? 2 : 1;
+
   const { academy, isLoading, error } = useOwnerAcademy();
   const { profile } = useAuthProfile();
   const [membersCount, setMembersCount] = useState(0);
@@ -44,6 +72,122 @@ export default function OwnerHome() {
   // Calculated metrics
   const attendanceRate = useMemo(() => calculateAttendanceRate(membersCount), [membersCount]);
   const overdueCount = useMemo(() => calculateOverdueCount(membersCount), [membersCount]);
+
+  const ownerFirstName = useMemo(() => {
+    if (profile?.fullName?.trim()) return profile.fullName.trim().split(" ")[0] ?? "Mestre";
+    if (profile?.email?.trim()) return profile.email.trim().split("@")[0] ?? "Mestre";
+    return "Mestre";
+  }, [profile?.email, profile?.fullName]);
+
+  const metricCards = useMemo<MetricCardData[]>(
+    () => [
+      {
+        key: "members",
+        label: "Alunos ativos",
+        value: isMetricsLoading ? "..." : membersCount,
+        helper: "Total de alunos vinculados",
+      },
+      {
+        key: "attendance",
+        label: "Taxa de frequência",
+        value: isMetricsLoading ? "..." : `${attendanceRate}%`,
+        helper: "Últimos 30 dias",
+      },
+      {
+        key: "overdue",
+        label: "Inadimplentes",
+        value: isMetricsLoading ? "..." : overdueCount,
+        helper:
+          membersCount > 0
+            ? `${Math.round((overdueCount / membersCount) * 100)}% do total`
+            : undefined,
+      },
+      {
+        key: "pending",
+        label: "Check-ins pendentes",
+        value: isMetricsLoading ? "..." : pendingCount,
+      },
+      {
+        key: "today",
+        label: "Aulas hoje",
+        value: isMetricsLoading ? "..." : todayCount,
+        helper: isMetricsLoading ? undefined : `Semana: ${weekCount}`,
+      },
+    ],
+    [
+      attendanceRate,
+      isMetricsLoading,
+      membersCount,
+      overdueCount,
+      pendingCount,
+      todayCount,
+      weekCount,
+    ]
+  );
+
+  const metricRows = useMemo<(MetricCardData | null)[][]>(() => {
+    const rows = chunkItems(metricCards, gridColumns).map((row) => [...row] as (MetricCardData | null)[]);
+
+    if (isDesktop && rows.length > 0) {
+      const lastRow = rows[rows.length - 1];
+      if (lastRow.length < gridColumns) {
+        const placeholders = Array.from({ length: gridColumns - lastRow.length }, () => null);
+        rows[rows.length - 1] = [...lastRow, ...placeholders];
+      }
+    }
+
+    return rows;
+  }, [gridColumns, isDesktop, metricCards]);
+
+  const actionItems: ActionItem[] = useMemo(
+    () => [
+      {
+        key: "schedule",
+        label: "Cadastrar aula",
+        href: "/owner-schedule",
+        variant: "primary",
+      },
+      {
+        key: "students",
+        label: "Ver alunos",
+        href: "/owner-students",
+        variant: "secondary",
+      },
+      {
+        key: "checkins",
+        label: "Validar check-ins",
+        href: "/owner-checkins",
+        variant: "secondary",
+      },
+      {
+        key: "plans",
+        label: "💳 Gerenciar planos",
+        href: "/owner-plans",
+        variant: "secondary",
+      },
+      {
+        key: "professors",
+        label: "👥 Professores",
+        href: "/owner-professors",
+        variant: "secondary",
+      },
+    ],
+    []
+  );
+
+  const actionRows = useMemo<(ActionItem | null)[][]>(() => {
+    const rows = chunkItems(actionItems, gridColumns).map((row) => [...row] as (ActionItem | null)[]);
+
+    if (isDesktop && rows.length > 0) {
+      const lastRow = rows[rows.length - 1];
+      if (lastRow.length < gridColumns) {
+        const placeholders = Array.from({ length: gridColumns - lastRow.length }, () => null);
+        rows[rows.length - 1] = [...lastRow, ...placeholders];
+      }
+    }
+
+    return rows;
+  }, [actionItems, gridColumns, isDesktop]);
 
   useEffect(() => {
     if (!academy) return;
@@ -79,8 +223,9 @@ export default function OwnerHome() {
   const handleCopy = async () => {
     if (!academy?.inviteCode) return;
     if (Platform.OS === "web") {
-      const clipboard = (globalThis as { navigator?: { clipboard?: { writeText: (value: string) => Promise<void> } } })
-        .navigator?.clipboard;
+      const clipboard = (globalThis as {
+        navigator?: { clipboard?: { writeText: (value: string) => Promise<void> } };
+      }).navigator?.clipboard;
       if (clipboard) {
         await clipboard.writeText(academy.inviteCode);
         setCopyMessage("Codigo copiado.");
@@ -97,15 +242,29 @@ export default function OwnerHome() {
     <ScrollView className="flex-1">
       <View className="pb-10 pt-6">
         <View className="w-full px-page web:mx-auto web:max-w-6xl web:px-10">
-          <HomeHeader
-            displayName={profile?.fullName ?? profile?.email ?? "Mestre"}
-            belt={profile?.currentBelt ?? 'Preta'}
-            beltDegree={profile?.beltDegree ?? null}
-            userName={profile?.fullName ?? profile?.email ?? "Mestre"}
-            userAvatarUrl={profile?.avatarUrl ?? null}
-            academyName={academy?.name ?? "Academia"}
-            academyLogoUrl={academy?.logoUrl ?? null}
-          />
+          <View className="gap-1">
+            <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
+              Dashboard
+            </Text>
+            <Text className="font-display text-3xl text-strong-light dark:text-strong-dark">
+              Ola, {ownerFirstName}
+            </Text>
+            <Text className="text-sm text-muted-light dark:text-muted-dark">
+              Visão geral da academia e principais ações do dia.
+            </Text>
+          </View>
+
+          <View className="mt-4">
+            <HomeHeader
+              displayName={profile?.fullName ?? profile?.email ?? "Mestre"}
+              belt={profile?.currentBelt ?? "Preta"}
+              beltDegree={profile?.beltDegree ?? null}
+              userName={profile?.fullName ?? profile?.email ?? "Mestre"}
+              userAvatarUrl={profile?.avatarUrl ?? null}
+              academyName={academy?.name ?? "Academia"}
+              academyLogoUrl={academy?.logoUrl ?? null}
+            />
+          </View>
 
           {error ? (
             <Card className="mt-6" variant="outline">
@@ -114,7 +273,7 @@ export default function OwnerHome() {
           ) : null}
 
           {academy ? (
-            <View className="mt-6 gap-4">
+            <View className="mt-6 gap-2">
               <InviteCodeCard
                 name={academy.name}
                 city={academy.city}
@@ -123,7 +282,7 @@ export default function OwnerHome() {
                 onCopy={handleCopy}
               />
               {copyMessage ? (
-                <Text className="text-xs text-emerald-600">{copyMessage}</Text>
+                <Text className="px-1 text-xs text-emerald-600">{copyMessage}</Text>
               ) : null}
             </View>
           ) : null}
@@ -135,84 +294,65 @@ export default function OwnerHome() {
             </View>
           )}
 
-          {/* Main KPIs */}
-          <View className="mt-6 gap-4 web:flex-row">
-            <KpiCard
-              label="Alunos ativos"
-              value={isMetricsLoading ? "..." : membersCount}
-              helper="Total de alunos vinculados"
-              className="flex-1"
-            />
-            <KpiCard
-              label="Taxa de frequência"
-              value={isMetricsLoading ? "..." : `${attendanceRate}%`}
-              helper="Últimos 30 dias"
-              className="flex-1"
-            />
-            <KpiCard
-              label="Inadimplentes"
-              value={isMetricsLoading ? "..." : overdueCount}
-              helper={membersCount > 0 ? `${Math.round((overdueCount / membersCount) * 100)}% do total` : undefined}
-              className="flex-1"
-            />
-          </View>
-
-          {/* Secondary KPIs */}
-          <View className="mt-4 gap-4 web:flex-row">
-            <KpiCard
-              label="Check-ins pendentes"
-              value={isMetricsLoading ? "..." : pendingCount}
-              className="flex-1"
-            />
-            <KpiCard
-              label="Aulas hoje"
-              value={isMetricsLoading ? "..." : todayCount}
-              helper={isMetricsLoading ? undefined : `Semana: ${weekCount}`}
-              className="flex-1"
-            />
+          {/* KPIs */}
+          <View className="mt-6 gap-4">
+            {metricRows.map((row, rowIndex) => {
+              const isMultiColumnRow = row.length > 1;
+              return (
+                <View
+                  key={`kpi-row-${rowIndex}`}
+                  className={isMultiColumnRow ? "flex-row gap-4" : ""}
+                >
+                  {row.map((metric, index) =>
+                    metric ? (
+                      <KpiCard
+                        key={metric.key}
+                        label={metric.label}
+                        value={metric.value}
+                        helper={metric.helper}
+                        className={isMultiColumnRow ? "flex-1" : ""}
+                      />
+                    ) : (
+                      <View key={`kpi-placeholder-${rowIndex}-${index}`} className="flex-1" />
+                    )
+                  )}
+                </View>
+              );
+            })}
           </View>
 
           {/* Quick Actions */}
-          <View className="mt-6">
+          <View className="mt-8">
             <Text className="mb-3 text-xs uppercase tracking-wide text-muted-light dark:text-muted-dark">
               Ações rápidas
             </Text>
-            <View className="gap-3 web:flex-row">
-              <Button
-                label="Cadastrar aula"
-                className="flex-1"
-                onPress={() => router.replace("/owner-schedule")}
-              />
-              <Button
-                label="Ver alunos"
-                variant="secondary"
-                className="flex-1"
-                onPress={() => router.replace("/owner-students")}
-              />
-              <Button
-                label="Validar check-ins"
-                variant="secondary"
-                className="flex-1"
-                onPress={() => router.replace("/owner-checkins")}
-              />
-            </View>
-          </View>
-
-          {/* Secondary Actions */}
-          <View className="mt-4">
-            <View className="gap-3 web:flex-row">
-              <Button
-                label="💳 Gerenciar planos"
-                variant="secondary"
-                className="flex-1"
-                onPress={() => router.replace("/owner-plans")}
-              />
-              <Button
-                label="👥 Professores"
-                variant="secondary"
-                className="flex-1"
-                onPress={() => router.replace("/owner-professors")}
-              />
+            <View className="gap-3">
+              {actionRows.map((row, rowIndex) => {
+                const isMultiColumnRow = row.length > 1;
+                return (
+                  <View
+                    key={`action-row-${rowIndex}`}
+                    className={isMultiColumnRow ? "flex-row gap-3" : ""}
+                  >
+                    {row.map((action, index) =>
+                      action ? (
+                        <Button
+                          key={action.key}
+                          label={action.label}
+                          variant={action.variant ?? "secondary"}
+                          className={isMultiColumnRow ? "flex-1" : ""}
+                          onPress={() => router.replace(action.href)}
+                        />
+                      ) : (
+                        <View
+                          key={`action-placeholder-${rowIndex}-${index}`}
+                          className="flex-1"
+                        />
+                      )
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </View>
 

@@ -20,7 +20,7 @@ export function InviteCodeCard({
   onCopy,
 }: InviteCodeCardProps) {
   return (
-    <Card className="gap-3">
+    <Card className="gap-4">
       <View className="flex-row items-center gap-3">
         <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-subtle-light bg-app-light dark:border-subtle-dark dark:bg-app-dark">
           {logoUrl ? (
@@ -33,11 +33,16 @@ export function InviteCodeCard({
           <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
             Minha academia
           </Text>
-          <Text className="mt-1 font-display text-lg text-strong-light dark:text-strong-dark">
+          <Text
+            className="mt-1 font-display text-lg text-strong-light dark:text-strong-dark"
+            numberOfLines={1}
+          >
             {name}
           </Text>
           {city ? (
-            <Text className="text-sm text-muted-light dark:text-muted-dark">{city}</Text>
+            <Text className="text-sm text-muted-light dark:text-muted-dark" numberOfLines={1}>
+              {city}
+            </Text>
           ) : null}
         </View>
       </View>
@@ -46,7 +51,11 @@ export function InviteCodeCard({
         <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
           Invite code
         </Text>
-        <Text className="mt-2 font-display text-2xl text-strong-light dark:text-strong-dark">
+        <Text
+          className="mt-2 font-display text-2xl tracking-[2px] text-strong-light dark:text-strong-dark"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
           {inviteCode}
         </Text>
       </View>

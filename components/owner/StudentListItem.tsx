@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, useWindowDimensions, View } from "react-native";
 
 import type { Belt } from "../../src/core/ports/blackbelt-ports";
 import { Card } from "../ui/Card";
@@ -42,39 +42,44 @@ const formatDate = (dateStr?: string | null): string => {
 };
 
 export function StudentListItem({ student, onPress, className }: StudentListItemProps) {
+  const { width } = useWindowDimensions();
+  const stackStatus = width < 560;
+
   const name = student.fullName || student.email || "Aluno";
   const initials = getInitials(student.fullName);
   const belt = student.currentBelt ?? "Branca";
 
   const content = (
     <Card className={["gap-3", className ?? ""].join(" ")}>
-      <View className="flex-row items-center gap-3">
-        {/* Avatar */}
-        <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-subtle-light bg-app-light dark:border-subtle-dark dark:bg-app-dark">
-          {student.avatarUrl ? (
-            <Image
-              source={{ uri: student.avatarUrl }}
-              className="h-full w-full"
-              resizeMode="cover"
-            />
-          ) : (
-            <Text className="text-sm text-muted-light dark:text-muted-dark">{initials}</Text>
-          )}
-        </View>
+      <View className={stackStatus ? "gap-3" : "flex-row items-center gap-3"}>
+        <View className="flex-row items-center gap-3 flex-1">
+          {/* Avatar */}
+          <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-subtle-light bg-app-light dark:border-subtle-dark dark:bg-app-dark">
+            {student.avatarUrl ? (
+              <Image
+                source={{ uri: student.avatarUrl }}
+                className="h-full w-full"
+                resizeMode="cover"
+              />
+            ) : (
+              <Text className="text-sm text-muted-light dark:text-muted-dark">{initials}</Text>
+            )}
+          </View>
 
-        {/* Info */}
-        <View className="flex-1">
-          <Text className="font-display text-base text-strong-light dark:text-strong-dark">
-            {name}
-          </Text>
-          <Text className="text-xs text-muted-light dark:text-muted-dark">
-            Faixa {belt}
-            {student.planName ? ` • ${student.planName}` : ""}
-          </Text>
+          {/* Info */}
+          <View className="flex-1">
+            <Text className="font-display text-base text-strong-light dark:text-strong-dark">
+              {name}
+            </Text>
+            <Text className="text-xs text-muted-light dark:text-muted-dark" numberOfLines={1}>
+              Faixa {belt}
+              {student.planName ? ` • ${student.planName}` : ""}
+            </Text>
+          </View>
         </View>
 
         {/* Payment Status */}
-        <PaymentStatusBadge status={student.paymentStatus} />
+        <PaymentStatusBadge status={student.paymentStatus} className={stackStatus ? "self-start" : ""} />
       </View>
 
       {/* Additional info */}

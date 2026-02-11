@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Platform, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ScrollView, Text, useWindowDimensions, View } from "react-native";
 
 import { OwnerSidebar } from "../../components/owner/OwnerSidebar";
 import { ClassList } from "../../components/owner/ClassList";
@@ -22,6 +22,7 @@ type InstructorOption = {
 export default function OwnerSchedule() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
 
   const { academy, profileId, isLoading, error } = useOwnerAcademy();
   const { profile } = useAuthProfile();
@@ -220,7 +221,13 @@ export default function OwnerSchedule() {
             {/* Main Content */}
             <View className="flex-1">
               {/* Header */}
-              <View className="flex-row items-start justify-between">
+              <View
+                className={
+                  isTablet
+                    ? "flex-row items-start justify-between gap-4"
+                    : "gap-3"
+                }
+              >
                 <View>
                   <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
                     Agenda
@@ -237,6 +244,7 @@ export default function OwnerSchedule() {
                   label="➕ Nova Aula"
                   onPress={() => setIsCreateModalOpen(true)}
                   size="md"
+                  className={isTablet ? "" : "self-start"}
                 />
               </View>
 
@@ -253,8 +261,8 @@ export default function OwnerSchedule() {
               ) : null}
 
               {/* Quick Stats */}
-              <View className="mt-6 flex-row gap-4">
-                <Card className="flex-1" variant="outline">
+              <View className={isTablet ? "mt-6 flex-row gap-4" : "mt-6 gap-3"}>
+                <Card className={isTablet ? "flex-1" : ""} variant="outline">
                   <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
                     Total de aulas
                   </Text>
@@ -262,7 +270,7 @@ export default function OwnerSchedule() {
                     {totalClasses}
                   </Text>
                 </Card>
-                <Card className="flex-1" variant="outline">
+                <Card className={isTablet ? "flex-1" : ""} variant="outline">
                   <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
                     Professores
                   </Text>

@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Text, View } from "react-native";
+import { Image, Text, useWindowDimensions, View } from "react-native";
 
 import type { BeltName } from "../../src/core/belts/belts";
 import { BeltBadge } from "../../src/ui/belts/BeltBadge";
@@ -31,6 +31,9 @@ export function AvatarCluster({
   beltDegree,
   className,
 }: AvatarClusterProps) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
+
   const userInitials = getInitials(userName);
   const academyInitials = getInitials(academyName);
   const userLabel = userName ?? "Aluno";
@@ -38,9 +41,14 @@ export function AvatarCluster({
   const beltToShow: BeltName = belt ?? "Branca";
 
   return (
-    <View className={["w-full items-center justify-center", className ?? ""].join(" ")}>
-      <View className="flex-row flex-wrap items-start justify-center gap-4">
-        <View className="w-[300px] max-w-full items-center rounded-card border border-subtle-light bg-surface-light px-4 py-4 shadow-card dark:border-subtle-dark dark:bg-surface-dark">
+    <View className={["w-full", className ?? ""].join(" ")}>
+      <View className={isCompact ? "gap-4" : "flex-row items-stretch justify-center gap-4"}>
+        <View
+          className={[
+            "min-h-[208px] items-center justify-center rounded-card border border-subtle-light bg-surface-light px-4 py-4 shadow-card dark:border-subtle-dark dark:bg-surface-dark",
+            isCompact ? "w-full" : "w-[320px] max-w-[48%]",
+          ].join(" ")}
+        >
           <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-subtle-light bg-app-light dark:border-subtle-dark dark:bg-app-dark">
             {userAvatarUrl ? (
               <Image
@@ -55,7 +63,10 @@ export function AvatarCluster({
               </Text>
             )}
           </View>
-          <Text className="mt-3 text-lg text-muted-light dark:text-muted-dark" numberOfLines={1}>
+          <Text
+            className="mt-3 text-center text-lg font-display text-strong-light dark:text-strong-dark"
+            numberOfLines={1}
+          >
             {userLabel}
           </Text>
           <View className="mt-2 items-center">
@@ -66,7 +77,13 @@ export function AvatarCluster({
             />
           </View>
         </View>
-        <View className="w-[300px] h-[207.767px] max-w-full items-center rounded-card border border-subtle-light bg-surface-light px-4 py-4 shadow-card dark:border-subtle-dark dark:bg-surface-dark">
+
+        <View
+          className={[
+            "min-h-[208px] items-center justify-center rounded-card border border-subtle-light bg-surface-light px-4 py-4 shadow-card dark:border-subtle-dark dark:bg-surface-dark",
+            isCompact ? "w-full" : "w-[320px] max-w-[48%]",
+          ].join(" ")}
+        >
           <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-subtle-light bg-app-light dark:border-subtle-dark dark:bg-app-dark">
             {academyLogoUrl ? (
               <Image
@@ -81,7 +98,10 @@ export function AvatarCluster({
               </Text>
             )}
           </View>
-          <Text className="mt-3 text-lg font-display text-muted-light dark:text-muted-dark" numberOfLines={1}>
+          <Text
+            className="mt-3 text-center text-lg font-display text-strong-light dark:text-strong-dark"
+            numberOfLines={2}
+          >
             {academyLabel}
           </Text>
         </View>

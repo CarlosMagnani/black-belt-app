@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
@@ -38,13 +38,23 @@ const formatCurrency = (cents: number): string => {
 };
 
 export function PlanCard({ plan, onEdit, onToggleActive, className }: PlanCardProps) {
+  const { width } = useWindowDimensions();
+  const stackHeader = width < 520;
+  const stackActions = width < 460;
+
   const periodLabel = PERIODICITY_LABELS[plan.periodicity] ?? plan.periodicity;
 
   return (
     <Card className={["gap-3", className ?? ""].join(" ")}>
-      <View className="flex-row items-start justify-between">
+      <View
+        className={
+          stackHeader
+            ? "gap-2"
+            : "flex-row items-start justify-between gap-3"
+        }
+      >
         <View className="flex-1">
-          <View className="flex-row items-center gap-2">
+          <View className="flex-row flex-wrap items-center gap-2">
             <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
               {plan.name}
             </Text>
@@ -60,7 +70,7 @@ export function PlanCard({ plan, onEdit, onToggleActive, className }: PlanCardPr
             </Text>
           )}
         </View>
-        <View className="items-end">
+        <View className={stackHeader ? "items-start" : "items-end"}>
           <Text className="font-display text-xl text-brand-600">
             {formatCurrency(plan.price_cents)}
           </Text>
@@ -78,20 +88,20 @@ export function PlanCard({ plan, onEdit, onToggleActive, className }: PlanCardPr
       </View>
 
       {/* Actions */}
-      <View className="flex-row gap-2">
+      <View className={stackActions ? "gap-2" : "flex-row gap-2"}>
         <Button
           label="Editar"
           variant="secondary"
           size="sm"
           onPress={onEdit}
-          className="flex-1"
+          className={stackActions ? "" : "flex-1"}
         />
         <Button
           label={plan.is_active ? "Desativar" : "Ativar"}
           variant={plan.is_active ? "ghost" : "primary"}
           size="sm"
           onPress={onToggleActive}
-          className="flex-1"
+          className={stackActions ? "" : "flex-1"}
         />
       </View>
     </Card>

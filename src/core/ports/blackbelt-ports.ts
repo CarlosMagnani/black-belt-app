@@ -178,6 +178,114 @@ export type AddMemberInput = {
   userId: string;
 };
 
+// ──────────────────────────────────────────────
+// Subscriptions (B2B - Academies)
+// ──────────────────────────────────────────────
+
+export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "expired";
+export type PaymentGateway = "pix_auto" | "stripe";
+export type PaymentStatus = "pending" | "processing" | "succeeded" | "failed" | "refunded";
+export type WebhookStatus = "pending" | "processing" | "processed" | "failed" | "skipped";
+
+export type SubscriptionPlan = {
+  id: string;
+  name: string;
+  slug: "starter" | "pro" | "business";
+  description: string | null;
+  priceMonthly: number;
+  priceYearly: number | null;
+  currency: string | null;
+  maxStudents: number | null;
+  maxProfessors: number | null;
+  maxLocations: number | null;
+  features: unknown[];
+  isActive: boolean | null;
+  stripePriceIdMonthly: string | null;
+  stripePriceIdYearly: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type Subscription = {
+  id: string;
+  academyId: string;
+  planId: string;
+  status: SubscriptionStatus;
+
+  trialStartDate: string | null;
+  trialEndDate: string | null;
+
+  paymentGateway: PaymentGateway | null;
+
+  pixAuthorizationId: string | null;
+  pixRecurrenceId: string | null;
+  pixCustomerCpf: string | null;
+  pixCustomerName: string | null;
+
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  stripePriceId: string | null;
+
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+
+  canceledAt: string | null;
+  cancelAtPeriodEnd: boolean | null;
+  cancelReason: string | null;
+
+  metadata: Record<string, unknown> | null;
+
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type PaymentHistory = {
+  id: string;
+  subscriptionId: string;
+  academyId: string;
+
+  amount: number;
+  currency: string | null;
+
+  paymentGateway: PaymentGateway;
+  gatewayPaymentId: string | null;
+  gatewayChargeId: string | null;
+  gatewayInvoiceId: string | null;
+
+  status: PaymentStatus;
+
+  paymentMethod: string | null;
+  failureReason: string | null;
+  failureCode: string | null;
+
+  periodStart: string | null;
+  periodEnd: string | null;
+
+  paidAt: string | null;
+  createdAt: string | null;
+};
+
+export type WebhookEvent = {
+  id: string;
+
+  gateway: PaymentGateway;
+
+  eventId: string;
+  eventType: string;
+
+  payload: Record<string, unknown>;
+  headers: Record<string, unknown> | null;
+
+  status: WebhookStatus;
+  processedAt: string | null;
+  errorMessage: string | null;
+  retryCount: number | null;
+  nextRetryAt: string | null;
+
+  receivedAt: string | null;
+  createdAt: string | null;
+};
+
 export interface AuthPort {
   signIn(email: string, password: string): Promise<AuthUser>;
   signUp(email: string, password: string): Promise<{ user: AuthUser; hasSession: boolean }>;

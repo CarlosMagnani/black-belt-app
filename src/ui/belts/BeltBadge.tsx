@@ -91,8 +91,8 @@ export function BeltBadge({ belt, degree, coralVariant, className }: BeltBadgePr
           justifyContent: "flex-start",
         }}
       >
-        {6 > 0
-          ? Array.from({ length: 6 }).map((_, index) => (
+        {stripeCount > 0
+          ? Array.from({ length: stripeCount }).map((_, index) => (
               <View
                 key={`${belt}-stripe-${index}`}
                 style={{

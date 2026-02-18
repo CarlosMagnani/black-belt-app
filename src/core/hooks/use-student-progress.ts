@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import type { BeltName } from "../belts/belts";
 import { getNextBelt } from "../belts/belts";
-import { blackBeltAdapters } from "../../infra/supabase/adapters";
 
 type StudentProgress = {
   classesThisGrade: number;
@@ -18,33 +17,18 @@ type StudentProgress = {
 const CLASSES_PER_GRADE = 24;
 const TOTAL_CLASSES_TARGET = 200;
 
+/**
+ * Now reads approved_classes directly from the AcademyMember record
+ * instead of a separate student_progress table.
+ */
 export const useStudentProgress = (
   currentBelt: BeltName | null | undefined,
-  studentId: string | null | undefined
+  approvedClasses: number | undefined
 ): StudentProgress => {
-  const [approvedCount, setApprovedCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const loadProgress = useCallback(async () => {
-    if (!studentId) return;
-    setIsLoading(true);
-    try {
-      const data = await blackBeltAdapters.progress.getByStudent(studentId);
-      setApprovedCount(data?.approvedClassesCount ?? 0);
-    } catch {
-      // Fallback to 0 on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [studentId]);
-
-  useEffect(() => {
-    void loadProgress();
-  }, [loadProgress]);
-
   return useMemo(() => {
     const belt = currentBelt ?? "Branca";
-    const classesThisGrade = approvedCount % CLASSES_PER_GRADE;
+    const count = approvedClasses ?? 0;
+    const classesThisGrade = count % CLASSES_PER_GRADE;
     const classesRemaining = Math.max(CLASSES_PER_GRADE - classesThisGrade, 0);
     const gradeProgress = classesThisGrade / CLASSES_PER_GRADE;
 
@@ -52,11 +36,11 @@ export const useStudentProgress = (
       classesThisGrade,
       classesNeededGrade: CLASSES_PER_GRADE,
       classesRemaining,
-      totalClasses: approvedCount,
+      totalClasses: count,
       nextBelt: getNextBelt(belt),
       gradeProgress,
-      totalProgress: Math.min(approvedCount / TOTAL_CLASSES_TARGET, 1),
-      isLoading,
+      totalProgress: Math.min(count / TOTAL_CLASSES_TARGET, 1),
+      isLoading: false,
     };
-  }, [currentBelt, approvedCount, isLoading]);
+  }, [currentBelt, approvedClasses]);
 };

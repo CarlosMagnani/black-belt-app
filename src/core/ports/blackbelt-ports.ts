@@ -1,5 +1,21 @@
-export type UserRole = "owner" | "professor" | "student";
+// ──────────────────────────────────────────────
+// Enums & Basic Types
+// ──────────────────────────────────────────────
+
+export type MemberRole = "student" | "instructor" | "owner";
 export type Belt = "Branca" | "Azul" | "Roxa" | "Marrom" | "Preta" | "Coral" | "Vermelha";
+export type BeltRank = "white" | "blue" | "purple" | "brown" | "black" | "coral" | "red";
+export type Sex = "M" | "F" | "O" | "N";
+export type CheckinStatus = "pending" | "approved" | "rejected";
+export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "expired";
+export type PaymentGateway = "pix" | "stripe";
+export type PaymentAttemptStatus = "pending" | "paid" | "failed" | "refunded";
+export type PlanPeriodicity = "monthly" | "quarterly" | "semiannual" | "annual";
+
+// ──────────────────────────────────────────────
+// Auth
+// ──────────────────────────────────────────────
+
 export type AuthUser = {
   id: string;
   email: string | null;
@@ -7,7 +23,6 @@ export type AuthUser = {
 
 export type SignUpResult = {
   user: AuthUser;
-  /** True if session was created immediately (email confirmation disabled) */
   hasSession: boolean;
 };
 
@@ -17,23 +32,36 @@ export type AuthSession = {
   expiresAt: number | null;
 };
 
-export type Sex = "M" | "F" | "O" | "N"; // Male, Female, Other, Not specified
+// ──────────────────────────────────────────────
+// Profile (from profiles table)
+// ──────────────────────────────────────────────
 
 export type Profile = {
   id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  fullName: string | null;
-  role: UserRole | null;
-  avatarUrl: string | null;
-  currentBelt: Belt | null;
-  beltDegree: number | null;
+  firstName: string;
   birthDate: string | null;
+  photoUrl: string | null;
   sex: Sex | null;
   federationNumber: string | null;
-  createdAt: string | null;
+  belt: Belt;
+  beltDegree: number;
+  createdAt: string;
 };
+
+export type ProfileUpsertInput = {
+  id: string;
+  firstName?: string;
+  birthDate?: string | null;
+  photoUrl?: string | null;
+  sex?: Sex | null;
+  federationNumber?: string | null;
+  belt?: Belt;
+  beltDegree?: number;
+};
+
+// ──────────────────────────────────────────────
+// Academy
+// ──────────────────────────────────────────────
 
 export type Academy = {
   id: string;
@@ -42,127 +70,7 @@ export type Academy = {
   city: string | null;
   inviteCode: string;
   logoUrl: string | null;
-  createdAt: string | null;
-};
-
-export type AcademyMember = {
-  academyId: string;
-  userId: string;
-  joinedAt: string | null;
-};
-
-export type ClassScheduleItem = {
-  id: string;
-  academyId: string;
-  title: string;
-  instructorId: string | null;
-  instructorName: string | null;
-  weekday: number;
-  startTime: string;
-  endTime: string;
-  location: string | null;
-  level: string | null;
-  notes: string | null;
-  isRecurring: boolean;
-  startDate: string | null;
-};
-
-export type AcademyClass = ClassScheduleItem & {
-  createdAt: string | null;
-};
-
-export type CheckinStatus = "pending" | "approved" | "rejected";
-
-export type ClassCheckin = {
-  id: string;
-  academyId: string;
-  classId: string;
-  studentId: string;
-  status: CheckinStatus;
-  validatedBy: string | null;
-  validatedAt: string | null;
-  createdAt: string | null;
-};
-
-export type CheckinListItem = {
-  id: string;
-  academyId: string;
-  classId: string;
-  classTitle: string | null;
-  classWeekday: number | null;
-  classStartTime: string | null;
-  studentId: string;
-  studentName: string | null;
-  studentAvatarUrl: string | null;
-  status: CheckinStatus;
-  createdAt: string | null;
-};
-
-export type MemberProfile = {
-  userId: string;
-  fullName: string | null;
-  email: string | null;
-  currentBelt: Belt | null;
-  beltDegree: number | null;
-  avatarUrl: string | null;
-  joinedAt: string | null;
-};
-
-export type ProfileUpsertInput = {
-  id: string;
-  email?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  fullName?: string | null;
-  role?: UserRole | null;
-  avatarUrl?: string | null;
-  currentBelt?: Belt | null;
-  beltDegree?: number | null;
-  birthDate?: string | null;
-  sex?: Sex | null;
-  federationNumber?: string | null;
-};
-
-export type CreateClassInput = {
-  academyId: string;
-  title: string;
-  instructorId?: string | null;
-  instructorName?: string | null;
-  weekday: number;
-  startTime: string;
-  endTime: string;
-  location?: string | null;
-  level?: string | null;
-  notes?: string | null;
-  isRecurring?: boolean;
-  startDate?: string | null;
-};
-
-export type UpdateClassInput = {
-  id: string;
-  title?: string;
-  instructorId?: string | null;
-  instructorName?: string | null;
-  weekday?: number;
-  startTime?: string;
-  endTime?: string;
-  location?: string | null;
-  level?: string | null;
-  notes?: string | null;
-  isRecurring?: boolean;
-  startDate?: string | null;
-};
-
-export type CreateCheckinInput = {
-  academyId: string;
-  classId: string;
-  studentId: string;
-};
-
-export type UpdateCheckinStatusInput = {
-  id: string;
-  status: CheckinStatus;
-  validatedBy: string;
+  createdAt: string;
 };
 
 export type CreateAcademyInput = {
@@ -173,282 +81,240 @@ export type CreateAcademyInput = {
   logoUrl?: string | null;
 };
 
+// ──────────────────────────────────────────────
+// Academy Members (replaces old memberships + staff + role)
+// ──────────────────────────────────────────────
+
+export type AcademyMember = {
+  id: string;
+  academyId: string;
+  userId: string;
+  role: MemberRole;
+  isBjj: boolean;
+  isMuayThai: boolean;
+  approvedClasses: number;
+  classesToDegree: number;
+  classesToBelt: number;
+  joinedAt: string;
+};
+
 export type AddMemberInput = {
   academyId: string;
   userId: string;
+  role?: MemberRole;
+  isBjj?: boolean;
+  isMuayThai?: boolean;
+};
+
+export type MemberProfile = {
+  memberId: string;
+  userId: string;
+  role: MemberRole;
+  firstName: string;
+  photoUrl: string | null;
+  belt: Belt;
+  beltDegree: number;
+  approvedClasses: number;
+  joinedAt: string;
 };
 
 // ──────────────────────────────────────────────
-// Subscriptions (B2B - Academies)
+// Class Schedule
 // ──────────────────────────────────────────────
 
-export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "expired";
-export type PaymentGateway = "pix_auto" | "stripe";
-export type PaymentStatus = "pending" | "processing" | "succeeded" | "failed" | "refunded";
-export type WebhookStatus = "pending" | "processing" | "processed" | "failed" | "skipped";
-
-export type SubscriptionPlan = {
-  id: string;
-  name: string;
-  slug: SubscriptionPlanSlug;
-  description: string | null;
-  priceMonthly: number;
-  priceYearly: number | null;
-  currency: string | null;
-  maxStudents: number | null;
-  maxProfessors: number | null;
-  maxLocations: number | null;
-  features: unknown[];
-  isActive: boolean | null;
-  stripePriceIdMonthly: string | null;
-  stripePriceIdYearly: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-};
-
-export type Subscription = {
+export type ClassScheduleItem = {
   id: string;
   academyId: string;
-  planId: string;
-  status: SubscriptionStatus;
-
-  trialStartDate: string | null;
-  trialEndDate: string | null;
-
-  paymentGateway: PaymentGateway | null;
-
-  pixAuthorizationId: string | null;
-  pixRecurrenceId: string | null;
-  pixCustomerCpf: string | null;
-  pixCustomerName: string | null;
-
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  stripePriceId: string | null;
-
-  currentPeriodStart: string | null;
-  currentPeriodEnd: string | null;
-
-  canceledAt: string | null;
-  cancelAtPeriodEnd: boolean | null;
-  cancelReason: string | null;
-
-  metadata: Record<string, unknown> | null;
-
-  createdAt: string | null;
-  updatedAt: string | null;
+  className: string;
+  instructorMemberId: string | null;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  location: string | null;
+  classType: string;
+  isActive: boolean;
 };
 
-export type PaymentHistory = {
-  id: string;
-  subscriptionId: string;
+export type AcademyClass = ClassScheduleItem & {
+  createdAt: string;
+};
+
+export type CreateClassInput = {
   academyId: string;
-
-  amount: number;
-  currency: string | null;
-
-  paymentGateway: PaymentGateway;
-  gatewayPaymentId: string | null;
-  gatewayChargeId: string | null;
-  gatewayInvoiceId: string | null;
-
-  status: PaymentStatus;
-
-  paymentMethod: string | null;
-  failureReason: string | null;
-  failureCode: string | null;
-
-  periodStart: string | null;
-  periodEnd: string | null;
-
-  paidAt: string | null;
-  createdAt: string | null;
+  className: string;
+  instructorMemberId?: string | null;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  location?: string | null;
+  classType?: string;
 };
 
-export type WebhookEvent = {
+export type UpdateClassInput = {
   id: string;
-
-  gateway: PaymentGateway;
-
-  eventId: string;
-  eventType: string;
-
-  payload: Record<string, unknown>;
-  headers: Record<string, unknown> | null;
-
-  status: WebhookStatus;
-  processedAt: string | null;
-  errorMessage: string | null;
-  retryCount: number | null;
-  nextRetryAt: string | null;
-
-  receivedAt: string | null;
-  createdAt: string | null;
-};
-
-export type SubscriptionPlanSlug = "starter" | "pro" | "business";
-
-export type CreateSubscriptionPlanInput = {
-  name: string;
-  slug: SubscriptionPlanSlug;
-  description?: string | null;
-  priceMonthly: number;
-  priceYearly?: number | null;
-  currency?: string | null;
-  maxStudents?: number | null;
-  maxProfessors?: number | null;
-  maxLocations?: number | null;
-  features?: unknown[];
+  className?: string;
+  instructorMemberId?: string | null;
+  weekday?: number;
+  startTime?: string;
+  endTime?: string;
+  location?: string | null;
+  classType?: string;
   isActive?: boolean;
-  stripePriceIdMonthly?: string | null;
-  stripePriceIdYearly?: string | null;
 };
 
-export type UpdateSubscriptionPlanInput = {
+// ──────────────────────────────────────────────
+// Checkins
+// ──────────────────────────────────────────────
+
+export type ClassCheckin = {
+  id: string;
+  academyId: string;
+  classId: string;
+  memberId: string;
+  trainingDate: string;
+  status: CheckinStatus;
+  approvedByMemberId: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+};
+
+export type CheckinListItem = {
+  id: string;
+  academyId: string;
+  classId: string;
+  className: string | null;
+  classWeekday: number | null;
+  classStartTime: string | null;
+  memberId: string;
+  memberName: string | null;
+  memberPhotoUrl: string | null;
+  status: CheckinStatus;
+  trainingDate: string;
+  createdAt: string;
+};
+
+export type CreateCheckinInput = {
+  academyId: string;
+  classId: string;
+  memberId: string;
+  trainingDate?: string;
+};
+
+export type UpdateCheckinStatusInput = {
+  id: string;
+  status: CheckinStatus;
+  approvedByMemberId: string;
+};
+
+// ──────────────────────────────────────────────
+// Platform Plans (B2B - for academies)
+// ──────────────────────────────────────────────
+
+export type PlatformPlan = {
+  id: string;
+  name: string;
+  slug: string;
+  priceMonthCents: number;
+  priceYearCents: number | null;
+  discountPercent: number | null;
+  description: string | null;
+  currency: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
+// ──────────────────────────────────────────────
+// Academy Plans (plans the academy offers to members)
+// ──────────────────────────────────────────────
+
+export type AcademyPlan = {
+  id: string;
+  academyId: string;
+  name: string;
+  priceCents: number;
+  periodicity: PlanPeriodicity;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type CreateAcademyPlanInput = {
+  academyId: string;
+  name: string;
+  priceCents: number;
+  periodicity: PlanPeriodicity;
+  isActive?: boolean;
+};
+
+export type UpdateAcademyPlanInput = {
   id: string;
   name?: string;
-  slug?: SubscriptionPlanSlug;
-  description?: string | null;
-  priceMonthly?: number;
-  priceYearly?: number | null;
-  currency?: string | null;
-  maxStudents?: number | null;
-  maxProfessors?: number | null;
-  maxLocations?: number | null;
-  features?: unknown[];
+  priceCents?: number;
+  periodicity?: PlanPeriodicity;
   isActive?: boolean;
-  stripePriceIdMonthly?: string | null;
-  stripePriceIdYearly?: string | null;
 };
 
-export type CreateSubscriptionInput = {
-  academyId: string;
-  planId: string;
-  status?: SubscriptionStatus;
-  trialStartDate?: string | null;
-  trialEndDate?: string | null;
-  paymentGateway?: PaymentGateway | null;
-  pixAuthorizationId?: string | null;
-  pixRecurrenceId?: string | null;
-  pixCustomerCpf?: string | null;
-  pixCustomerName?: string | null;
-  stripeCustomerId?: string | null;
-  stripeSubscriptionId?: string | null;
-  stripePriceId?: string | null;
-  currentPeriodStart?: string | null;
-  currentPeriodEnd?: string | null;
-  canceledAt?: string | null;
-  cancelAtPeriodEnd?: boolean;
-  cancelReason?: string | null;
-  metadata?: Record<string, unknown> | null;
-};
+// ──────────────────────────────────────────────
+// Academy Subscriptions (academy subscribes to platform)
+// ──────────────────────────────────────────────
 
-export type UpdateSubscriptionInput = {
+export type AcademySubscription = {
   id: string;
-  planId?: string;
-  status?: SubscriptionStatus;
-  trialStartDate?: string | null;
-  trialEndDate?: string | null;
-  paymentGateway?: PaymentGateway | null;
-  pixAuthorizationId?: string | null;
-  pixRecurrenceId?: string | null;
-  pixCustomerCpf?: string | null;
-  pixCustomerName?: string | null;
-  stripeCustomerId?: string | null;
-  stripeSubscriptionId?: string | null;
-  stripePriceId?: string | null;
-  currentPeriodStart?: string | null;
-  currentPeriodEnd?: string | null;
-  canceledAt?: string | null;
-  cancelAtPeriodEnd?: boolean;
-  cancelReason?: string | null;
-  metadata?: Record<string, unknown> | null;
-};
-
-export type CreatePaymentHistoryInput = {
-  subscriptionId: string;
   academyId: string;
-  amount: number;
-  currency?: string | null;
-  paymentGateway: PaymentGateway;
-  gatewayPaymentId?: string | null;
-  gatewayChargeId?: string | null;
-  gatewayInvoiceId?: string | null;
-  status?: PaymentStatus;
-  paymentMethod?: string | null;
-  failureReason?: string | null;
-  failureCode?: string | null;
-  periodStart?: string | null;
-  periodEnd?: string | null;
-  paidAt?: string | null;
+  platformPlanId: string;
+  status: SubscriptionStatus;
+  gateway: PaymentGateway | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  nextBillingAt: string | null;
+  canceledAt: string | null;
+  createdAt: string;
 };
 
-export type UpdatePaymentHistoryInput = {
+// ──────────────────────────────────────────────
+// Member Subscriptions (member subscribes to academy plan)
+// ──────────────────────────────────────────────
+
+export type MemberSubscription = {
   id: string;
-  status?: PaymentStatus;
-  gatewayPaymentId?: string | null;
-  gatewayChargeId?: string | null;
-  gatewayInvoiceId?: string | null;
-  paymentMethod?: string | null;
-  failureReason?: string | null;
-  failureCode?: string | null;
-  periodStart?: string | null;
-  periodEnd?: string | null;
-  paidAt?: string | null;
+  academyId: string;
+  memberId: string;
+  academyPlanId: string;
+  status: SubscriptionStatus;
+  subscribedAt: string;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  nextBillingAt: string | null;
+  canceledAt: string | null;
+  createdAt: string;
 };
 
-export type CreateWebhookEventInput = {
+// ──────────────────────────────────────────────
+// Payment Attempts
+// ──────────────────────────────────────────────
+
+export type PaymentAttempt = {
+  id: string;
+  academyId: string;
+  memberSubscriptionId: string | null;
+  academySubscriptionId: string | null;
   gateway: PaymentGateway;
-  eventId: string;
-  eventType: string;
-  payload: Record<string, unknown>;
-  headers?: Record<string, unknown> | null;
-  status?: WebhookStatus;
-  processedAt?: string | null;
-  errorMessage?: string | null;
-  retryCount?: number;
-  nextRetryAt?: string | null;
-  receivedAt?: string | null;
+  amountCents: number;
+  status: PaymentAttemptStatus;
+  externalReference: string | null;
+  failureCode: string | null;
+  failureReason: string | null;
+  attemptedAt: string;
+  paidAt: string | null;
+  createdAt: string;
 };
 
-export type UpdateWebhookEventInput = {
-  id: string;
-  status?: WebhookStatus;
-  processedAt?: string | null;
-  errorMessage?: string | null;
-  retryCount?: number;
-  nextRetryAt?: string | null;
-};
-
-export interface SubscriptionPlansPort {
-  listActive(): Promise<SubscriptionPlan[]>;
-  getById(id: string): Promise<SubscriptionPlan | null>;
-  getBySlug(slug: SubscriptionPlanSlug): Promise<SubscriptionPlan | null>;
-  createPlan?(input: CreateSubscriptionPlanInput): Promise<SubscriptionPlan>;
-  updatePlan?(input: UpdateSubscriptionPlanInput): Promise<SubscriptionPlan>;
-}
-
-export interface SubscriptionsPort {
-  getByAcademyId(academyId: string): Promise<Subscription | null>;
-  createSubscription?(input: CreateSubscriptionInput): Promise<Subscription>;
-  updateSubscription?(input: UpdateSubscriptionInput): Promise<Subscription>;
-}
-
-export interface PaymentHistoryPort {
-  listByAcademy(academyId: string): Promise<PaymentHistory[]>;
-  createPayment?(input: CreatePaymentHistoryInput): Promise<PaymentHistory>;
-  updatePayment?(input: UpdatePaymentHistoryInput): Promise<PaymentHistory>;
-}
-
-export interface WebhookEventsPort {
-  getByEventId(eventId: string): Promise<WebhookEvent | null>;
-  createEvent?(input: CreateWebhookEventInput): Promise<WebhookEvent>;
-  updateEvent?(input: UpdateWebhookEventInput): Promise<WebhookEvent>;
-}
+// ──────────────────────────────────────────────
+// Port Interfaces
+// ──────────────────────────────────────────────
 
 export interface AuthPort {
   signIn(email: string, password: string): Promise<AuthUser>;
-  signUp(email: string, password: string): Promise<{ user: AuthUser; hasSession: boolean }>;
+  signUp(email: string, password: string): Promise<SignUpResult>;
   signOut(): Promise<void>;
   getSession(): Promise<AuthSession | null>;
   getCurrentUser(): Promise<AuthUser | null>;
@@ -460,8 +326,7 @@ export interface AuthPort {
 export interface ProfilesPort {
   getProfile(userId: string): Promise<Profile | null>;
   upsertProfile(input: ProfileUpsertInput): Promise<Profile>;
-  setCurrentBelt(userId: string, belt: Belt): Promise<Profile>;
-  setBeltAndDegree(userId: string, belt: Belt, degree: number | null): Promise<Profile>;
+  setBeltAndDegree(userId: string, belt: Belt, degree: number): Promise<Profile>;
 }
 
 export interface AcademiesPort {
@@ -473,6 +338,7 @@ export interface AcademiesPort {
 
 export interface MembershipsPort {
   addMember(input: AddMemberInput): Promise<AcademyMember>;
+  getMember(academyId: string, userId: string): Promise<AcademyMember | null>;
   listByAcademy(academyId: string): Promise<AcademyMember[]>;
   listByUser(userId: string): Promise<AcademyMember[]>;
   listMembersWithProfiles(academyId: string): Promise<MemberProfile[]>;
@@ -488,32 +354,40 @@ export interface ClassesPort {
 export interface CheckinsPort {
   createCheckin(input: CreateCheckinInput): Promise<ClassCheckin>;
   listPendingByAcademy(academyId: string): Promise<CheckinListItem[]>;
-  /** RLS filters results to the current instructor's classes. */
   listPendingMine(): Promise<CheckinListItem[]>;
   updateStatus(input: UpdateCheckinStatusInput): Promise<ClassCheckin>;
 }
 
 export interface SchedulesPort {
-  getWeeklySchedule(
-    academyId: string,
-    weekStartISO: string,
-    weekEndISO: string
-  ): Promise<ClassScheduleItem[]>;
-}
-
-export type StudentProgress = {
-  studentId: string;
-  academyId: string;
-  approvedClassesCount: number;
-};
-
-export interface ProgressPort {
-  getByStudent(studentId: string): Promise<StudentProgress | null>;
+  getWeeklySchedule(academyId: string): Promise<ClassScheduleItem[]>;
 }
 
 export interface StoragePort {
   uploadAvatar(userId: string, blob: Blob, fileExt: string): Promise<string>;
 }
+
+export interface PlatformPlansPort {
+  listActive(): Promise<PlatformPlan[]>;
+  getById(id: string): Promise<PlatformPlan | null>;
+}
+
+export interface AcademyPlansPort {
+  listByAcademy(academyId: string): Promise<AcademyPlan[]>;
+  createPlan(input: CreateAcademyPlanInput): Promise<AcademyPlan>;
+  updatePlan(input: UpdateAcademyPlanInput): Promise<AcademyPlan>;
+}
+
+export interface AcademySubscriptionsPort {
+  getByAcademyId(academyId: string): Promise<AcademySubscription | null>;
+}
+
+export interface PaymentAttemptsPort {
+  listByAcademy(academyId: string): Promise<PaymentAttempt[]>;
+}
+
+// ──────────────────────────────────────────────
+// Master Ports
+// ──────────────────────────────────────────────
 
 export type BlackBeltPorts = {
   auth: AuthPort;
@@ -523,10 +397,9 @@ export type BlackBeltPorts = {
   classes: ClassesPort;
   checkins: CheckinsPort;
   schedules: SchedulesPort;
-  progress: ProgressPort;
   storage: StoragePort;
-  subscriptionPlans?: SubscriptionPlansPort;
-  subscriptions?: SubscriptionsPort;
-  paymentHistory?: PaymentHistoryPort;
-  webhookEvents?: WebhookEventsPort;
+  platformPlans?: PlatformPlansPort;
+  academyPlans?: AcademyPlansPort;
+  academySubscriptions?: AcademySubscriptionsPort;
+  paymentAttempts?: PaymentAttemptsPort;
 };

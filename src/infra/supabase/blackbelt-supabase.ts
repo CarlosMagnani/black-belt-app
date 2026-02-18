@@ -5,39 +5,33 @@ import * as Linking from "expo-linking";
 
 import type {
   Academy,
-  AcademyMember,
   AcademyClass,
+  AcademyMember,
+  AcademyPlan,
+  AcademySubscription,
   AddMemberInput,
   AuthSession,
   AuthUser,
   Belt,
+  BeltRank,
+  BlackBeltPorts,
   CheckinListItem,
   ClassCheckin,
   ClassScheduleItem,
-  CreateCheckinInput,
   CreateAcademyInput,
+  CreateAcademyPlanInput,
+  CreateCheckinInput,
   CreateClassInput,
-  BlackBeltPorts,
   MemberProfile,
+  MemberRole,
+  PaymentAttempt,
+  PlatformPlan,
   Profile,
   ProfileUpsertInput,
-  StudentProgress,
+  Sex,
+  UpdateAcademyPlanInput,
   UpdateCheckinStatusInput,
   UpdateClassInput,
-  UserRole,
-  SubscriptionPlan,
-  SubscriptionPlanSlug,
-  Subscription,
-  PaymentHistory,
-  WebhookEvent,
-  CreateSubscriptionPlanInput,
-  UpdateSubscriptionPlanInput,
-  CreateSubscriptionInput,
-  UpdateSubscriptionInput,
-  CreatePaymentHistoryInput,
-  UpdatePaymentHistoryInput,
-  CreateWebhookEventInput,
-  UpdateWebhookEventInput,
 } from "../../core/ports/blackbelt-ports";
 import type { Database } from "./database.types";
 
@@ -51,45 +45,53 @@ export type SupabaseConfig = {
   client?: SupabaseClient<Database, SupabaseSchema>;
 };
 
-const BELT_VALUES: Belt[] = ["Branca", "Azul", "Roxa", "Marrom", "Preta", "Coral", "Vermelha"];
-const ROLE_VALUES: UserRole[] = ["owner", "professor", "student"];
+// ──────────────────────────────────────────────
+// Belt mapping (DB uses belt_rank enum, UI uses display names)
+// ──────────────────────────────────────────────
 
-const toBelt = (value: string | null): Belt | null =>
-  BELT_VALUES.includes(value as Belt) ? (value as Belt) : null;
-
-const toRole = (value: string | null): UserRole | null =>
-  ROLE_VALUES.includes(value as UserRole) ? (value as UserRole) : null;
-
-const buildFullName = (
-  firstName?: string | null,
-  lastName?: string | null,
-  fallback?: string | null
-) => {
-  const first = firstName?.trim() ?? "";
-  const last = lastName?.trim() ?? "";
-  const combined = `${first} ${last}`.trim();
-  return combined || fallback || null;
+const BELT_RANK_TO_DISPLAY: Record<BeltRank, Belt> = {
+  white: "Branca",
+  blue: "Azul",
+  purple: "Roxa",
+  brown: "Marrom",
+  black: "Preta",
+  coral: "Coral",
+  red: "Vermelha",
 };
 
-const SEX_VALUES = ["M", "F", "O", "N"] as const;
-type Sex = (typeof SEX_VALUES)[number];
+const BELT_DISPLAY_TO_RANK: Record<Belt, BeltRank> = {
+  Branca: "white",
+  Azul: "blue",
+  Roxa: "purple",
+  Marrom: "brown",
+  Preta: "black",
+  Coral: "coral",
+  Vermelha: "red",
+};
 
+const toBeltDisplay = (rank: string | null): Belt =>
+  BELT_RANK_TO_DISPLAY[rank as BeltRank] ?? "Branca";
+
+const toBeltRank = (display: Belt): BeltRank =>
+  BELT_DISPLAY_TO_RANK[display] ?? "white";
+
+const SEX_VALUES = ["M", "F", "O", "N"] as const;
 const toSex = (value: string | null): Sex | null =>
   SEX_VALUES.includes(value as Sex) ? (value as Sex) : null;
 
+// ──────────────────────────────────────────────
+// Transformation functions
+// ──────────────────────────────────────────────
+
 const toProfile = (row: Database["public"]["Tables"]["profiles"]["Row"]): Profile => ({
   id: row.id,
-  email: row.email,
   firstName: row.first_name,
-  lastName: row.last_name,
-  fullName: buildFullName(row.first_name, row.last_name, row.full_name),
-  role: toRole(row.role),
-  avatarUrl: row.avatar_url,
-  currentBelt: toBelt(row.current_belt),
-  beltDegree: row.belt_degree,
   birthDate: row.birth_date,
-  sex: toSex((row as any).sex),
+  photoUrl: row.photo_url,
+  sex: toSex(row.sex),
   federationNumber: row.federation_number,
+  belt: toBeltDisplay(row.belt),
+  beltDegree: row.belt_degree,
   createdAt: row.created_at,
 });
 
@@ -97,21 +99,13 @@ const toProfilePayload = (
   input: ProfileUpsertInput
 ): Database["public"]["Tables"]["profiles"]["Insert"] => ({
   id: input.id,
-  ...(input.email !== undefined ? { email: input.email } : {}),
   ...(input.firstName !== undefined ? { first_name: input.firstName } : {}),
-  ...(input.lastName !== undefined ? { last_name: input.lastName } : {}),
-  ...(input.firstName !== undefined || input.lastName !== undefined
-    ? { full_name: buildFullName(input.firstName, input.lastName) }
-    : input.fullName !== undefined
-      ? { full_name: input.fullName }
-      : {}),
-  ...(input.role !== undefined ? { role: input.role } : {}),
-  ...(input.avatarUrl !== undefined ? { avatar_url: input.avatarUrl } : {}),
-  ...(input.currentBelt !== undefined ? { current_belt: input.currentBelt } : {}),
-  ...(input.beltDegree !== undefined ? { belt_degree: input.beltDegree } : {}),
   ...(input.birthDate !== undefined ? { birth_date: input.birthDate } : {}),
+  ...(input.photoUrl !== undefined ? { photo_url: input.photoUrl } : {}),
   ...(input.sex !== undefined ? { sex: input.sex } : {}),
   ...(input.federationNumber !== undefined ? { federation_number: input.federationNumber } : {}),
+  ...(input.belt !== undefined ? { belt: toBeltRank(input.belt) } : {}),
+  ...(input.beltDegree !== undefined ? { belt_degree: input.beltDegree } : {}),
 });
 
 const toAcademy = (row: Database["public"]["Tables"]["academies"]["Row"]): Academy => ({
@@ -125,8 +119,15 @@ const toAcademy = (row: Database["public"]["Tables"]["academies"]["Row"]): Acade
 });
 
 const toMember = (row: Database["public"]["Tables"]["academy_members"]["Row"]): AcademyMember => ({
+  id: row.id,
   academyId: row.academy_id,
   userId: row.user_id,
+  role: row.role as MemberRole,
+  isBjj: row.is_bjj,
+  isMuayThai: row.is_muay_thai,
+  approvedClasses: row.approved_classes,
+  classesToDegree: row.classes_to_degree,
+  classesToBelt: row.classes_to_belt,
   joinedAt: row.joined_at,
 });
 
@@ -135,17 +136,14 @@ const toScheduleItem = (
 ): ClassScheduleItem => ({
   id: row.id,
   academyId: row.academy_id,
-  title: row.title,
-  instructorId: row.instructor_id,
-  instructorName: row.instructor_name,
+  className: row.class_name,
+  instructorMemberId: row.instructor_member_id,
   weekday: row.weekday,
   startTime: row.start_time,
   endTime: row.end_time,
   location: row.location,
-  level: row.level,
-  notes: row.notes,
-  isRecurring: row.is_recurring ?? true,
-  startDate: row.start_date,
+  classType: row.class_type,
+  isActive: row.is_active,
 });
 
 const toAcademyClass = (
@@ -161,194 +159,77 @@ const toCheckin = (
   id: row.id,
   academyId: row.academy_id,
   classId: row.class_id,
-  studentId: row.student_id,
+  memberId: row.member_id,
+  trainingDate: row.training_date,
   status: row.status,
-  validatedBy: row.validated_by,
-  validatedAt: row.validated_at,
+  approvedByMemberId: row.approved_by_member_id,
+  approvedAt: row.approved_at,
   createdAt: row.created_at,
 });
 
-const toSubscriptionPlan = (
-  row: Database["public"]["Tables"]["subscription_plans"]["Row"]
-): SubscriptionPlan => ({
+const toPlatformPlan = (
+  row: Database["public"]["Tables"]["platform_plans"]["Row"]
+): PlatformPlan => ({
   id: row.id,
   name: row.name,
-  slug: row.slug as SubscriptionPlanSlug,
+  slug: row.slug,
+  priceMonthCents: row.price_month_cents,
+  priceYearCents: row.price_year_cents,
+  discountPercent: row.discount_percent,
   description: row.description,
-  priceMonthly: row.price_monthly,
-  priceYearly: row.price_yearly,
   currency: row.currency,
-  maxStudents: row.max_students,
-  maxProfessors: row.max_professors,
-  maxLocations: row.max_locations,
-  features: Array.isArray(row.features) ? row.features : [],
   isActive: row.is_active,
-  stripePriceIdMonthly: row.stripe_price_id_monthly,
-  stripePriceIdYearly: row.stripe_price_id_yearly,
   createdAt: row.created_at,
-  updatedAt: row.updated_at,
 });
 
-const toSubscriptionPlanPayload = (
-  input: CreateSubscriptionPlanInput | UpdateSubscriptionPlanInput
-): Partial<Database["public"]["Tables"]["subscription_plans"]["Insert"]> => ({
-  ...("name" in input && input.name !== undefined ? { name: input.name } : {}),
-  ...("slug" in input && input.slug !== undefined ? { slug: input.slug } : {}),
-  ...(input.description !== undefined ? { description: input.description } : {}),
-  ...(input.priceMonthly !== undefined ? { price_monthly: input.priceMonthly } : {}),
-  ...(input.priceYearly !== undefined ? { price_yearly: input.priceYearly } : {}),
-  ...(input.currency !== undefined ? { currency: input.currency } : {}),
-  ...(input.maxStudents !== undefined ? { max_students: input.maxStudents } : {}),
-  ...(input.maxProfessors !== undefined ? { max_professors: input.maxProfessors } : {}),
-  ...(input.maxLocations !== undefined ? { max_locations: input.maxLocations } : {}),
-  ...(input.features !== undefined ? { features: input.features } : {}),
-  ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
-  ...(input.stripePriceIdMonthly !== undefined
-    ? { stripe_price_id_monthly: input.stripePriceIdMonthly }
-    : {}),
-  ...(input.stripePriceIdYearly !== undefined
-    ? { stripe_price_id_yearly: input.stripePriceIdYearly }
-    : {}),
-});
-
-const toSubscription = (
-  row: Database["public"]["Tables"]["subscriptions"]["Row"]
-): Subscription => ({
+const toAcademyPlan = (
+  row: Database["public"]["Tables"]["academy_plans"]["Row"]
+): AcademyPlan => ({
   id: row.id,
   academyId: row.academy_id,
-  planId: row.plan_id,
+  name: row.name,
+  priceCents: row.price_cents,
+  periodicity: row.periodicity,
+  isActive: row.is_active,
+  createdAt: row.created_at,
+});
+
+const toAcademySubscription = (
+  row: Database["public"]["Tables"]["academy_subscriptions"]["Row"]
+): AcademySubscription => ({
+  id: row.id,
+  academyId: row.academy_id,
+  platformPlanId: row.platform_plan_id,
   status: row.status,
-  trialStartDate: row.trial_start_date,
-  trialEndDate: row.trial_end_date,
-  paymentGateway: row.payment_gateway,
-  pixAuthorizationId: row.pix_authorization_id,
-  pixRecurrenceId: row.pix_recurrence_id,
-  pixCustomerCpf: row.pix_customer_cpf,
-  pixCustomerName: row.pix_customer_name,
-  stripeCustomerId: row.stripe_customer_id,
-  stripeSubscriptionId: row.stripe_subscription_id,
-  stripePriceId: row.stripe_price_id,
+  gateway: row.gateway,
   currentPeriodStart: row.current_period_start,
   currentPeriodEnd: row.current_period_end,
+  nextBillingAt: row.next_billing_at,
   canceledAt: row.canceled_at,
-  cancelAtPeriodEnd: row.cancel_at_period_end,
-  cancelReason: row.cancel_reason,
-  metadata: (row.metadata as Record<string, unknown> | null) ?? null,
   createdAt: row.created_at,
-  updatedAt: row.updated_at,
 });
 
-const toSubscriptionPayload = (
-  input: CreateSubscriptionInput | UpdateSubscriptionInput
-): Partial<Database["public"]["Tables"]["subscriptions"]["Insert"]> => ({
-  ...(input.academyId !== undefined ? { academy_id: input.academyId } : {}),
-  ...(input.planId !== undefined ? { plan_id: input.planId } : {}),
-  ...(input.status !== undefined ? { status: input.status } : {}),
-  ...(input.trialStartDate !== undefined ? { trial_start_date: input.trialStartDate } : {}),
-  ...(input.trialEndDate !== undefined ? { trial_end_date: input.trialEndDate } : {}),
-  ...(input.paymentGateway !== undefined ? { payment_gateway: input.paymentGateway } : {}),
-  ...(input.pixAuthorizationId !== undefined
-    ? { pix_authorization_id: input.pixAuthorizationId }
-    : {}),
-  ...(input.pixRecurrenceId !== undefined ? { pix_recurrence_id: input.pixRecurrenceId } : {}),
-  ...(input.pixCustomerCpf !== undefined ? { pix_customer_cpf: input.pixCustomerCpf } : {}),
-  ...(input.pixCustomerName !== undefined ? { pix_customer_name: input.pixCustomerName } : {}),
-  ...(input.stripeCustomerId !== undefined ? { stripe_customer_id: input.stripeCustomerId } : {}),
-  ...(input.stripeSubscriptionId !== undefined
-    ? { stripe_subscription_id: input.stripeSubscriptionId }
-    : {}),
-  ...(input.stripePriceId !== undefined ? { stripe_price_id: input.stripePriceId } : {}),
-  ...(input.currentPeriodStart !== undefined
-    ? { current_period_start: input.currentPeriodStart }
-    : {}),
-  ...(input.currentPeriodEnd !== undefined
-    ? { current_period_end: input.currentPeriodEnd }
-    : {}),
-  ...(input.canceledAt !== undefined ? { canceled_at: input.canceledAt } : {}),
-  ...(input.cancelAtPeriodEnd !== undefined
-    ? { cancel_at_period_end: input.cancelAtPeriodEnd }
-    : {}),
-  ...(input.cancelReason !== undefined ? { cancel_reason: input.cancelReason } : {}),
-  ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
-});
-
-const toPaymentHistory = (
-  row: Database["public"]["Tables"]["payment_history"]["Row"]
-): PaymentHistory => ({
+const toPaymentAttempt = (
+  row: Database["public"]["Tables"]["payment_attempts"]["Row"]
+): PaymentAttempt => ({
   id: row.id,
-  subscriptionId: row.subscription_id,
   academyId: row.academy_id,
-  amount: row.amount,
-  currency: row.currency,
-  paymentGateway: row.payment_gateway,
-  gatewayPaymentId: row.gateway_payment_id,
-  gatewayChargeId: row.gateway_charge_id,
-  gatewayInvoiceId: row.gateway_invoice_id,
+  memberSubscriptionId: row.member_subscription_id,
+  academySubscriptionId: row.academy_subscription_id,
+  gateway: row.gateway,
+  amountCents: row.amount_cents,
   status: row.status,
-  paymentMethod: row.payment_method,
-  failureReason: row.failure_reason,
+  externalReference: row.external_reference,
   failureCode: row.failure_code,
-  periodStart: row.period_start,
-  periodEnd: row.period_end,
+  failureReason: row.failure_reason,
+  attemptedAt: row.attempted_at,
   paidAt: row.paid_at,
   createdAt: row.created_at,
 });
 
-const toPaymentHistoryPayload = (
-  input: CreatePaymentHistoryInput | UpdatePaymentHistoryInput
-): Partial<Database["public"]["Tables"]["payment_history"]["Insert"]> => ({
-  ...(input.subscriptionId !== undefined ? { subscription_id: input.subscriptionId } : {}),
-  ...(input.academyId !== undefined ? { academy_id: input.academyId } : {}),
-  ...(input.amount !== undefined ? { amount: input.amount } : {}),
-  ...(input.currency !== undefined ? { currency: input.currency } : {}),
-  ...(input.paymentGateway !== undefined ? { payment_gateway: input.paymentGateway } : {}),
-  ...(input.gatewayPaymentId !== undefined
-    ? { gateway_payment_id: input.gatewayPaymentId }
-    : {}),
-  ...(input.gatewayChargeId !== undefined ? { gateway_charge_id: input.gatewayChargeId } : {}),
-  ...(input.gatewayInvoiceId !== undefined ? { gateway_invoice_id: input.gatewayInvoiceId } : {}),
-  ...(input.status !== undefined ? { status: input.status } : {}),
-  ...(input.paymentMethod !== undefined ? { payment_method: input.paymentMethod } : {}),
-  ...(input.failureReason !== undefined ? { failure_reason: input.failureReason } : {}),
-  ...(input.failureCode !== undefined ? { failure_code: input.failureCode } : {}),
-  ...(input.periodStart !== undefined ? { period_start: input.periodStart } : {}),
-  ...(input.periodEnd !== undefined ? { period_end: input.periodEnd } : {}),
-  ...(input.paidAt !== undefined ? { paid_at: input.paidAt } : {}),
-});
-
-const toWebhookEvent = (
-  row: Database["public"]["Tables"]["webhook_events"]["Row"]
-): WebhookEvent => ({
-  id: row.id,
-  gateway: row.gateway as WebhookEvent["gateway"],
-  eventId: row.event_id,
-  eventType: row.event_type,
-  payload: (row.payload as Record<string, unknown>) ?? {},
-  headers: (row.headers as Record<string, unknown> | null) ?? null,
-  status: row.status,
-  processedAt: row.processed_at,
-  errorMessage: row.error_message,
-  retryCount: row.retry_count,
-  nextRetryAt: row.next_retry_at,
-  receivedAt: row.received_at,
-  createdAt: row.created_at,
-});
-
-const toWebhookEventPayload = (
-  input: CreateWebhookEventInput | UpdateWebhookEventInput
-): Partial<Database["public"]["Tables"]["webhook_events"]["Insert"]> => ({
-  ...("gateway" in input && input.gateway !== undefined ? { gateway: input.gateway } : {}),
-  ...("eventId" in input && input.eventId !== undefined ? { event_id: input.eventId } : {}),
-  ...("eventType" in input && input.eventType !== undefined ? { event_type: input.eventType } : {}),
-  ...("payload" in input && input.payload !== undefined ? { payload: input.payload } : {}),
-  ...(input.headers !== undefined ? { headers: input.headers } : {}),
-  ...(input.status !== undefined ? { status: input.status } : {}),
-  ...(input.processedAt !== undefined ? { processed_at: input.processedAt } : {}),
-  ...(input.errorMessage !== undefined ? { error_message: input.errorMessage } : {}),
-  ...(input.retryCount !== undefined ? { retry_count: input.retryCount } : {}),
-  ...(input.nextRetryAt !== undefined ? { next_retry_at: input.nextRetryAt } : {}),
-  ...(input.receivedAt !== undefined ? { received_at: input.receivedAt } : {}),
-});
+// ──────────────────────────────────────────────
+// Supabase config
+// ──────────────────────────────────────────────
 
 const resolveSupabaseConfig = (config?: SupabaseConfig) => {
   const url = config?.url ?? process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -391,8 +272,14 @@ export const createSupabaseClient = (
   });
 };
 
+// ──────────────────────────────────────────────
+// Adapter factory
+// ──────────────────────────────────────────────
+
 export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts => {
   const client = createSupabaseClient(config);
+
+  // ── Profiles ──────────────────────────────
 
   const profiles = {
     async getProfile(userId: string): Promise<Profile | null> {
@@ -413,20 +300,10 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
       if (error) throw error;
       return toProfile(data);
     },
-    async setCurrentBelt(userId: string, belt: Belt): Promise<Profile> {
+    async setBeltAndDegree(userId: string, belt: Belt, degree: number): Promise<Profile> {
       const { data, error } = await client
         .from("profiles")
-        .update({ current_belt: belt })
-        .eq("id", userId)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return toProfile(data);
-    },
-    async setBeltAndDegree(userId: string, belt: Belt, degree: number | null): Promise<Profile> {
-      const { data, error } = await client
-        .from("profiles")
-        .update({ current_belt: belt, belt_degree: degree })
+        .update({ belt: toBeltRank(belt), belt_degree: degree })
         .eq("id", userId)
         .select("*")
         .single();
@@ -434,6 +311,8 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
       return toProfile(data);
     },
   };
+
+  // ── Academies ─────────────────────────────
 
   const academies = {
     async createAcademy(input: CreateAcademyInput): Promise<Academy> {
@@ -453,14 +332,12 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     },
     async getByInviteCode(inviteCode: string): Promise<Academy | null> {
       const normalized = inviteCode.trim().toUpperCase();
-
-      const { data, error } = await client
-        .rpc("get_academy_by_invite_code", { p_code: normalized });
-      
+      const { data, error } = await client.rpc("get_academy_by_invite_code", {
+        p_code: normalized,
+      });
       if (error) throw error;
-      
       const academy = Array.isArray(data) ? (data.length > 0 ? data[0] : null) : data;
-      return academy ? toAcademy(academy) : null;
+      return academy ? toAcademy(academy as any) : null;
     },
     async getById(academyId: string): Promise<Academy | null> {
       const { data, error } = await client
@@ -484,21 +361,33 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     },
   };
 
+  // ── Memberships ───────────────────────────
+
   const memberships = {
     async addMember(input: AddMemberInput): Promise<AcademyMember> {
       const { data, error } = await client
         .from("academy_members")
-        .upsert(
-          {
-            academy_id: input.academyId,
-            user_id: input.userId,
-          },
-          { onConflict: "academy_id,user_id" }
-        )
+        .insert({
+          academy_id: input.academyId,
+          user_id: input.userId,
+          role: input.role ?? "student",
+          ...(input.isBjj !== undefined ? { is_bjj: input.isBjj } : {}),
+          ...(input.isMuayThai !== undefined ? { is_muay_thai: input.isMuayThai } : {}),
+        })
         .select("*")
         .single();
       if (error) throw error;
       return toMember(data);
+    },
+    async getMember(academyId: string, userId: string): Promise<AcademyMember | null> {
+      const { data, error } = await client
+        .from("academy_members")
+        .select("*")
+        .eq("academy_id", academyId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? toMember(data) : null;
     },
     async listByAcademy(academyId: string): Promise<AcademyMember[]> {
       const { data, error } = await client
@@ -518,36 +407,42 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     },
     async listMembersWithProfiles(academyId: string): Promise<MemberProfile[]> {
       type MemberRow = {
+        id: string;
         user_id: string;
-        joined_at: string | null;
+        role: string;
+        approved_classes: number;
+        joined_at: string;
         profiles: {
-          full_name: string | null;
-          email: string | null;
-          current_belt: string | null;
-          belt_degree: number | null;
-          avatar_url: string | null;
+          first_name: string;
+          photo_url: string | null;
+          belt: string;
+          belt_degree: number;
         } | null;
       };
 
       const { data, error } = await client
         .from("academy_members")
         .select(
-          "user_id, joined_at, profiles:profiles (full_name, email, current_belt, belt_degree, avatar_url)"
+          "id, user_id, role, approved_classes, joined_at, profiles:profiles (first_name, photo_url, belt, belt_degree)"
         )
         .eq("academy_id", academyId);
       if (error) throw error;
       const rows = (data as MemberRow[] | null) ?? [];
       return rows.map((row) => ({
+        memberId: row.id,
         userId: row.user_id,
+        role: row.role as MemberRole,
+        firstName: row.profiles?.first_name ?? "",
+        photoUrl: row.profiles?.photo_url ?? null,
+        belt: toBeltDisplay(row.profiles?.belt ?? null),
+        beltDegree: row.profiles?.belt_degree ?? 0,
+        approvedClasses: row.approved_classes,
         joinedAt: row.joined_at,
-        fullName: row.profiles?.full_name ?? null,
-        email: row.profiles?.email ?? null,
-        currentBelt: toBelt(row.profiles?.current_belt ?? null),
-        beltDegree: row.profiles?.belt_degree ?? null,
-        avatarUrl: row.profiles?.avatar_url ?? null,
       }));
     },
   };
+
+  // ── Classes ───────────────────────────────
 
   const classes = {
     async listByAcademy(academyId: string): Promise<AcademyClass[]> {
@@ -555,6 +450,7 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         .from("academy_class_schedule")
         .select("*")
         .eq("academy_id", academyId)
+        .eq("is_active", true)
         .order("weekday", { ascending: true })
         .order("start_time", { ascending: true });
       if (error) throw error;
@@ -565,17 +461,15 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         .from("academy_class_schedule")
         .insert({
           academy_id: input.academyId,
-          title: input.title,
+          class_name: input.className,
           weekday: input.weekday,
           start_time: input.startTime,
           end_time: input.endTime,
-          ...(input.instructorId !== undefined ? { instructor_id: input.instructorId } : {}),
-          ...(input.instructorName !== undefined ? { instructor_name: input.instructorName } : {}),
+          ...(input.instructorMemberId !== undefined
+            ? { instructor_member_id: input.instructorMemberId }
+            : {}),
           ...(input.location !== undefined ? { location: input.location } : {}),
-          ...(input.level !== undefined ? { level: input.level } : {}),
-          ...(input.notes !== undefined ? { notes: input.notes } : {}),
-          ...(input.isRecurring !== undefined ? { is_recurring: input.isRecurring } : {}),
-          ...(input.startDate !== undefined ? { start_date: input.startDate } : {}),
+          ...(input.classType !== undefined ? { class_type: input.classType } : {}),
         })
         .select("*")
         .single();
@@ -586,17 +480,16 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
       const { data, error } = await client
         .from("academy_class_schedule")
         .update({
-          ...(input.title !== undefined ? { title: input.title } : {}),
+          ...(input.className !== undefined ? { class_name: input.className } : {}),
           ...(input.weekday !== undefined ? { weekday: input.weekday } : {}),
           ...(input.startTime !== undefined ? { start_time: input.startTime } : {}),
           ...(input.endTime !== undefined ? { end_time: input.endTime } : {}),
-          ...(input.instructorId !== undefined ? { instructor_id: input.instructorId } : {}),
-          ...(input.instructorName !== undefined ? { instructor_name: input.instructorName } : {}),
+          ...(input.instructorMemberId !== undefined
+            ? { instructor_member_id: input.instructorMemberId }
+            : {}),
           ...(input.location !== undefined ? { location: input.location } : {}),
-          ...(input.level !== undefined ? { level: input.level } : {}),
-          ...(input.notes !== undefined ? { notes: input.notes } : {}),
-          ...(input.isRecurring !== undefined ? { is_recurring: input.isRecurring } : {}),
-          ...(input.startDate !== undefined ? { start_date: input.startDate } : {}),
+          ...(input.classType !== undefined ? { class_type: input.classType } : {}),
+          ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
         })
         .eq("id", input.id)
         .select("*")
@@ -613,6 +506,8 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     },
   };
 
+  // ── Checkins ──────────────────────────────
+
   const checkins = {
     async createCheckin(input: CreateCheckinInput): Promise<ClassCheckin> {
       const { data, error } = await client
@@ -620,8 +515,9 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         .insert({
           academy_id: input.academyId,
           class_id: input.classId,
-          student_id: input.studentId,
+          member_id: input.memberId,
           status: "pending",
+          ...(input.trainingDate ? { training_date: input.trainingDate } : {}),
         })
         .select("*")
         .single();
@@ -633,17 +529,25 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         id: string;
         academy_id: string;
         class_id: string;
-        student_id: string;
+        member_id: string;
         status: string;
-        created_at: string | null;
-        profiles: { full_name: string | null; avatar_url: string | null } | null;
-        academy_class_schedule: { title: string | null; weekday: number | null; start_time: string | null } | null;
+        training_date: string;
+        created_at: string;
+        academy_members: {
+          user_id: string;
+          profiles: { first_name: string; photo_url: string | null } | null;
+        } | null;
+        academy_class_schedule: {
+          class_name: string | null;
+          weekday: number | null;
+          start_time: string | null;
+        } | null;
       };
 
       const { data, error } = await client
         .from("class_checkins")
         .select(
-          "id, academy_id, class_id, student_id, status, created_at, profiles:profiles!class_checkins_student_id_fkey (full_name, avatar_url), academy_class_schedule:academy_class_schedule (title, weekday, start_time)"
+          "id, academy_id, class_id, member_id, status, training_date, created_at, academy_members:academy_members!class_checkins_member_id_fkey (user_id, profiles:profiles (first_name, photo_url)), academy_class_schedule:academy_class_schedule (class_name, weekday, start_time)"
         )
         .eq("academy_id", academyId)
         .eq("status", "pending")
@@ -654,13 +558,14 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         id: row.id,
         academyId: row.academy_id,
         classId: row.class_id,
-        classTitle: row.academy_class_schedule?.title ?? null,
+        className: row.academy_class_schedule?.class_name ?? null,
         classWeekday: row.academy_class_schedule?.weekday ?? null,
         classStartTime: row.academy_class_schedule?.start_time ?? null,
-        studentId: row.student_id,
-        studentName: row.profiles?.full_name ?? null,
-        studentAvatarUrl: row.profiles?.avatar_url ?? null,
+        memberId: row.member_id,
+        memberName: row.academy_members?.profiles?.first_name ?? null,
+        memberPhotoUrl: row.academy_members?.profiles?.photo_url ?? null,
         status: row.status as ClassCheckin["status"],
+        trainingDate: row.training_date,
         createdAt: row.created_at,
       }));
     },
@@ -669,17 +574,25 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         id: string;
         academy_id: string;
         class_id: string;
-        student_id: string;
+        member_id: string;
         status: string;
-        created_at: string | null;
-        profiles: { full_name: string | null; avatar_url: string | null } | null;
-        academy_class_schedule: { title: string | null; weekday: number | null; start_time: string | null } | null;
+        training_date: string;
+        created_at: string;
+        academy_members: {
+          user_id: string;
+          profiles: { first_name: string; photo_url: string | null } | null;
+        } | null;
+        academy_class_schedule: {
+          class_name: string | null;
+          weekday: number | null;
+          start_time: string | null;
+        } | null;
       };
 
       const { data, error } = await client
         .from("class_checkins")
         .select(
-          "id, academy_id, class_id, student_id, status, created_at, profiles:profiles!class_checkins_student_id_fkey (full_name, avatar_url), academy_class_schedule:academy_class_schedule (title, weekday, start_time)"
+          "id, academy_id, class_id, member_id, status, training_date, created_at, academy_members:academy_members!class_checkins_member_id_fkey (user_id, profiles:profiles (first_name, photo_url)), academy_class_schedule:academy_class_schedule (class_name, weekday, start_time)"
         )
         .eq("status", "pending")
         .order("created_at", { ascending: true });
@@ -689,13 +602,14 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         id: row.id,
         academyId: row.academy_id,
         classId: row.class_id,
-        classTitle: row.academy_class_schedule?.title ?? null,
+        className: row.academy_class_schedule?.class_name ?? null,
         classWeekday: row.academy_class_schedule?.weekday ?? null,
         classStartTime: row.academy_class_schedule?.start_time ?? null,
-        studentId: row.student_id,
-        studentName: row.profiles?.full_name ?? null,
-        studentAvatarUrl: row.profiles?.avatar_url ?? null,
+        memberId: row.member_id,
+        memberName: row.academy_members?.profiles?.first_name ?? null,
+        memberPhotoUrl: row.academy_members?.profiles?.photo_url ?? null,
         status: row.status as ClassCheckin["status"],
+        trainingDate: row.training_date,
         createdAt: row.created_at,
       }));
     },
@@ -704,51 +618,46 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
         .from("class_checkins")
         .update({
           status: input.status,
-          validated_by: input.validatedBy,
-          validated_at: new Date().toISOString(),
+          approved_by_member_id: input.approvedByMemberId,
+          approved_at: new Date().toISOString(),
         })
         .eq("id", input.id)
         .select("*")
         .single();
       if (error) throw error;
-
       return toCheckin(data);
     },
   };
 
+  // ── Schedules ─────────────────────────────
+
   const schedules = {
-    async getWeeklySchedule(
-      academyId: string,
-      weekStartISO: string,
-      weekEndISO: string
-    ): Promise<ClassScheduleItem[]> {
+    async getWeeklySchedule(academyId: string): Promise<ClassScheduleItem[]> {
       const { data, error } = await client
         .from("academy_class_schedule")
         .select("*")
         .eq("academy_id", academyId)
+        .eq("is_active", true)
         .order("weekday", { ascending: true })
         .order("start_time", { ascending: true });
-
       if (error) throw error;
-      return (data ?? [])
-        .filter((row) => {
-          if (row.is_recurring !== false) return true;
-          if (!row.start_date) return false;
-          return row.start_date >= weekStartISO && row.start_date <= weekEndISO;
-        })
-        .map(toScheduleItem);
+      return (data ?? []).map(toScheduleItem);
     },
   };
+
+  // ── Auth ──────────────────────────────────
 
   const auth = {
     async signIn(email: string, password: string): Promise<AuthUser> {
       const { data, error } = await client.auth.signInWithPassword({ email, password });
       if (error) throw error;
       if (!data.user) throw new Error("Missing user from sign-in response.");
-
       return { id: data.user.id, email: data.user.email ?? null };
     },
-    async signUp(email: string, password: string): Promise<{ user: AuthUser; hasSession: boolean }> {
+    async signUp(
+      email: string,
+      password: string
+    ): Promise<{ user: AuthUser; hasSession: boolean }> {
       const emailRedirectTo =
         process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL ?? Linking.createURL("auth-callback");
 
@@ -760,9 +669,6 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
       if (error) throw error;
       if (!data.user) throw new Error("Missing user from sign-up response.");
 
-      // Supabase may return an obfuscated user (without identities) when this
-      // email is already registered. In this case we should not continue to
-      // onboarding as if this were a brand-new account.
       const isExistingUser =
         Array.isArray(data.user.identities) && data.user.identities.length === 0;
       if (isExistingUser) {
@@ -772,10 +678,10 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
       const hasSession = !!data.session?.user;
 
       if (hasSession) {
+        // Create a minimal profile for the new user
         await profiles.upsertProfile({
           id: data.user.id,
-          email: data.user.email ?? email,
-          role: null,
+          firstName: email.split("@")[0],
         });
       }
 
@@ -821,164 +727,103 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     },
   };
 
-  const progress = {
-    async getByStudent(studentId: string): Promise<StudentProgress | null> {
-      const { data, error } = await client
-        .from("student_progress")
-        .select("*")
-        .eq("student_id", studentId)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
-      return {
-        studentId: data.student_id,
-        academyId: data.academy_id,
-        approvedClassesCount: data.approved_classes_count,
-      };
-    },
-  };
+  // ── Platform Plans ────────────────────────
 
-  const subscriptionPlans = {
-    async listActive(): Promise<SubscriptionPlan[]> {
+  const platformPlans = {
+    async listActive(): Promise<PlatformPlan[]> {
       const { data, error } = await client
-        .from("subscription_plans")
+        .from("platform_plans")
         .select("*")
         .eq("is_active", true)
-        .order("price_monthly", { ascending: true });
+        .order("price_month_cents", { ascending: true });
       if (error) throw error;
-      return (data ?? []).map(toSubscriptionPlan);
+      return (data ?? []).map(toPlatformPlan);
     },
-    async getById(id: string): Promise<SubscriptionPlan | null> {
+    async getById(id: string): Promise<PlatformPlan | null> {
       const { data, error } = await client
-        .from("subscription_plans")
+        .from("platform_plans")
         .select("*")
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
-      return data ? toSubscriptionPlan(data) : null;
+      return data ? toPlatformPlan(data) : null;
     },
-    async getBySlug(slug: SubscriptionPlanSlug): Promise<SubscriptionPlan | null> {
+  };
+
+  // ── Academy Plans ─────────────────────────
+
+  const academyPlans = {
+    async listByAcademy(academyId: string): Promise<AcademyPlan[]> {
       const { data, error } = await client
-        .from("subscription_plans")
+        .from("academy_plans")
         .select("*")
-        .eq("slug", slug)
-        .maybeSingle();
+        .eq("academy_id", academyId)
+        .eq("is_active", true)
+        .order("price_cents", { ascending: true });
       if (error) throw error;
-      return data ? toSubscriptionPlan(data) : null;
+      return (data ?? []).map(toAcademyPlan);
     },
-    async createPlan(input: CreateSubscriptionPlanInput): Promise<SubscriptionPlan> {
+    async createPlan(input: CreateAcademyPlanInput): Promise<AcademyPlan> {
       const { data, error } = await client
-        .from("subscription_plans")
-        .insert(toSubscriptionPlanPayload(input))
+        .from("academy_plans")
+        .insert({
+          academy_id: input.academyId,
+          name: input.name,
+          price_cents: input.priceCents,
+          periodicity: input.periodicity,
+          ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
+        })
         .select("*")
         .single();
       if (error) throw error;
-      return toSubscriptionPlan(data);
+      return toAcademyPlan(data);
     },
-    async updatePlan(input: UpdateSubscriptionPlanInput): Promise<SubscriptionPlan> {
+    async updatePlan(input: UpdateAcademyPlanInput): Promise<AcademyPlan> {
       const { data, error } = await client
-        .from("subscription_plans")
-        .update(toSubscriptionPlanPayload(input))
+        .from("academy_plans")
+        .update({
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.priceCents !== undefined ? { price_cents: input.priceCents } : {}),
+          ...(input.periodicity !== undefined ? { periodicity: input.periodicity } : {}),
+          ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
+        })
         .eq("id", input.id)
         .select("*")
         .single();
       if (error) throw error;
-      return toSubscriptionPlan(data);
+      return toAcademyPlan(data);
     },
   };
 
-  const subscriptions = {
-    async getByAcademyId(academyId: string): Promise<Subscription | null> {
+  // ── Academy Subscriptions ─────────────────
+
+  const academySubscriptions = {
+    async getByAcademyId(academyId: string): Promise<AcademySubscription | null> {
       const { data, error } = await client
-        .from("subscriptions")
+        .from("academy_subscriptions")
         .select("*")
         .eq("academy_id", academyId)
         .maybeSingle();
       if (error) throw error;
-      return data ? toSubscription(data) : null;
-    },
-    async createSubscription(input: CreateSubscriptionInput): Promise<Subscription> {
-      const { data, error } = await client
-        .from("subscriptions")
-        .insert(toSubscriptionPayload(input))
-        .select("*")
-        .single();
-      if (error) throw error;
-      return toSubscription(data);
-    },
-    async updateSubscription(input: UpdateSubscriptionInput): Promise<Subscription> {
-      const { data, error } = await client
-        .from("subscriptions")
-        .update(toSubscriptionPayload(input))
-        .eq("id", input.id)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return toSubscription(data);
+      return data ? toAcademySubscription(data) : null;
     },
   };
 
-  const paymentHistory = {
-    async listByAcademy(academyId: string): Promise<PaymentHistory[]> {
+  // ── Payment Attempts ──────────────────────
+
+  const paymentAttempts = {
+    async listByAcademy(academyId: string): Promise<PaymentAttempt[]> {
       const { data, error } = await client
-        .from("payment_history")
+        .from("payment_attempts")
         .select("*")
         .eq("academy_id", academyId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map(toPaymentHistory);
-    },
-    async createPayment(input: CreatePaymentHistoryInput): Promise<PaymentHistory> {
-      const { data, error } = await client
-        .from("payment_history")
-        .insert(toPaymentHistoryPayload(input))
-        .select("*")
-        .single();
-      if (error) throw error;
-      return toPaymentHistory(data);
-    },
-    async updatePayment(input: UpdatePaymentHistoryInput): Promise<PaymentHistory> {
-      const { data, error } = await client
-        .from("payment_history")
-        .update(toPaymentHistoryPayload(input))
-        .eq("id", input.id)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return toPaymentHistory(data);
+      return (data ?? []).map(toPaymentAttempt);
     },
   };
 
-  const webhookEvents = {
-    async getByEventId(eventId: string): Promise<WebhookEvent | null> {
-      const { data, error } = await client
-        .from("webhook_events")
-        .select("*")
-        .eq("event_id", eventId)
-        .maybeSingle();
-      if (error) throw error;
-      return data ? toWebhookEvent(data) : null;
-    },
-    async createEvent(input: CreateWebhookEventInput): Promise<WebhookEvent> {
-      const { data, error } = await client
-        .from("webhook_events")
-        .insert(toWebhookEventPayload(input))
-        .select("*")
-        .single();
-      if (error) throw error;
-      return toWebhookEvent(data);
-    },
-    async updateEvent(input: UpdateWebhookEventInput): Promise<WebhookEvent> {
-      const { data, error } = await client
-        .from("webhook_events")
-        .update(toWebhookEventPayload(input))
-        .eq("id", input.id)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return toWebhookEvent(data);
-    },
-  };
+  // ── Storage ───────────────────────────────
 
   const fileStorage = {
     async uploadAvatar(userId: string, blob: Blob, fileExt: string): Promise<string> {
@@ -1040,11 +885,10 @@ export const createSupabaseAdapters = (config?: SupabaseConfig): BlackBeltPorts 
     classes,
     checkins,
     schedules,
-    progress,
     storage: fileStorage,
-    subscriptionPlans,
-    subscriptions,
-    paymentHistory,
-    webhookEvents,
+    platformPlans,
+    academyPlans,
+    academySubscriptions,
+    paymentAttempts,
   };
 };

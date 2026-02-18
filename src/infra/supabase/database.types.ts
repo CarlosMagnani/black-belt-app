@@ -12,50 +12,48 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          email: string | null;
-          first_name: string | null;
-          last_name: string | null;
-          full_name: string | null;
-          role: string | null;
-          avatar_url: string | null;
-          current_belt: string | null;
-          belt_degree: number | null;
+          first_name: string;
           birth_date: string | null;
+          photo_url: string | null;
           sex: string | null;
           federation_number: string | null;
-          created_at: string | null;
+          belt: string;
+          belt_degree: number;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
-          id?: string;
-          email?: string | null;
-          first_name?: string | null;
-          last_name?: string | null;
-          full_name?: string | null;
-          role?: string | null;
-          avatar_url?: string | null;
-          current_belt?: string | null;
-          belt_degree?: number | null;
+          id: string;
+          first_name: string;
           birth_date?: string | null;
+          photo_url?: string | null;
           sex?: string | null;
           federation_number?: string | null;
-          created_at?: string | null;
+          belt?: string;
+          belt_degree?: number;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
-          email?: string | null;
-          first_name?: string | null;
-          last_name?: string | null;
-          full_name?: string | null;
-          role?: string | null;
-          avatar_url?: string | null;
-          current_belt?: string | null;
-          belt_degree?: number | null;
+          first_name?: string;
           birth_date?: string | null;
+          photo_url?: string | null;
           sex?: string | null;
           federation_number?: string | null;
-          created_at?: string | null;
+          belt?: string;
+          belt_degree?: number;
+          created_at?: string;
+          updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey";
+            columns: ["id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       academies: {
         Row: {
@@ -65,7 +63,8 @@ export type Database = {
           city: string | null;
           invite_code: string;
           logo_url: string | null;
-          created_at: string | null;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -74,7 +73,8 @@ export type Database = {
           city?: string | null;
           invite_code: string;
           logo_url?: string | null;
-          created_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -83,25 +83,60 @@ export type Database = {
           city?: string | null;
           invite_code?: string;
           logo_url?: string | null;
-          created_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "academies_owner_id_fkey";
+            columns: ["owner_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       academy_members: {
         Row: {
+          id: string;
           academy_id: string;
           user_id: string;
-          joined_at: string | null;
+          role: Database["public"]["Enums"]["member_role"];
+          is_bjj: boolean;
+          is_muay_thai: boolean;
+          approved_classes: number;
+          classes_to_degree: number;
+          classes_to_belt: number;
+          joined_at: string;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
+          id?: string;
           academy_id: string;
           user_id: string;
-          joined_at?: string | null;
+          role?: Database["public"]["Enums"]["member_role"];
+          is_bjj?: boolean;
+          is_muay_thai?: boolean;
+          approved_classes?: number;
+          classes_to_degree?: number;
+          classes_to_belt?: number;
+          joined_at?: string;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
+          id?: string;
           academy_id?: string;
           user_id?: string;
-          joined_at?: string | null;
+          role?: Database["public"]["Enums"]["member_role"];
+          is_bjj?: boolean;
+          is_muay_thai?: boolean;
+          approved_classes?: number;
+          classes_to_degree?: number;
+          classes_to_belt?: number;
+          joined_at?: string;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -118,354 +153,48 @@ export type Database = {
           }
         ];
       };
-      academy_staff: {
-        Row: {
-          academy_id: string;
-          user_id: string;
-          role: Database["public"]["Enums"]["academy_staff_role"];
-          created_at: string | null;
-        };
-        Insert: {
-          academy_id: string;
-          user_id: string;
-          role: Database["public"]["Enums"]["academy_staff_role"];
-          created_at?: string | null;
-        };
-        Update: {
-          academy_id?: string;
-          user_id?: string;
-          role?: Database["public"]["Enums"]["academy_staff_role"];
-          created_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "academy_staff_academy_id_fkey";
-            columns: ["academy_id"];
-            referencedRelation: "academies";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "academy_staff_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
-      subscription_plans: {
-        Row: {
-          id: string;
-          name: string;
-          slug: string;
-          description: string | null;
-          price_monthly: number;
-          price_yearly: number | null;
-          currency: string | null;
-          max_students: number | null;
-          max_professors: number | null;
-          max_locations: number | null;
-          features: Json;
-          is_active: boolean | null;
-          stripe_price_id_monthly: string | null;
-          stripe_price_id_yearly: string | null;
-          created_at: string | null;
-          updated_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          slug: string;
-          description?: string | null;
-          price_monthly: number;
-          price_yearly?: number | null;
-          currency?: string | null;
-          max_students?: number | null;
-          max_professors?: number | null;
-          max_locations?: number | null;
-          features?: Json;
-          is_active?: boolean | null;
-          stripe_price_id_monthly?: string | null;
-          stripe_price_id_yearly?: string | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          slug?: string;
-          description?: string | null;
-          price_monthly?: number;
-          price_yearly?: number | null;
-          currency?: string | null;
-          max_students?: number | null;
-          max_professors?: number | null;
-          max_locations?: number | null;
-          features?: Json;
-          is_active?: boolean | null;
-          stripe_price_id_monthly?: string | null;
-          stripe_price_id_yearly?: string | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-        };
-        Relationships: [];
-      };
-      subscriptions: {
-        Row: {
-          id: string;
-          academy_id: string;
-          plan_id: string;
-          status: Database["public"]["Enums"]["subscription_status"];
-          trial_start_date: string | null;
-          trial_end_date: string | null;
-          payment_gateway: Database["public"]["Enums"]["payment_gateway"] | null;
-          pix_authorization_id: string | null;
-          pix_recurrence_id: string | null;
-          pix_customer_cpf: string | null;
-          pix_customer_name: string | null;
-          stripe_customer_id: string | null;
-          stripe_subscription_id: string | null;
-          stripe_price_id: string | null;
-          current_period_start: string | null;
-          current_period_end: string | null;
-          canceled_at: string | null;
-          cancel_at_period_end: boolean | null;
-          cancel_reason: string | null;
-          metadata: Json | null;
-          created_at: string | null;
-          updated_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          academy_id: string;
-          plan_id: string;
-          status?: Database["public"]["Enums"]["subscription_status"];
-          trial_start_date?: string | null;
-          trial_end_date?: string | null;
-          payment_gateway?: Database["public"]["Enums"]["payment_gateway"] | null;
-          pix_authorization_id?: string | null;
-          pix_recurrence_id?: string | null;
-          pix_customer_cpf?: string | null;
-          pix_customer_name?: string | null;
-          stripe_customer_id?: string | null;
-          stripe_subscription_id?: string | null;
-          stripe_price_id?: string | null;
-          current_period_start?: string | null;
-          current_period_end?: string | null;
-          canceled_at?: string | null;
-          cancel_at_period_end?: boolean | null;
-          cancel_reason?: string | null;
-          metadata?: Json | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          academy_id?: string;
-          plan_id?: string;
-          status?: Database["public"]["Enums"]["subscription_status"];
-          trial_start_date?: string | null;
-          trial_end_date?: string | null;
-          payment_gateway?: Database["public"]["Enums"]["payment_gateway"] | null;
-          pix_authorization_id?: string | null;
-          pix_recurrence_id?: string | null;
-          pix_customer_cpf?: string | null;
-          pix_customer_name?: string | null;
-          stripe_customer_id?: string | null;
-          stripe_subscription_id?: string | null;
-          stripe_price_id?: string | null;
-          current_period_start?: string | null;
-          current_period_end?: string | null;
-          canceled_at?: string | null;
-          cancel_at_period_end?: boolean | null;
-          cancel_reason?: string | null;
-          metadata?: Json | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_academy_id_fkey";
-            columns: ["academy_id"];
-            referencedRelation: "academies";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "subscriptions_plan_id_fkey";
-            columns: ["plan_id"];
-            referencedRelation: "subscription_plans";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
-      payment_history: {
-        Row: {
-          id: string;
-          subscription_id: string;
-          academy_id: string;
-          amount: number;
-          currency: string | null;
-          payment_gateway: Database["public"]["Enums"]["payment_gateway"];
-          gateway_payment_id: string | null;
-          gateway_charge_id: string | null;
-          gateway_invoice_id: string | null;
-          status: Database["public"]["Enums"]["payment_status"];
-          payment_method: string | null;
-          failure_reason: string | null;
-          failure_code: string | null;
-          period_start: string | null;
-          period_end: string | null;
-          paid_at: string | null;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          subscription_id: string;
-          academy_id: string;
-          amount: number;
-          currency?: string | null;
-          payment_gateway: Database["public"]["Enums"]["payment_gateway"];
-          gateway_payment_id?: string | null;
-          gateway_charge_id?: string | null;
-          gateway_invoice_id?: string | null;
-          status?: Database["public"]["Enums"]["payment_status"];
-          payment_method?: string | null;
-          failure_reason?: string | null;
-          failure_code?: string | null;
-          period_start?: string | null;
-          period_end?: string | null;
-          paid_at?: string | null;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          subscription_id?: string;
-          academy_id?: string;
-          amount?: number;
-          currency?: string | null;
-          payment_gateway?: Database["public"]["Enums"]["payment_gateway"];
-          gateway_payment_id?: string | null;
-          gateway_charge_id?: string | null;
-          gateway_invoice_id?: string | null;
-          status?: Database["public"]["Enums"]["payment_status"];
-          payment_method?: string | null;
-          failure_reason?: string | null;
-          failure_code?: string | null;
-          period_start?: string | null;
-          period_end?: string | null;
-          paid_at?: string | null;
-          created_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "payment_history_subscription_id_fkey";
-            columns: ["subscription_id"];
-            referencedRelation: "subscriptions";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "payment_history_academy_id_fkey";
-            columns: ["academy_id"];
-            referencedRelation: "academies";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
-      webhook_events: {
-        Row: {
-          id: string;
-          gateway: string;
-          event_id: string;
-          event_type: string;
-          payload: Json;
-          headers: Json | null;
-          status: Database["public"]["Enums"]["webhook_status"];
-          processed_at: string | null;
-          error_message: string | null;
-          retry_count: number | null;
-          next_retry_at: string | null;
-          received_at: string | null;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          gateway: string;
-          event_id: string;
-          event_type: string;
-          payload: Json;
-          headers?: Json | null;
-          status?: Database["public"]["Enums"]["webhook_status"];
-          processed_at?: string | null;
-          error_message?: string | null;
-          retry_count?: number | null;
-          next_retry_at?: string | null;
-          received_at?: string | null;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          gateway?: string;
-          event_id?: string;
-          event_type?: string;
-          payload?: Json;
-          headers?: Json | null;
-          status?: Database["public"]["Enums"]["webhook_status"];
-          processed_at?: string | null;
-          error_message?: string | null;
-          retry_count?: number | null;
-          next_retry_at?: string | null;
-          received_at?: string | null;
-          created_at?: string | null;
-        };
-        Relationships: [];
-      };
       academy_class_schedule: {
         Row: {
           id: string;
           academy_id: string;
-          title: string;
-          instructor_id: string | null;
-          instructor_name: string | null;
+          class_name: string;
+          instructor_member_id: string | null;
           weekday: number;
           start_time: string;
           end_time: string;
           location: string | null;
-          level: string | null;
-          notes: string | null;
-          is_recurring: boolean | null;
-          start_date: string | null;
-          created_at: string | null;
+          class_type: string;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
           academy_id: string;
-          title: string;
-          instructor_id?: string | null;
-          instructor_name?: string | null;
+          class_name: string;
+          instructor_member_id?: string | null;
           weekday: number;
           start_time: string;
           end_time: string;
           location?: string | null;
-          level?: string | null;
-          notes?: string | null;
-          is_recurring?: boolean | null;
-          start_date?: string | null;
-          created_at?: string | null;
+          class_type?: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
           academy_id?: string;
-          title?: string;
-          instructor_id?: string | null;
-          instructor_name?: string | null;
+          class_name?: string;
+          instructor_member_id?: string | null;
           weekday?: number;
           start_time?: string;
           end_time?: string;
           location?: string | null;
-          level?: string | null;
-          notes?: string | null;
-          is_recurring?: boolean | null;
-          start_date?: string | null;
-          created_at?: string | null;
+          class_type?: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -473,12 +202,11 @@ export type Database = {
             columns: ["academy_id"];
             referencedRelation: "academies";
             referencedColumns: ["id"];
-          }
-          ,
+          },
           {
-            foreignKeyName: "academy_class_schedule_instructor_id_fkey";
-            columns: ["instructor_id"];
-            referencedRelation: "profiles";
+            foreignKeyName: "academy_class_schedule_instructor_member_id_fkey";
+            columns: ["instructor_member_id"];
+            referencedRelation: "academy_members";
             referencedColumns: ["id"];
           }
         ];
@@ -488,31 +216,34 @@ export type Database = {
           id: string;
           academy_id: string;
           class_id: string;
-          student_id: string;
-          status: "pending" | "approved" | "rejected";
-          validated_by: string | null;
-          validated_at: string | null;
-          created_at: string | null;
+          member_id: string;
+          training_date: string;
+          status: Database["public"]["Enums"]["checkin_status"];
+          approved_by_member_id: string | null;
+          approved_at: string | null;
+          created_at: string;
         };
         Insert: {
           id?: string;
           academy_id: string;
           class_id: string;
-          student_id: string;
-          status?: "pending" | "approved" | "rejected";
-          validated_by?: string | null;
-          validated_at?: string | null;
-          created_at?: string | null;
+          member_id: string;
+          training_date?: string;
+          status?: Database["public"]["Enums"]["checkin_status"];
+          approved_by_member_id?: string | null;
+          approved_at?: string | null;
+          created_at?: string;
         };
         Update: {
           id?: string;
           academy_id?: string;
           class_id?: string;
-          student_id?: string;
-          status?: "pending" | "approved" | "rejected";
-          validated_by?: string | null;
-          validated_at?: string | null;
-          created_at?: string | null;
+          member_id?: string;
+          training_date?: string;
+          status?: Database["public"]["Enums"]["checkin_status"];
+          approved_by_member_id?: string | null;
+          approved_at?: string | null;
+          created_at?: string;
         };
         Relationships: [
           {
@@ -528,49 +259,350 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "class_checkins_student_id_fkey";
-            columns: ["student_id"];
-            referencedRelation: "profiles";
+            foreignKeyName: "class_checkins_member_id_fkey";
+            columns: ["member_id"];
+            referencedRelation: "academy_members";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "class_checkins_validated_by_fkey";
-            columns: ["validated_by"];
-            referencedRelation: "profiles";
+            foreignKeyName: "class_checkins_approved_by_member_id_fkey";
+            columns: ["approved_by_member_id"];
+            referencedRelation: "academy_members";
             referencedColumns: ["id"];
           }
         ];
       };
-      student_progress: {
+      platform_plans: {
         Row: {
-          student_id: string;
-          academy_id: string;
-          approved_classes_count: number;
-          updated_at: string | null;
+          id: string;
+          name: string;
+          slug: string;
+          price_month_cents: number;
+          price_year_cents: number | null;
+          discount_percent: number | null;
+          description: string | null;
+          currency: string;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
-          student_id: string;
-          academy_id: string;
-          approved_classes_count?: number;
-          updated_at?: string | null;
+          id?: string;
+          name: string;
+          slug: string;
+          price_month_cents: number;
+          price_year_cents?: number | null;
+          discount_percent?: number | null;
+          description?: string | null;
+          currency?: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
-          student_id?: string;
+          id?: string;
+          name?: string;
+          slug?: string;
+          price_month_cents?: number;
+          price_year_cents?: number | null;
+          discount_percent?: number | null;
+          description?: string | null;
+          currency?: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      academy_plans: {
+        Row: {
+          id: string;
+          academy_id: string;
+          name: string;
+          price_cents: number;
+          periodicity: Database["public"]["Enums"]["plan_periodicity"];
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          academy_id: string;
+          name: string;
+          price_cents: number;
+          periodicity: Database["public"]["Enums"]["plan_periodicity"];
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
           academy_id?: string;
-          approved_classes_count?: number;
-          updated_at?: string | null;
+          name?: string;
+          price_cents?: number;
+          periodicity?: Database["public"]["Enums"]["plan_periodicity"];
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "student_progress_academy_id_fkey";
+            foreignKeyName: "academy_plans_academy_id_fkey";
+            columns: ["academy_id"];
+            referencedRelation: "academies";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      academy_subscriptions: {
+        Row: {
+          id: string;
+          academy_id: string;
+          platform_plan_id: string;
+          status: Database["public"]["Enums"]["subscription_status"];
+          gateway: Database["public"]["Enums"]["payment_gateway"] | null;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          next_billing_at: string | null;
+          canceled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          academy_id: string;
+          platform_plan_id: string;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          gateway?: Database["public"]["Enums"]["payment_gateway"] | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          next_billing_at?: string | null;
+          canceled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          academy_id?: string;
+          platform_plan_id?: string;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          gateway?: Database["public"]["Enums"]["payment_gateway"] | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          next_billing_at?: string | null;
+          canceled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "academy_subscriptions_academy_id_fkey";
             columns: ["academy_id"];
             referencedRelation: "academies";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "student_progress_student_id_fkey";
-            columns: ["student_id"];
-            referencedRelation: "profiles";
+            foreignKeyName: "academy_subscriptions_platform_plan_id_fkey";
+            columns: ["platform_plan_id"];
+            referencedRelation: "platform_plans";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      member_subscriptions: {
+        Row: {
+          id: string;
+          academy_id: string;
+          member_id: string;
+          academy_plan_id: string;
+          status: Database["public"]["Enums"]["subscription_status"];
+          subscribed_at: string;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          next_billing_at: string | null;
+          canceled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          academy_id: string;
+          member_id: string;
+          academy_plan_id: string;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          subscribed_at?: string;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          next_billing_at?: string | null;
+          canceled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          academy_id?: string;
+          member_id?: string;
+          academy_plan_id?: string;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          subscribed_at?: string;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          next_billing_at?: string | null;
+          canceled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "member_subscriptions_academy_id_fkey";
+            columns: ["academy_id"];
+            referencedRelation: "academies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "member_subscriptions_member_id_fkey";
+            columns: ["member_id"];
+            referencedRelation: "academy_members";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "member_subscriptions_academy_plan_id_fkey";
+            columns: ["academy_plan_id"];
+            referencedRelation: "academy_plans";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      payment_attempts: {
+        Row: {
+          id: string;
+          academy_id: string;
+          member_subscription_id: string | null;
+          academy_subscription_id: string | null;
+          gateway: Database["public"]["Enums"]["payment_gateway"];
+          amount_cents: number;
+          status: Database["public"]["Enums"]["payment_attempt_status"];
+          external_reference: string | null;
+          failure_code: string | null;
+          failure_reason: string | null;
+          attempted_at: string;
+          paid_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          academy_id: string;
+          member_subscription_id?: string | null;
+          academy_subscription_id?: string | null;
+          gateway: Database["public"]["Enums"]["payment_gateway"];
+          amount_cents: number;
+          status?: Database["public"]["Enums"]["payment_attempt_status"];
+          external_reference?: string | null;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          attempted_at?: string;
+          paid_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          academy_id?: string;
+          member_subscription_id?: string | null;
+          academy_subscription_id?: string | null;
+          gateway?: Database["public"]["Enums"]["payment_gateway"];
+          amount_cents?: number;
+          status?: Database["public"]["Enums"]["payment_attempt_status"];
+          external_reference?: string | null;
+          failure_code?: string | null;
+          failure_reason?: string | null;
+          attempted_at?: string;
+          paid_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_academy_id_fkey";
+            columns: ["academy_id"];
+            referencedRelation: "academies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_attempts_member_subscription_id_fkey";
+            columns: ["member_subscription_id"];
+            referencedRelation: "member_subscriptions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_attempts_academy_subscription_id_fkey";
+            columns: ["academy_subscription_id"];
+            referencedRelation: "academy_subscriptions";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      billing_notifications: {
+        Row: {
+          id: string;
+          academy_id: string;
+          member_subscription_id: string | null;
+          academy_subscription_id: string | null;
+          notification_type: Database["public"]["Enums"]["notification_type"];
+          channel: Database["public"]["Enums"]["notification_channel"];
+          status: Database["public"]["Enums"]["notification_status"];
+          dedupe_key: string;
+          payload: Json;
+          scheduled_for: string;
+          sent_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          academy_id: string;
+          member_subscription_id?: string | null;
+          academy_subscription_id?: string | null;
+          notification_type: Database["public"]["Enums"]["notification_type"];
+          channel: Database["public"]["Enums"]["notification_channel"];
+          status?: Database["public"]["Enums"]["notification_status"];
+          dedupe_key: string;
+          payload?: Json;
+          scheduled_for?: string;
+          sent_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          academy_id?: string;
+          member_subscription_id?: string | null;
+          academy_subscription_id?: string | null;
+          notification_type?: Database["public"]["Enums"]["notification_type"];
+          channel?: Database["public"]["Enums"]["notification_channel"];
+          status?: Database["public"]["Enums"]["notification_status"];
+          dedupe_key?: string;
+          payload?: Json;
+          scheduled_for?: string;
+          sent_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "billing_notifications_academy_id_fkey";
+            columns: ["academy_id"];
+            referencedRelation: "academies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_notifications_member_subscription_id_fkey";
+            columns: ["member_subscription_id"];
+            referencedRelation: "member_subscriptions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_notifications_academy_subscription_id_fkey";
+            columns: ["academy_subscription_id"];
+            referencedRelation: "academy_subscriptions";
             referencedColumns: ["id"];
           }
         ];
@@ -578,13 +610,6 @@ export type Database = {
     };
     Views: {};
     Functions: {
-      add_professor_to_academy: {
-        Args: {
-          p_academy_id: string;
-          p_email: string;
-        };
-        Returns: string;
-      };
       get_academy_by_invite_code: {
         Args: {
           p_code: string;
@@ -596,17 +621,22 @@ export type Database = {
           city: string | null;
           invite_code: string;
           logo_url: string | null;
-          created_at: string | null;
+          created_at: string;
+          updated_at: string;
         }[];
       };
     };
     Enums: {
-      academy_staff_role: "owner" | "professor";
+      member_role: "student" | "instructor" | "owner";
+      belt_rank: "white" | "blue" | "purple" | "brown" | "black" | "coral" | "red";
+      checkin_status: "pending" | "approved" | "rejected";
       subscription_status: "trialing" | "active" | "past_due" | "canceled" | "expired";
-      payment_gateway: "pix_auto" | "stripe";
-      payment_status: "pending" | "processing" | "succeeded" | "failed" | "refunded";
-      webhook_status: "pending" | "processing" | "processed" | "failed" | "skipped";
-      user_role: "owner" | "professor" | "student";
+      payment_gateway: "pix" | "stripe";
+      payment_attempt_status: "pending" | "paid" | "failed" | "refunded";
+      plan_periodicity: "monthly" | "quarterly" | "semiannual" | "annual";
+      notification_type: "payment_due" | "payment_failed" | "payment_succeeded" | "subscription_expiring";
+      notification_channel: "push" | "email" | "sms";
+      notification_status: "pending" | "sent" | "failed";
     };
     CompositeTypes: {};
   };

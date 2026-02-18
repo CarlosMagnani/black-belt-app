@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 
-import type { Academy } from "../ports/blackbelt-ports";
+import type { Academy, AcademyMember } from "../ports/blackbelt-ports";
 import { useAuthProfile } from "./use-auth-profile";
 import { blackBeltAdapters } from "../../infra/supabase/adapters";
 
@@ -9,6 +9,8 @@ type StudentAcademyState = {
   isBooting: boolean;
   session: ReturnType<typeof useAuthProfile>["session"];
   profile: ReturnType<typeof useAuthProfile>["profile"];
+  role: ReturnType<typeof useAuthProfile>["role"];
+  membership: AcademyMember | null;
   academy: Academy | null;
   academyId: string | null;
   isAcademyLoading: boolean;
@@ -18,7 +20,14 @@ type StudentAcademyState = {
 
 export const useStudentAcademy = (): StudentAcademyState => {
   const router = useRouter();
-  const { isLoading: isBooting, session, profile, refresh: refreshProfile } = useAuthProfile();
+  const {
+    isLoading: isBooting,
+    session,
+    profile,
+    role,
+    membership: authMembership,
+    refresh: refreshProfile,
+  } = useAuthProfile();
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [isAcademyLoading, setIsAcademyLoading] = useState(false);
@@ -30,18 +39,18 @@ export const useStudentAcademy = (): StudentAcademyState => {
       router.replace("/auth");
       return;
     }
-    if (!profile?.role) {
+    if (!profile) {
       router.replace("/onboarding");
       return;
     }
-    if (profile.role !== "student") {
+    if (role && role !== "student") {
       router.replace("/");
     }
-  }, [isBooting, session, profile, router]);
+  }, [isBooting, session, profile, role, router]);
 
   useEffect(() => {
     if (!profile?.id) return;
-    if (profile.role !== "student") return;
+    if (role !== "student" && role !== null) return;
 
     let isActive = true;
 
@@ -55,8 +64,9 @@ export const useStudentAcademy = (): StudentAcademyState => {
           router.replace("/join-academy");
           return;
         }
-        setAcademyId(memberships[0].academyId);
-        const academyData = await blackBeltAdapters.academies.getById(memberships[0].academyId);
+        const mem = memberships[0];
+        setAcademyId(mem.academyId);
+        const academyData = await blackBeltAdapters.academies.getById(mem.academyId);
         if (!isActive) return;
         setAcademy(academyData);
       } catch (err) {
@@ -72,12 +82,14 @@ export const useStudentAcademy = (): StudentAcademyState => {
     return () => {
       isActive = false;
     };
-  }, [profile?.id, profile?.role, router]);
+  }, [profile?.id, role, router]);
 
   return {
     isBooting,
     session,
     profile,
+    role,
+    membership: authMembership,
     academy,
     academyId,
     isAcademyLoading,

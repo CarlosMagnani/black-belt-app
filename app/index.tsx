@@ -2,33 +2,36 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, SafeAreaView, Text, View } from "react-native";
 
+import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
 import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 
 export default function Index() {
   const router = useRouter();
+  const { isLoading, session, profile, role } = useAuthProfile();
   const [status, setStatus] = useState<"loading" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLoading) return;
     let isActive = true;
 
     const resolveRoute = async () => {
       try {
-        const session = await blackBeltAdapters.auth.getSession();
         if (!session) {
           router.replace("/auth");
           return;
         }
 
-        const profile = await blackBeltAdapters.profiles.getProfile(session.user.id);
-        const hasProfileName = !!(profile?.firstName?.trim() || profile?.fullName?.trim());
-        if (!profile?.role || !profile.currentBelt || !hasProfileName) {
+        const hasProfileName = !!profile?.firstName?.trim();
+        const hasBelt = !!profile?.belt;
+        if (!profile || !hasBelt || !hasProfileName) {
           router.replace("/onboarding");
           return;
         }
 
-        if (profile.role === "student") {
+        if (role === "student") {
           const memberships = await blackBeltAdapters.memberships.listByUser(profile.id);
+          if (!isActive) return;
           if (memberships.length === 0) {
             router.replace("/join-academy");
             return;
@@ -37,8 +40,9 @@ export default function Index() {
           return;
         }
 
-        if (profile.role === "owner") {
+        if (role === "owner") {
           const academy = await blackBeltAdapters.academies.getByOwnerId(profile.id);
+          if (!isActive) return;
           if (!academy) {
             router.replace("/create-academy");
             return;
@@ -47,7 +51,7 @@ export default function Index() {
           return;
         }
 
-        if (profile.role === "professor") {
+        if (role === "instructor") {
           router.replace("/professor-checkins");
           return;
         }
@@ -65,7 +69,7 @@ export default function Index() {
     return () => {
       isActive = false;
     };
-  }, [router]);
+  }, [isLoading, profile, role, router, session]);
 
   return (
     <SafeAreaView className="flex-1 bg-app-light dark:bg-app-dark">

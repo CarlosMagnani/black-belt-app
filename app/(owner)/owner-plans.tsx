@@ -11,18 +11,31 @@ import { supabase } from "../../src/infra/supabase/client";
 type PlanRow = {
   id: string;
   name: string;
-  description: string | null;
   price_cents: number;
-  periodicity: Periodicity;
+  periodicity: "monthly" | "quarterly" | "semiannual" | "yearly" | "annual";
   is_active: boolean;
+};
+
+const toUiPeriodicity = (value: PlanRow["periodicity"]): Periodicity => {
+  if (value === "quarterly") return "TRIMESTRAL";
+  if (value === "semiannual") return "SEMESTRAL";
+  if (value === "yearly" || value === "annual") return "ANUAL";
+  return "MENSAL";
+};
+
+const toDbPeriodicity = (value: Periodicity): PlanRow["periodicity"] => {
+  if (value === "TRIMESTRAL") return "quarterly";
+  if (value === "SEMESTRAL") return "semiannual";
+  if (value === "ANUAL") return "yearly";
+  return "monthly";
 };
 
 const toPlan = (row: PlanRow): Plan => ({
   id: row.id,
   name: row.name,
-  description: row.description,
+  description: null,
   price_cents: row.price_cents,
-  periodicity: row.periodicity,
+  periodicity: toUiPeriodicity(row.periodicity),
   is_active: row.is_active,
   subscriber_count: 0,
 });
@@ -43,7 +56,7 @@ export default function OwnerPlans() {
     try {
       const { data, error: selectError } = await supabase
         .from("academy_plans")
-        .select("id, name, description, price_cents, periodicity, is_active")
+        .select("id, name, price_cents, periodicity, is_active")
         .eq("academy_id", academyId)
         .order("price_cents", { ascending: true });
 
@@ -89,18 +102,20 @@ export default function OwnerPlans() {
           .from("academy_plans")
           .update({
             name: data.name,
-            description: data.description.trim() ? data.description.trim() : null,
             price_cents: data.price_cents,
-            periodicity: data.periodicity,
+            periodicity: toDbPeriodicity(data.periodicity) as any,
           })
           .eq("id", editingPlan.id)
-          .select("id, name, description, price_cents, periodicity, is_active")
+          .select("id, name, price_cents, periodicity, is_active")
           .single();
 
         if (updateError) throw updateError;
         if (!updated) throw new Error("Plano nao encontrado.");
 
-        const updatedPlan = toPlan(updated as PlanRow);
+        const updatedPlan: Plan = {
+          ...toPlan(updated as PlanRow),
+          description: data.description.trim() ? data.description.trim() : null,
+        };
 
         setPlans((prev) =>
           prev
@@ -113,20 +128,21 @@ export default function OwnerPlans() {
           .insert({
             academy_id: academy.id,
             name: data.name,
-            description: data.description.trim() ? data.description.trim() : null,
             price_cents: data.price_cents,
-            periodicity: data.periodicity,
+            periodicity: toDbPeriodicity(data.periodicity) as any,
             is_active: true,
           })
-          .select("id, name, description, price_cents, periodicity, is_active")
+          .select("id, name, price_cents, periodicity, is_active")
           .single();
 
         if (insertError) throw insertError;
         if (!created) throw new Error("Nao foi possivel criar o plano.");
 
-        setPlans((prev) =>
-          [...prev, toPlan(created as PlanRow)].sort((a, b) => a.price_cents - b.price_cents)
-        );
+        const createdPlan: Plan = {
+          ...toPlan(created as PlanRow),
+          description: data.description.trim() ? data.description.trim() : null,
+        };
+        setPlans((prev) => [...prev, createdPlan].sort((a, b) => a.price_cents - b.price_cents));
       }
 
       handleCloseModal();
@@ -144,13 +160,16 @@ export default function OwnerPlans() {
         .from("academy_plans")
         .update({ is_active: !plan.is_active })
         .eq("id", plan.id)
-        .select("id, name, description, price_cents, periodicity, is_active")
+        .select("id, name, price_cents, periodicity, is_active")
         .single();
 
       if (updateError) throw updateError;
       if (!updated) throw new Error("Plano nao encontrado.");
 
-      const updatedPlan = toPlan(updated as PlanRow);
+      const updatedPlan: Plan = {
+        ...toPlan(updated as PlanRow),
+        description: plan.description ?? null,
+      };
 
       setPlans((prev) =>
         prev

@@ -62,7 +62,7 @@ export default function Onboarding() {
   const router = useRouter();
   const params = useLocalSearchParams<{ pendingEmail?: string | string[] }>();
   const pendingEmail = Array.isArray(params.pendingEmail) ? params.pendingEmail[0] : params.pendingEmail;
-  const { isLoading, session, profile, refresh } = useAuthProfile();
+  const { isLoading, session, profile, role, refresh } = useAuthProfile();
   
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialData);
@@ -71,7 +71,7 @@ export default function Onboarding() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const [pendingEmailMessage, setPendingEmailMessage] = useState<string | null>(null);
-  const roleLocked = !!profile?.role;
+  const roleLocked = !!role;
 
   // Redirect logic
   useEffect(() => {
@@ -82,22 +82,22 @@ export default function Onboarding() {
       return;
     }
     // If profile is complete, go to appropriate route
-    const hasProfileName = !!(profile?.firstName?.trim() || profile?.fullName?.trim());
-    if (profile?.role && hasProfileName && profile?.currentBelt) {
-      if (profile.role === "student") {
+    const hasProfileName = !!profile?.firstName?.trim();
+    if (role && hasProfileName && profile?.belt) {
+      if (role === "student") {
         router.replace("/join-academy");
-      } else if (profile.role === "owner") {
+      } else if (role === "owner") {
         router.replace("/create-academy");
       } else {
         router.replace("/professor-checkins");
       }
     }
-  }, [isLoading, session, profile, router, pendingEmail]);
+  }, [isLoading, session, profile, role, router, pendingEmail]);
 
   useEffect(() => {
-    if (!profile?.role) return;
-    setData((prev) => (prev.role ? prev : { ...prev, role: profile.role }));
-  }, [profile?.role]);
+    if (!role) return;
+    setData((prev) => (prev.role ? prev : { ...prev, role }));
+  }, [role]);
 
   const updateData = (updates: Partial<OnboardingData>) => {
     setData((prev) => ({ ...prev, ...updates }));
@@ -153,21 +153,31 @@ export default function Onboarding() {
 
   const handleFinish = async () => {
     if (!session?.user.id) return;
+    const selectedRole = data.role ?? role;
+    if (!selectedRole) {
+      setSaveError("Selecione como vai usar o BlackBelt para continuar.");
+      setStep(1);
+      return;
+    }
     
     setIsSaving(true);
     setSaveError(null);
 
     try {
+      // Persist onboarding role for users that still have no academy/membership.
+      await supabase.auth.updateUser({
+        data: {
+          onboarding_role: selectedRole,
+        },
+      });
+
       await blackBeltAdapters.profiles.upsertProfile({
         id: session.user.id,
-        email: session.user.email,
-        role: profile?.role ?? data.role,
         firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
         birthDate: data.birthDate || null,
         sex: data.sex,
-        avatarUrl: data.avatarUrl || null,
-        currentBelt: data.belt,
+        photoUrl: data.avatarUrl || null,
+        belt: data.belt,
         beltDegree: data.degree,
       });
 
@@ -180,9 +190,9 @@ export default function Onboarding() {
         setShowEmailConfirmation(true);
       } else {
         // Redirect based on role
-        if (data.role === "student") {
+        if (selectedRole === "student") {
           router.replace("/join-academy");
-        } else if (data.role === "owner") {
+        } else if (selectedRole === "owner") {
           router.replace("/create-academy");
         } else {
           router.replace("/professor-checkins");
@@ -198,13 +208,14 @@ export default function Onboarding() {
   const handleCheckEmailConfirmed = async () => {
     try {
       await refresh();
+      const selectedRole = data.role ?? role;
       const { data: userData } = await supabase.auth.getUser();
       const emailConfirmed = userData?.user?.email_confirmed_at != null;
       
-      if (emailConfirmed) {
-        if (data.role === "student") {
+      if (emailConfirmed && selectedRole) {
+        if (selectedRole === "student") {
           router.replace("/join-academy");
-        } else if (data.role === "owner") {
+        } else if (selectedRole === "owner") {
           router.replace("/create-academy");
         } else {
           router.replace("/professor-checkins");

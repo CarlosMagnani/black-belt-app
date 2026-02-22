@@ -202,7 +202,8 @@ export default function OwnerHome() {
           blackBeltAdapters.classes.listByAcademy(academy.id),
         ]);
         if (!isActive) return;
-        setMembersCount(members.length);
+        const studentMembers = members.filter((member) => member.role === "student");
+        setMembersCount(studentMembers.length);
         setPendingCount(pending.length);
         setWeekCount(classes.length);
         setTodayCount(classes.filter((item) => item.weekday === todayWeekday).length);

@@ -45,6 +45,7 @@ export default function StudentHome() {
   const {
     isBooting,
     profile,
+    membership,
     academy,
     academyId,
     isAcademyLoading,
@@ -56,14 +57,14 @@ export default function StudentHome() {
   const [selectedWeekday, setSelectedWeekday] = useState(() => new Date().getDay());
 
   const displayName = useMemo(() => {
-    if (profile?.fullName) return profile.fullName.split(" ")[0];
+    if (profile?.firstName) return profile.firstName.split(" ")[0];
     if (profile?.email) return profile.email.split("@")[0];
     return "Aluno";
-  }, [profile?.fullName, profile?.email]);
+  }, [profile?.firstName, profile?.email]);
 
   const currentBelt: BeltName = profile?.currentBelt ?? "Branca";
   const beltDegree = profile?.beltDegree ?? undefined;
-  const progress = useStudentProgress(currentBelt, profile?.id);
+  const progress = useStudentProgress(currentBelt, membership?.approvedClasses);
   const calendarIconColor = theme === "dark" ? "#E0E7FF" : "#1E3A8A";
 
   const [weekStart] = useState(() => getWeekStart(new Date()));

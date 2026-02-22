@@ -7,11 +7,23 @@ type AuthProfileState = {
   isLoading: boolean;
   session: AuthSession | null;
   profile: Profile | null;
-  /** The user's role in their first academy, or "owner" if they own one. */
+  /** Resolved from ownership, membership, then auth metadata fallback. */
   role: MemberRole | null;
   membership: AcademyMember | null;
   error: string | null;
   refresh: () => Promise<void>;
+};
+
+const toMemberRole = (value: unknown): MemberRole | null => {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "owner" || normalized === "student" || normalized === "instructor") {
+    return normalized;
+  }
+  if (normalized === "professor") {
+    return "instructor";
+  }
+  return null;
 };
 
 export const useAuthProfile = (): AuthProfileState => {
@@ -53,9 +65,13 @@ export const useAuthProfile = (): AuthProfileState => {
       const memberships = await blackBeltAdapters.memberships.listByUser(userId);
       if (memberships.length > 0) {
         setMembership(memberships[0]);
-        setRole(memberships[0].role);
+        setRole(toMemberRole(memberships[0].role));
       } else {
-        setRole(null);
+        const currentUser = await blackBeltAdapters.auth.getCurrentUser();
+        const metadata = currentUser?.metadata;
+        const metadataRole =
+          toMemberRole(metadata?.onboarding_role) ?? toMemberRole(metadata?.role);
+        setRole(metadataRole);
         setMembership(null);
       }
     } catch (err) {

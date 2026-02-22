@@ -35,15 +35,17 @@ export default function OwnerProfessors() {
     setLocalError(null);
     try {
       type StaffRow = {
+        id: string;
         user_id: string;
         role: StaffRole;
-        profiles: { full_name: string | null; email: string | null } | null;
+        profiles: { first_name: string | null } | null;
       };
 
       const { data, error: staffError } = await supabase
-        .from("academy_staff")
-        .select("user_id, role, profiles:profiles (full_name, email)")
+        .from("academy_members")
+        .select("id, user_id, role, profiles:profiles (first_name)")
         .eq("academy_id", academy.id)
+        .in("role", ["owner", "professor"] as any)
         .order("created_at", { ascending: true });
 
       if (staffError) throw staffError;
@@ -53,8 +55,8 @@ export default function OwnerProfessors() {
         rows.map((row) => ({
           userId: row.user_id,
           role: row.role,
-          fullName: row.profiles?.full_name ?? null,
-          email: row.profiles?.email ?? null,
+          fullName: row.profiles?.first_name ?? null,
+          email: null,
         }))
       );
     } catch (err) {
@@ -77,7 +79,7 @@ export default function OwnerProfessors() {
     setSuccessMessage(null);
     try {
       const trimmed = email.trim();
-      const { error: rpcError } = await supabase.rpc("add_professor_to_academy", {
+      const { error: rpcError } = await (supabase as any).rpc("add_professor_to_academy", {
         p_academy_id: academy.id,
         p_email: trimmed,
       });
@@ -100,10 +102,11 @@ export default function OwnerProfessors() {
     setSuccessMessage(null);
     try {
       const { error: deleteError } = await supabase
-        .from("academy_staff")
+        .from("academy_members")
         .delete()
         .eq("academy_id", academy.id)
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .eq("role", "professor" as any);
 
       if (deleteError) throw deleteError;
       setSuccessMessage("Professor removido.");

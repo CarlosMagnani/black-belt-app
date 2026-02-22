@@ -2,15 +2,22 @@
 // Enums & Basic Types
 // ──────────────────────────────────────────────
 
-export type MemberRole = "student" | "instructor" | "owner";
+export type MemberRole = "student" | "instructor" | "professor" | "owner";
+export type UserRole = MemberRole;
 export type Belt = "Branca" | "Azul" | "Roxa" | "Marrom" | "Preta" | "Coral" | "Vermelha";
 export type BeltRank = "white" | "blue" | "purple" | "brown" | "black" | "coral" | "red";
 export type Sex = "M" | "F" | "O" | "N";
 export type CheckinStatus = "pending" | "approved" | "rejected";
 export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "expired";
-export type PaymentGateway = "pix" | "stripe";
-export type PaymentAttemptStatus = "pending" | "paid" | "failed" | "refunded";
-export type PlanPeriodicity = "monthly" | "quarterly" | "semiannual" | "annual";
+export type PaymentGateway = "pix" | "pix_auto" | "stripe";
+export type PaymentAttemptStatus =
+  | "pending"
+  | "processing"
+  | "paid"
+  | "succeeded"
+  | "failed"
+  | "refunded";
+export type PlanPeriodicity = "monthly" | "quarterly" | "semiannual" | "annual" | "yearly";
 
 // ──────────────────────────────────────────────
 // Auth
@@ -19,6 +26,7 @@ export type PlanPeriodicity = "monthly" | "quarterly" | "semiannual" | "annual";
 export type AuthUser = {
   id: string;
   email: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 export type SignUpResult = {
@@ -39,11 +47,17 @@ export type AuthSession = {
 export type Profile = {
   id: string;
   firstName: string;
+  /** Legacy compatibility fields used by older screens/components. */
+  lastName: string | null;
+  fullName: string | null;
+  email: string | null;
   birthDate: string | null;
   photoUrl: string | null;
+  avatarUrl: string | null;
   sex: Sex | null;
   federationNumber: string | null;
   belt: Belt;
+  currentBelt: Belt;
   beltDegree: number;
   createdAt: string;
 };
@@ -51,11 +65,15 @@ export type Profile = {
 export type ProfileUpsertInput = {
   id: string;
   firstName?: string;
+  lastName?: string | null;
+  fullName?: string | null;
   birthDate?: string | null;
   photoUrl?: string | null;
+  avatarUrl?: string | null;
   sex?: Sex | null;
   federationNumber?: string | null;
   belt?: Belt;
+  currentBelt?: Belt;
   beltDegree?: number;
 };
 
@@ -78,6 +96,13 @@ export type CreateAcademyInput = {
   name: string;
   city?: string | null;
   inviteCode: string;
+  logoUrl?: string | null;
+};
+
+export type UpdateAcademyInput = {
+  id: string;
+  name?: string;
+  city?: string | null;
   logoUrl?: string | null;
 };
 
@@ -111,8 +136,12 @@ export type MemberProfile = {
   userId: string;
   role: MemberRole;
   firstName: string;
+  fullName: string | null;
+  email: string | null;
   photoUrl: string | null;
+  avatarUrl: string | null;
   belt: Belt;
+  currentBelt: Belt;
   beltDegree: number;
   approvedClasses: number;
   joinedAt: string;
@@ -126,12 +155,20 @@ export type ClassScheduleItem = {
   id: string;
   academyId: string;
   className: string;
+  /** Legacy compatibility fields used by older screens/components. */
+  title: string;
   instructorMemberId: string | null;
+  instructorId: string | null;
+  instructorName: string | null;
   weekday: number;
   startTime: string;
   endTime: string;
   location: string | null;
   classType: string;
+  level: string | null;
+  notes: string | null;
+  isRecurring: boolean;
+  startDate: string | null;
   isActive: boolean;
 };
 
@@ -141,24 +178,38 @@ export type AcademyClass = ClassScheduleItem & {
 
 export type CreateClassInput = {
   academyId: string;
-  className: string;
+  className?: string;
+  title?: string;
   instructorMemberId?: string | null;
+  instructorId?: string | null;
+  instructorName?: string | null;
   weekday: number;
   startTime: string;
   endTime: string;
   location?: string | null;
   classType?: string;
+  level?: string | null;
+  notes?: string | null;
+  isRecurring?: boolean;
+  startDate?: string | null;
 };
 
 export type UpdateClassInput = {
   id: string;
   className?: string;
+  title?: string;
   instructorMemberId?: string | null;
+  instructorId?: string | null;
+  instructorName?: string | null;
   weekday?: number;
   startTime?: string;
   endTime?: string;
   location?: string | null;
   classType?: string;
+  level?: string | null;
+  notes?: string | null;
+  isRecurring?: boolean;
+  startDate?: string | null;
   isActive?: boolean;
 };
 
@@ -183,11 +234,14 @@ export type CheckinListItem = {
   academyId: string;
   classId: string;
   className: string | null;
+  classTitle: string | null;
   classWeekday: number | null;
   classStartTime: string | null;
   memberId: string;
   memberName: string | null;
+  studentName: string | null;
   memberPhotoUrl: string | null;
+  studentAvatarUrl: string | null;
   status: CheckinStatus;
   trainingDate: string;
   createdAt: string;
@@ -196,14 +250,16 @@ export type CheckinListItem = {
 export type CreateCheckinInput = {
   academyId: string;
   classId: string;
-  memberId: string;
+  memberId?: string;
+  studentId?: string;
   trainingDate?: string;
 };
 
 export type UpdateCheckinStatusInput = {
   id: string;
   status: CheckinStatus;
-  approvedByMemberId: string;
+  approvedByMemberId?: string;
+  validatedBy?: string;
 };
 
 // ──────────────────────────────────────────────
@@ -331,6 +387,7 @@ export interface ProfilesPort {
 
 export interface AcademiesPort {
   createAcademy(input: CreateAcademyInput): Promise<Academy>;
+  updateAcademy(input: UpdateAcademyInput): Promise<Academy>;
   getByInviteCode(inviteCode: string): Promise<Academy | null>;
   getById(academyId: string): Promise<Academy | null>;
   getByOwnerId(ownerId: string): Promise<Academy | null>;
@@ -359,11 +416,16 @@ export interface CheckinsPort {
 }
 
 export interface SchedulesPort {
-  getWeeklySchedule(academyId: string): Promise<ClassScheduleItem[]>;
+  getWeeklySchedule(
+    academyId: string,
+    weekStartISO?: string,
+    weekEndISO?: string
+  ): Promise<ClassScheduleItem[]>;
 }
 
 export interface StoragePort {
   uploadAvatar(userId: string, blob: Blob, fileExt: string): Promise<string>;
+  uploadAcademyLogo(ownerId: string, blob: Blob, fileExt: string): Promise<string>;
 }
 
 export interface PlatformPlansPort {

@@ -625,6 +625,25 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      set_member_belt: {
+        Args: {
+          p_profile_id: string;
+          p_belt: Database["public"]["Enums"]["belt_rank"];
+          p_degree: number;
+        };
+        Returns: {
+          id: string;
+          first_name: string;
+          birth_date: string | null;
+          photo_url: string | null;
+          sex: string | null;
+          federation_number: string | null;
+          belt: string;
+          belt_degree: number;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
     };
     Enums: {
       member_role: "student" | "instructor" | "owner";

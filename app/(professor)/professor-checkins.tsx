@@ -10,7 +10,7 @@ import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
 export default function ProfessorCheckins() {
   const router = useRouter();
-  const { isLoading: isBooting, session, profile } = useAuthProfile();
+  const { isLoading: isBooting, session, profile, role } = useAuthProfile();
   const [pending, setPending] = useState<CheckinListItem[]>([]);
   const [isListLoading, setIsListLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -22,19 +22,19 @@ export default function ProfessorCheckins() {
       router.replace("/auth");
       return;
     }
-    if (!profile?.role) {
+    if (!role) {
       router.replace("/onboarding");
       return;
     }
-    if (profile.role !== "professor") {
+    if (role !== "instructor") {
       router.replace("/");
     }
-  }, [isBooting, session, profile, router]);
+  }, [isBooting, session, role, router]);
 
   useEffect(() => {
     if (isBooting) return;
     if (!session) return;
-    if (profile?.role !== "professor") return;
+    if (role !== "instructor") return;
 
     let isActive = true;
 
@@ -58,7 +58,7 @@ export default function ProfessorCheckins() {
     return () => {
       isActive = false;
     };
-  }, [isBooting, session, profile?.role]);
+  }, [isBooting, role, session]);
 
   const handleStatus = async (item: CheckinListItem, status: "approved" | "rejected") => {
     if (!profile?.id) return;
@@ -68,7 +68,7 @@ export default function ProfessorCheckins() {
       await blackBeltAdapters.checkins.updateStatus({
         id: item.id,
         status,
-        validatedBy: profile.id,
+        approvedByMemberId: profile.id,
       });
       setPending((prev) => prev.filter((entry) => entry.id !== item.id));
     } catch (err) {

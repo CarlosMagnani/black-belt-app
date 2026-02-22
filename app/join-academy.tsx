@@ -32,7 +32,7 @@ const formatCode = (code: string): string => {
 
 export default function JoinAcademy() {
   const router = useRouter();
-  const { isLoading: isBooting, session, profile } = useAuthProfile();
+  const { isLoading: isBooting, session, profile, role } = useAuthProfile();
   
   const [inviteCode, setInviteCode] = useState("");
   const [academy, setAcademy] = useState<Academy | null>(null);
@@ -113,18 +113,22 @@ export default function JoinAcademy() {
       router.replace("/auth");
       return;
     }
-    if (!profile?.role) {
+    if (!profile) {
       router.replace("/onboarding");
       return;
     }
-    if (profile.role !== "student") {
+    if (!role) {
+      router.replace("/onboarding");
+      return;
+    }
+    if (role !== "student") {
       router.replace("/");
     }
-  }, [isBooting, session, profile, router]);
+  }, [isBooting, session, profile, role, router]);
 
   // Check if already has membership
   useEffect(() => {
-    if (!profile?.id || profile.role !== "student") return;
+    if (!profile?.id || role !== "student") return;
 
     const checkMembership = async () => {
       try {
@@ -138,7 +142,7 @@ export default function JoinAcademy() {
     };
 
     void checkMembership();
-  }, [profile?.id, profile?.role, router]);
+  }, [profile?.id, role, router]);
 
   const displayCode = formatCode(normalizeCode(inviteCode));
 

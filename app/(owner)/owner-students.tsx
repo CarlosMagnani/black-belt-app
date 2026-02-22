@@ -60,7 +60,7 @@ export default function OwnerStudents() {
       try {
         const list = await blackBeltAdapters.memberships.listMembersWithProfiles(academy.id);
         if (!isActive) return;
-        setMembers(list);
+        setMembers(list.filter((member) => member.role === "student"));
       } catch (err) {
         if (!isActive) return;
         setLocalError(err instanceof Error ? err.message : "Nao foi possivel carregar os alunos.");
@@ -141,7 +141,7 @@ export default function OwnerStudents() {
       const updated = await blackBeltAdapters.profiles.setBeltAndDegree(
         member.userId,
         editingBelt.name,
-        editingBelt.degree ?? null
+        editingBelt.degree ?? 0
       );
       setMembers((prev) =>
         prev.map((item) =>

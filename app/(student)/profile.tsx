@@ -138,10 +138,15 @@ export default function Profile() {
     setSaveSuccess(null);
 
     try {
+      const normalizedFirstName = firstName.trim();
+      const normalizedLastName = lastName.trim();
+      const fullName = `${normalizedFirstName} ${normalizedLastName}`.trim();
+
       await blackBeltAdapters.profiles.upsertProfile({
         id: profile.id,
-        firstName: firstName.trim() || null,
-        lastName: lastName.trim() || null,
+        firstName: normalizedFirstName || undefined,
+        lastName: normalizedLastName || null,
+        fullName: fullName || undefined,
         birthDate: birthDate.trim() || null,
         sex: (sex as "M" | "F" | "O" | "N") || null,
         federationNumber: federationNumber.trim() || null,

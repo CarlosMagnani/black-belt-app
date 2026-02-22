@@ -49,9 +49,34 @@ const generateInviteCode = () => {
   return `${part}-${digits}`;
 };
 
+const guessImageExt = (localUri: string, mimeType?: string | null): string => {
+  const guessFromMime = (mime?: string | null): string | null => {
+    const value = (mime ?? "").toLowerCase();
+    if (!value.startsWith("image/")) return null;
+    const subtype = value.slice("image/".length);
+    if (subtype === "jpeg" || subtype === "jpg") return "jpg";
+    if (subtype === "png") return "png";
+    if (subtype === "webp") return "webp";
+    if (subtype === "gif") return "gif";
+    if (subtype === "heic") return "heic";
+    if (subtype === "heif") return "heif";
+    return null;
+  };
+
+  const guessFromUri = (uri: string): string | null => {
+    const match = uri.toLowerCase().match(/\.([a-z0-9]{1,10})(?:$|[?#])/);
+    if (!match?.[1]) return null;
+    const ext = match[1] === "jpeg" ? "jpg" : match[1];
+    if (!/^[a-z0-9]{1,10}$/.test(ext)) return null;
+    return ext;
+  };
+
+  return guessFromMime(mimeType) ?? guessFromUri(localUri) ?? "jpg";
+};
+
 export default function CreateAcademy() {
   const router = useRouter();
-  const { isLoading: isBooting, session, profile } = useAuthProfile();
+  const { isLoading: isBooting, session, profile, role } = useAuthProfile();
 
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [isCheckingExisting, setIsCheckingExisting] = useState(true);
@@ -72,7 +97,7 @@ export default function CreateAcademy() {
   const [stateUf, setStateUf] = useState("");
   const [complement, setComplement] = useState("");
 
-  // Step 3 (logo) - UI only for now (no upload/integration).
+  // Step 3 (logo) - persisted to storage on create.
   const [logoUri, setLogoUri] = useState<string | null>(null);
   const [isPickingLogo, setIsPickingLogo] = useState(false);
 
@@ -100,23 +125,27 @@ export default function CreateAcademy() {
       router.replace("/auth");
       return;
     }
-    if (!profile?.role) {
+    if (!profile) {
       router.replace("/onboarding");
       return;
     }
-    if (profile.role !== "owner") {
+    if (!role) {
+      router.replace("/onboarding");
+      return;
+    }
+    if (role !== "owner") {
       router.replace("/");
     }
-  }, [isBooting, session, profile, router]);
+  }, [isBooting, session, profile, role, router]);
 
   // Check for existing academy
   useEffect(() => {
-    if (!profile?.id || profile.role !== "owner") return;
+    if (!session?.user.id || role !== "owner") return;
 
     const loadAcademy = async () => {
       setIsCheckingExisting(true);
       try {
-        const existing = await blackBeltAdapters.academies.getByOwnerId(profile.id);
+        const existing = await blackBeltAdapters.academies.getByOwnerId(session.user.id);
         if (existing) setAcademy(existing);
       } catch {
         // Ignore - will show create flow
@@ -126,7 +155,7 @@ export default function CreateAcademy() {
     };
 
     void loadAcademy();
-  }, [profile?.id, profile?.role]);
+  }, [role, session?.user.id]);
 
   const generateUniqueCode = async () => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -153,7 +182,6 @@ export default function CreateAcademy() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        // UI only: do not upload/persist to Supabase for now.
         setLogoUri(result.assets[0].uri);
       }
     } catch (err) {
@@ -164,7 +192,7 @@ export default function CreateAcademy() {
   };
 
   const handleCreateAcademy = async () => {
-    if (!profile?.id || profile.role !== "owner") return;
+    if (!session?.user.id || role !== "owner") return;
     if (!canProceedStep1) {
       setError("Informe o nome da academia.");
       setStep(1);
@@ -180,14 +208,28 @@ export default function CreateAcademy() {
     setError(null);
 
     try {
+      const activeSession = await blackBeltAdapters.auth.getSession();
+      if (!activeSession?.user.id) {
+        throw new Error("Sua sessao expirou. Faca login novamente para criar a academia.");
+      }
+
+      const ownerId = activeSession.user.id;
+      let logoUrl: string | null = null;
+      if (logoUri) {
+        const response = await fetch(logoUri);
+        const blob = await response.blob();
+        const ext = guessImageExt(logoUri, (blob as unknown as { type?: string }).type ?? null);
+        logoUrl = await blackBeltAdapters.storage.uploadAcademyLogo(ownerId, blob, ext);
+      }
+
       const inviteCode = await generateUniqueCode();
       const created = await blackBeltAdapters.academies.createAcademy({
-        ownerId: profile.id,
+        ownerId,
         name: name.trim(),
         // Keep current backend contract: only city + logoUrl exist.
-        // Address + logo are UI-only for now (no integration).
+        // Full address fields are UI-only for now (no integration).
         city: city.trim() || null,
-        logoUrl: null,
+        logoUrl,
         inviteCode,
       });
       setAcademy(created);
@@ -555,7 +597,7 @@ export default function CreateAcademy() {
 
                 {step === 3 ? (
                   <Text className="mt-4 text-xs text-text-muted-dark text-center">
-                    Logo e endereco ainda nao sao salvos no banco. Esta tela e apenas UI por enquanto.
+                    Endereco completo ainda nao e salvo no banco. Logo e salvo no Storage.
                   </Text>
                 ) : null}
               </View>

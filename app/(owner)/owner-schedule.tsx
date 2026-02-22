@@ -24,7 +24,7 @@ export default function OwnerSchedule() {
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
 
-  const { academy, profileId, isLoading, error } = useOwnerAcademy();
+  const { academy, ownerMember, isLoading, error } = useOwnerAcademy();
   const { profile } = useAuthProfile();
 
   const [classes, setClasses] = useState<AcademyClass[]>([]);
@@ -49,26 +49,28 @@ export default function OwnerSchedule() {
       try {
         type StaffRole = "owner" | "professor";
         type StaffRow = {
+          id: string;
           user_id: string;
           role: StaffRole;
-          profiles: { full_name: string | null; email: string | null } | null;
+          profiles: { first_name: string | null } | null;
         };
 
         const { data, error } = await supabase
-          .from("academy_staff")
-          .select("user_id, role, profiles:profiles (full_name, email)")
+          .from("academy_members")
+          .select("id, user_id, role, profiles:profiles (first_name)")
           .eq("academy_id", academy.id)
+          .in("role", ["owner", "professor"] as any)
           .order("created_at", { ascending: true });
 
         if (error) throw error;
 
         const rows = (data as StaffRow[] | null) ?? [];
         const options = rows.map((row) => {
-          const name = row.profiles?.full_name ?? null;
-          const email = row.profiles?.email ?? null;
-          const labelBase = name ?? email ?? row.user_id.slice(0, 8);
-          const label = row.role === "owner" ? `${labelBase} (Mestre)` : `${labelBase} (Professor)`;
-          return { value: row.user_id, label, name: name ?? email };
+          const name = row.profiles?.first_name ?? null;
+          const labelBase = name ?? row.user_id.slice(0, 8);
+          const label =
+            row.role === "owner" ? `${labelBase} (Mestre)` : `${labelBase} (Professor)`;
+          return { value: row.id, label, name };
         });
 
         if (!isActive) return;
@@ -136,7 +138,7 @@ export default function OwnerSchedule() {
     const created = await blackBeltAdapters.classes.createClass({
       academyId: academy.id,
       title: data.title,
-      instructorId: data.instructor_id ?? profileId ?? null,
+      instructorId: data.instructor_id ?? ownerMember?.id ?? null,
       instructorName: data.instructor_name ?? null,
       weekday: data.weekday,
       startTime: data.start_time,
@@ -171,7 +173,7 @@ export default function OwnerSchedule() {
     const updated = await blackBeltAdapters.classes.updateClass({
       id,
       title: data.title,
-      instructorId: data.instructor_id ?? profileId ?? null,
+      instructorId: data.instructor_id ?? ownerMember?.id ?? null,
       instructorName: data.instructor_name ?? null,
       weekday: data.weekday,
       startTime: data.start_time,
@@ -298,7 +300,7 @@ export default function OwnerSchedule() {
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateClass}
         instructorOptions={instructorOptions}
-        defaultInstructorId={profileId}
+        defaultInstructorId={ownerMember?.id ?? null}
         isInstructorsLoading={isInstructorsLoading}
       />
 

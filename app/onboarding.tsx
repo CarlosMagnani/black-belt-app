@@ -17,12 +17,14 @@ import { Avatar } from "../components/ui/Avatar";
 import { BeltSelector } from "../components/ui/BeltSelector";
 import { DateInput } from "../components/ui/DateInput";
 import { DegreeSelector } from "../components/ui/DegreeSelector";
+import { ErrorBoundary } from "../components/ui/ErrorBoundary";
 import { RoleCard } from "../components/RoleCard";
 import { TextField } from "../components/ui/TextField";
 import type { UserRole, Sex } from "../src/core/ports/blackbelt-ports";
 import type { BeltName } from "../src/core/belts/belts";
 import { getErrorMessage } from "../src/core/errors/get-error-message";
 import { useAuthProfile } from "../src/core/hooks/use-auth-profile";
+import { guessImageExt } from "../src/core/utils/guess-image-ext";
 import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 import { supabase } from "../src/infra/supabase/client";
 
@@ -58,7 +60,7 @@ const initialData: OnboardingData = {
   degree: 0,
 };
 
-export default function Onboarding() {
+function OnboardingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ pendingEmail?: string | string[] }>();
   const pendingEmail = Array.isArray(params.pendingEmail) ? params.pendingEmail[0] : params.pendingEmail;
@@ -101,31 +103,6 @@ export default function Onboarding() {
 
   const updateData = (updates: Partial<OnboardingData>) => {
     setData((prev) => ({ ...prev, ...updates }));
-  };
-
-  const guessImageExt = (localUri: string, mimeType?: string | null): string => {
-    const guessFromMime = (mime?: string | null): string | null => {
-      const value = (mime ?? "").toLowerCase();
-      if (!value.startsWith("image/")) return null;
-      const subtype = value.slice("image/".length);
-      if (subtype === "jpeg" || subtype === "jpg") return "jpg";
-      if (subtype === "png") return "png";
-      if (subtype === "webp") return "webp";
-      if (subtype === "gif") return "gif";
-      if (subtype === "heic") return "heic";
-      if (subtype === "heif") return "heif";
-      return null;
-    };
-
-    const guessFromUri = (uri: string): string | null => {
-      const match = uri.toLowerCase().match(/\.([a-z0-9]{1,10})(?:$|[?#])/);
-      if (!match?.[1]) return null;
-      const ext = match[1] === "jpeg" ? "jpg" : match[1];
-      if (!/^[a-z0-9]{1,10}$/.test(ext)) return null;
-      return ext;
-    };
-
-    return guessFromMime(mimeType) ?? guessFromUri(localUri) ?? "jpg";
   };
 
   const handleAvatarSelected = async (localUri: string) => {
@@ -438,7 +415,7 @@ export default function Onboarding() {
       )}
 
       {data.avatarUrl && !isUploading && (
-        <Text className="mt-4 text-sm text-success-dark">✓ Foto salva!</Text>
+        <Text className="mt-4 text-sm text-success-dark">Foto salva!</Text>
       )}
 
       <Pressable
@@ -449,7 +426,7 @@ export default function Onboarding() {
         }}
         className="mt-6 py-3 px-6 rounded-xl border border-subtle-dark bg-surface-dark flex-row items-center gap-2"
       >
-        <Text className="text-brand-400 font-medium">📷 Escolher foto</Text>
+        <Text className="text-brand-400 font-medium">Escolher foto</Text>
       </Pressable>
 
       <Text className="mt-4 text-center text-xs text-text-muted-dark">
@@ -746,5 +723,13 @@ export default function Onboarding() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+export default function Onboarding() {
+  return (
+    <ErrorBoundary>
+      <OnboardingScreen />
+    </ErrorBoundary>
   );
 }

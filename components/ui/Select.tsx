@@ -42,6 +42,8 @@ export function Select({
       ) : null}
       
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label ? `${label}: ${selectedOption?.label ?? placeholder}` : undefined}
         onPress={() => setIsOpen(true)}
         className={[
           "mt-2 flex-row items-center justify-between rounded-input border px-input py-3",
@@ -73,6 +75,8 @@ export function Select({
         onRequestClose={() => setIsOpen(false)}
       >
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Fechar"
           className="flex-1 items-center justify-center bg-black/60"
           onPress={() => setIsOpen(false)}
         >
@@ -84,6 +88,9 @@ export function Select({
               {options.map((option) => (
                 <Pressable
                   key={option.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: option.value === value }}
+                  accessibilityLabel={option.label}
                   onPress={() => handleSelect(option.value)}
                   className={[
                     "rounded-lg px-4 py-3",

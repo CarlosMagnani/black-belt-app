@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from "react-native";
 
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 import { TextField } from "../../components/ui/TextField";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
 import { supabase } from "../../src/infra/supabase/client";
@@ -16,7 +17,7 @@ type StaffMember = {
   email: string | null;
 };
 
-export default function OwnerProfessors() {
+function OwnerProfessorsScreen() {
   const { academy, isLoading, error } = useOwnerAcademy();
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [isListLoading, setIsListLoading] = useState(false);
@@ -245,5 +246,13 @@ export default function OwnerProfessors() {
         </View>
       </View>
     </ScrollView>
+  );
+}
+
+export default function OwnerProfessors() {
+  return (
+    <ErrorBoundary>
+      <OwnerProfessorsScreen />
+    </ErrorBoundary>
   );
 }

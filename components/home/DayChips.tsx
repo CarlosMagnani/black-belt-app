@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { hapticSelection } from "../../src/core/utils/haptics";
 
 type DayChip = {
   label: string;
@@ -13,6 +14,11 @@ type DayChipsProps = {
 };
 
 export function DayChips({ days, selected, onSelect }: DayChipsProps) {
+  const handleSelect = (value: number) => {
+    void hapticSelection();
+    onSelect(value);
+  };
+
   return (
     <ScrollView
       horizontal
@@ -27,9 +33,10 @@ export function DayChips({ days, selected, onSelect }: DayChipsProps) {
             <Pressable
               key={day.value}
               accessibilityRole="button"
-              onPress={() => onSelect(day.value)}
+              accessibilityState={{ selected: isActive }}
+              onPress={() => handleSelect(day.value)}
               className={[
-                "rounded-full border px-3 py-1",
+                "min-h-[44px] min-w-[44px] items-center justify-center rounded-full border px-3 py-1",
                 isActive
                   ? "border-brand-600 bg-brand-600"
                   : "border-subtle-light bg-surface-light dark:border-subtle-dark dark:bg-surface-dark",

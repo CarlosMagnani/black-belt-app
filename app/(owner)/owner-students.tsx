@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import type { BeltRank } from "../../src/core/belts/belts";
@@ -12,8 +12,11 @@ import { StudentListItem, type StudentWithPayment } from "../../components/owner
 import { OverdueCounter } from "../../components/owner/OverdueCounter";
 import { getPaymentStatus, type PaymentStatus } from "../../components/owner/PaymentStatusBadge";
 import { Card } from "../../components/ui/Card";
+import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { TextField } from "../../components/ui/TextField";
 import { Button } from "../../components/ui/Button";
+import { showToast } from "../../src/core/utils/toast";
 
 type ViewMode = "payment" | "belts";
 
@@ -38,43 +41,55 @@ const getMockSubscription = (userId: string): { status: string; next_billing_at:
   return { status: "active", next_billing_at: nextDate.toISOString(), plan_name: mod % 2 === 0 ? "Plano Mensal" : "Plano Trimestral" };
 };
 
-export default function OwnerStudents() {
+function OwnerStudentsScreen() {
   const router = useRouter();
-  const { academy, isLoading, error } = useOwnerAcademy();
+  const { academy, isLoading, error, refresh: refreshAcademy } = useOwnerAcademy();
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [filter, setFilter] = useState("");
   const [isMembersLoading, setIsMembersLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editingBelt, setEditingBelt] = useState<BeltRank>({ name: "Branca", degree: 0 });
   const [isSaving, setIsSaving] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("payment");
+
+  const loadMembers = useCallback(async (academyId: string) => {
+    setIsMembersLoading(true);
+    try {
+      const list = await blackBeltAdapters.memberships.listMembersWithProfiles(academyId);
+      setMembers(list.filter((member) => member.role === "student"));
+    } catch (err) {
+      showToast({
+        message: err instanceof Error ? err.message : "Nao foi possivel carregar os alunos.",
+        variant: "error",
+      });
+    } finally {
+      setIsMembersLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!academy) return;
     let isActive = true;
 
-    const loadMembers = async () => {
-      setIsMembersLoading(true);
-      setLocalError(null);
-      try {
-        const list = await blackBeltAdapters.memberships.listMembersWithProfiles(academy.id);
-        if (!isActive) return;
-        setMembers(list.filter((member) => member.role === "student"));
-      } catch (err) {
-        if (!isActive) return;
-        setLocalError(err instanceof Error ? err.message : "Nao foi possivel carregar os alunos.");
-      } finally {
-        if (isActive) setIsMembersLoading(false);
-      }
-    };
-
-    void loadMembers();
+    void loadMembers(academy.id).then(() => {
+      if (!isActive) return;
+    });
 
     return () => {
       isActive = false;
     };
-  }, [academy]);
+  }, [academy, loadMembers]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshAcademy();
+      if (academy) await loadMembers(academy.id);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [academy, loadMembers, refreshAcademy]);
 
   // Convert members to students with payment status
   const studentsWithPayment = useMemo((): StudentWithPayment[] => {
@@ -136,7 +151,6 @@ export default function OwnerStudents() {
   const handleSave = async (member: MemberProfile) => {
     if (!member.userId) return;
     setIsSaving(true);
-    setLocalError(null);
     try {
       const updated = await blackBeltAdapters.profiles.setBeltAndDegree(
         member.userId,
@@ -152,7 +166,10 @@ export default function OwnerStudents() {
       );
       setEditingMemberId(null);
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Nao foi possivel salvar a faixa.");
+      showToast({
+        message: err instanceof Error ? err.message : "Nao foi possivel salvar a faixa.",
+        variant: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -168,7 +185,12 @@ export default function OwnerStudents() {
   };
 
   return (
-    <ScrollView className="flex-1">
+    <ScrollView
+      className="flex-1"
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} />
+      }
+    >
       <View className="px-page pb-10 pt-6 web:px-10">
         <View className="mx-auto w-full max-w-[1100px]">
           <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
@@ -188,23 +210,18 @@ export default function OwnerStudents() {
               <Text className="text-sm text-red-500">{error}</Text>
             </Card>
           ) : null}
-          {localError ? (
-            <Card className="mt-6" variant="outline">
-              <Text className="text-sm text-red-500">{localError}</Text>
-            </Card>
-          ) : null}
 
           {/* View Mode Toggle */}
           <View className="mt-6 flex-row gap-2">
             <Button
-              label="💳 Pagamentos"
+              label="Pagamentos"
               variant={viewMode === "payment" ? "primary" : "secondary"}
               size="sm"
               onPress={() => setViewMode("payment")}
               className="flex-1"
             />
             <Button
-              label="🥋 Faixas"
+              label="Faixas"
               variant={viewMode === "belts" ? "primary" : "secondary"}
               size="sm"
               onPress={() => setViewMode("belts")}
@@ -231,11 +248,19 @@ export default function OwnerStudents() {
           </View>
 
           {isLoading || isMembersLoading ? (
-            <Card className="mt-6">
-              <Text className="text-sm text-muted-light dark:text-muted-dark">
-                Carregando alunos...
-              </Text>
-            </Card>
+            <View className="mt-6 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <View className="flex-row items-center gap-3">
+                    <Skeleton width={44} height={44} borderRadius={22} />
+                    <View className="flex-1 gap-2">
+                      <Skeleton height={16} width="60%" />
+                      <Skeleton height={12} width="40%" />
+                    </View>
+                  </View>
+                </Card>
+              ))}
+            </View>
           ) : viewMode === "payment" ? (
             /* Payment Status View */
             filtered.length === 0 ? (
@@ -284,5 +309,13 @@ export default function OwnerStudents() {
         </View>
       </View>
     </ScrollView>
+  );
+}
+
+export default function OwnerStudents() {
+  return (
+    <ErrorBoundary>
+      <OwnerStudentsScreen />
+    </ErrorBoundary>
   );
 }

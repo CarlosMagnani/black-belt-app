@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { ActivityIndicator, Image, Pressable, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Pencil } from "lucide-react-native";
+import { hapticLight } from "../../src/core/utils/haptics";
+import { useTheme } from "../../src/ui/theme/ThemeProvider";
 
 type AvatarSize = "sm" | "md" | "lg" | "xl";
 
@@ -40,8 +43,10 @@ export function Avatar({
   className,
 }: AvatarProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { theme } = useTheme();
   const sizeConfig = SIZE_MAP[size];
   const initials = getInitials(name);
+  const borderColor = theme === "dark" ? "#1E293B" : "#E2E8F0";
 
   const handlePickImage = async () => {
     if (!editable) return;
@@ -51,6 +56,7 @@ export function Avatar({
       return;
     }
 
+    void hapticLight();
     setIsLoading(true);
     onUploadStart?.();
 
@@ -82,6 +88,7 @@ export function Avatar({
       source={{ uri }}
       style={containerStyle}
       className="bg-subtle-dark"
+      accessibilityLabel={name ? `Foto de ${name}` : "Foto de perfil"}
     />
   ) : (
     <View
@@ -98,9 +105,13 @@ export function Avatar({
     return <View className={className}>{content}</View>;
   }
 
+  const pencilSize = size === "sm" ? 10 : size === "md" ? 12 : 14;
+
   return (
     <Pressable
       onPress={handlePickImage}
+      accessibilityRole="button"
+      accessibilityLabel="Alterar foto de perfil"
       className={`relative ${className ?? ""}`}
       style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
     >
@@ -115,14 +126,14 @@ export function Avatar({
       ) : (
         <View
           className="absolute bottom-0 right-0 items-center justify-center rounded-full bg-brand-500 p-1.5"
-          style={{ 
-            width: sizeConfig.icon + 8, 
+          style={{
+            width: sizeConfig.icon + 8,
             height: sizeConfig.icon + 8,
             borderWidth: 2,
-            borderColor: "#0A0F1A",
+            borderColor,
           }}
         >
-          <Text className="text-white text-xs">✏️</Text>
+          <Pencil size={pencilSize} color="#fff" strokeWidth={2.5} />
         </View>
       )}
     </Pressable>

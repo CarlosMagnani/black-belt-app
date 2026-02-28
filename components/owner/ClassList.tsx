@@ -1,9 +1,13 @@
 import React, { useMemo } from "react";
 import { Text, View } from "react-native";
+import { BarChart3, CalendarDays, Inbox } from "lucide-react-native";
 
 import type { AcademyClass } from "../../src/core/ports/blackbelt-ports";
 import { ClassCard } from "./ClassCard";
 import { Card } from "../ui/Card";
+import { Skeleton } from "../ui/Skeleton";
+import { useTheme } from "../../src/ui/theme/ThemeProvider";
+import { getIconColor } from "../../src/ui/theme/icon-colors";
 
 const WEEKDAY_NAMES = [
   "Domingo",
@@ -15,8 +19,6 @@ const WEEKDAY_NAMES = [
   "Sábado",
 ];
 
-const WEEKDAY_EMOJIS = ["🌙", "💪", "🔥", "⚡", "🎯", "🏆", "🌟"];
-
 type ClassListProps = {
   classes: AcademyClass[];
   onEdit: (item: AcademyClass) => void;
@@ -27,11 +29,13 @@ type ClassListProps = {
 type GroupedClasses = {
   weekday: number;
   name: string;
-  emoji: string;
   classes: AcademyClass[];
 };
 
 export function ClassList({ classes, onEdit, onDelete, isLoading }: ClassListProps) {
+  const { theme } = useTheme();
+  const iconColor = getIconColor(theme, "muted");
+
   const grouped = useMemo(() => {
     // Sort classes by weekday and start time
     const sorted = [...classes].sort((a, b) => {
@@ -52,7 +56,6 @@ export function ClassList({ classes, onEdit, onDelete, isLoading }: ClassListPro
       result.push({
         weekday,
         name: WEEKDAY_NAMES[weekday] ?? `Dia ${weekday}`,
-        emoji: WEEKDAY_EMOJIS[weekday] ?? "📅",
         classes: classesInDay,
       });
     });
@@ -62,20 +65,23 @@ export function ClassList({ classes, onEdit, onDelete, isLoading }: ClassListPro
 
   if (isLoading) {
     return (
-      <Card className="mt-6">
-        <View className="flex-row items-center gap-2">
-          <Text className="text-sm text-muted-light dark:text-muted-dark">
-            ⏳ Carregando aulas...
-          </Text>
-        </View>
-      </Card>
+      <View className="mt-6 gap-4">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <Skeleton height={16} width="40%" />
+            <View className="mt-3 gap-2">
+              <Skeleton height={60} width="100%" borderRadius={12} />
+            </View>
+          </Card>
+        ))}
+      </View>
     );
   }
 
   if (classes.length === 0) {
     return (
       <Card className="mt-6 items-center py-8">
-        <Text className="text-4xl">📭</Text>
+        <Inbox size={40} color={iconColor} strokeWidth={1.5} />
         <Text className="mt-3 text-center font-display text-lg text-strong-light dark:text-strong-dark">
           Nenhuma aula cadastrada
         </Text>
@@ -92,7 +98,7 @@ export function ClassList({ classes, onEdit, onDelete, isLoading }: ClassListPro
         <View key={group.weekday}>
           {/* Day Header */}
           <View className="mb-3 flex-row items-center gap-2">
-            <Text className="text-xl">{group.emoji}</Text>
+            <CalendarDays size={18} color={iconColor} strokeWidth={2} />
             <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
               {group.name}
             </Text>
@@ -120,17 +126,23 @@ export function ClassList({ classes, onEdit, onDelete, isLoading }: ClassListPro
       {/* Summary */}
       <Card variant="outline" className="mt-4">
         <View className="flex-row items-center justify-between">
-          <Text className="text-sm text-muted-light dark:text-muted-dark">
-            📊 Total de aulas cadastradas
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            <BarChart3 size={14} color={iconColor} strokeWidth={2} />
+            <Text className="text-sm text-muted-light dark:text-muted-dark">
+              Total de aulas cadastradas
+            </Text>
+          </View>
           <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
             {classes.length}
           </Text>
         </View>
         <View className="mt-2 flex-row items-center justify-between">
-          <Text className="text-sm text-muted-light dark:text-muted-dark">
-            📅 Dias com aulas
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            <CalendarDays size={14} color={iconColor} strokeWidth={2} />
+            <Text className="text-sm text-muted-light dark:text-muted-dark">
+              Dias com aulas
+            </Text>
+          </View>
           <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
             {grouped.length}
           </Text>

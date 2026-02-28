@@ -16,13 +16,13 @@ const STATUS_CONFIG: Record<
     bg: "bg-green-100 dark:bg-green-900/30",
     text: "text-green-800 dark:text-green-400",
     label: "Em dia",
-    icon: "✓",
+    icon: "OK",
   },
   due_soon: {
     bg: "bg-yellow-100 dark:bg-yellow-900/30",
     text: "text-yellow-800 dark:text-yellow-400",
     label: "Vence em breve",
-    icon: "⏰",
+    icon: "!",
   },
   overdue: {
     bg: "bg-red-100 dark:bg-red-900/30",

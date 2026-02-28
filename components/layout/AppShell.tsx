@@ -8,9 +8,13 @@ import {
   View,
 } from "react-native";
 import { usePathname, useRouter } from "expo-router";
+import Animated, { FadeIn, FadeOut, SlideInLeft, SlideOutLeft } from "react-native-reanimated";
 import { CalendarDays, Home, Menu, Moon, Settings2, Sun, UserCircle2 } from "lucide-react-native";
 
+import { hapticLight } from "../../src/core/utils/haptics";
+import { getIconColor } from "../../src/ui/theme/icon-colors";
 import { useTheme } from "../../src/ui/theme/ThemeProvider";
+import { OfflineIndicator } from "../ui/OfflineIndicator";
 
 type NavItem = {
   label: string;
@@ -58,20 +62,23 @@ export function AppShell({
     return match?.href ?? "/home";
   }, [pathname, resolvedNavItems]);
 
+  const handleNavPress = (href: string, onNavigate?: () => void) => {
+    void hapticLight();
+    router.replace(href);
+    onNavigate?.();
+  };
+
   const renderNavItems = (onNavigate?: () => void) =>
     resolvedNavItems.map((item) => {
       const isActive = activeHref === item.href;
       const Icon = item.icon;
-      const iconColor = isActive ? (theme === "dark" ? "#EEF2FF" : "#1E3A8A") : "#94A3B8";
+      const iconColor = getIconColor(theme, isActive ? "active" : "inactive");
 
       return (
         <Pressable
           key={item.href}
           accessibilityRole="button"
-          onPress={() => {
-            router.replace(item.href);
-            onNavigate?.();
-          }}
+          onPress={() => handleNavPress(item.href, onNavigate)}
           className={[
             "flex-row items-center gap-3 rounded-xl px-3 py-2",
             isActive ? "bg-brand-50 dark:bg-brand-600/20" : "bg-transparent",
@@ -112,11 +119,14 @@ export function AppShell({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Abrir menu"
-                  onPress={() => setDrawerOpen(true)}
+                  onPress={() => {
+                    void hapticLight();
+                    setDrawerOpen(true);
+                  }}
                   className="rounded-full border border-subtle-light bg-surface-light p-2 dark:border-subtle-dark dark:bg-surface-dark"
                   style={({ pressed }) => (pressed ? { opacity: 0.9 } : undefined)}
                 >
-                  <Menu size={18} color={theme === "dark" ? "#E5E7EB" : "#0F172A"} />
+                  <Menu size={18} color={getIconColor(theme, "header")} />
                 </Pressable>
               ) : null}
               <View>
@@ -132,14 +142,17 @@ export function AppShell({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Alternar tema"
-              onPress={() => void toggle()}
+              onPress={() => {
+                void hapticLight();
+                void toggle();
+              }}
               className="flex-row items-center gap-2 rounded-full border border-subtle-light bg-surface-light px-3 py-2 dark:border-subtle-dark dark:bg-surface-dark"
               style={({ pressed }) => (pressed ? { opacity: 0.9 } : undefined)}
             >
               {theme === "dark" ? (
-                <Sun size={16} color="#E5E7EB" />
+                <Sun size={16} color={getIconColor(theme, "header")} />
               ) : (
-                <Moon size={16} color="#0F172A" />
+                <Moon size={16} color={getIconColor(theme, "header")} />
               )}
               <Text className="text-xs text-muted-light dark:text-muted-dark">
                 {theme === "dark" ? "Escuro" : "Claro"}
@@ -147,6 +160,7 @@ export function AppShell({
             </Pressable>
           </View>
 
+          <OfflineIndicator />
           <View className="flex-1" style={!isDesktop ? { paddingBottom: 72 } : undefined}>
             {children}
           </View>
@@ -154,17 +168,17 @@ export function AppShell({
       </View>
 
       {!isDesktop ? (
-        <View className="border-t border-subtle-light bg-surface-light px-2 pb-2 pt-2 dark:border-subtle-dark dark:bg-surface-dark">
+        <View className="min-h-[52px] border-t border-subtle-light bg-surface-light px-2 pb-2 pt-2 dark:border-subtle-dark dark:bg-surface-dark">
           <View className="flex-row">
             {resolvedMobileItems.map((item) => {
               const isActive = activeHref === item.href;
               const Icon = item.icon;
-              const iconColor = isActive ? (theme === "dark" ? "#EEF2FF" : "#1E3A8A") : "#94A3B8";
+              const iconColor = getIconColor(theme, isActive ? "active" : "inactive");
               return (
                 <Pressable
                   key={item.href}
                   accessibilityRole="button"
-                  onPress={() => router.replace(item.href)}
+                  onPress={() => handleNavPress(item.href)}
                   className="flex-1 items-center justify-center gap-1 py-2"
                   style={({ pressed }) => (pressed ? { opacity: 0.9 } : undefined)}
                 >
@@ -179,6 +193,9 @@ export function AppShell({
                   >
                     {item.label}
                   </Text>
+                  {isActive && (
+                    <View className="mt-0.5 h-1 w-4 rounded-full bg-brand-600" />
+                  )}
                 </Pressable>
               );
             })}
@@ -186,18 +203,28 @@ export function AppShell({
         </View>
       ) : null}
 
-      <Modal transparent visible={drawerOpen} animationType="slide" onRequestClose={() => setDrawerOpen(false)}>
+      <Modal transparent visible={drawerOpen} animationType="none" onRequestClose={() => setDrawerOpen(false)}>
         <View className="flex-1">
           <Pressable
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0"
             onPress={() => setDrawerOpen(false)}
-          />
-          <View className="h-full w-72 bg-surface-light px-6 py-8 dark:bg-surface-dark">
+          >
+            <Animated.View
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(150)}
+              className="flex-1 bg-black/40"
+            />
+          </Pressable>
+          <Animated.View
+            entering={SlideInLeft.duration(250).springify()}
+            exiting={SlideOutLeft.duration(200)}
+            className="h-full w-72 bg-surface-light px-6 py-8 dark:bg-surface-dark"
+          >
             <Text className="font-display text-lg text-strong-light dark:text-strong-dark">
               BlackBelt
             </Text>
             <View className="mt-6 gap-2">{renderNavItems(() => setDrawerOpen(false))}</View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>

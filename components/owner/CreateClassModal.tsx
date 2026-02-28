@@ -159,7 +159,7 @@ export function CreateClassModal({
     <Modal
       visible={visible}
       onClose={onClose}
-      title="➕ Nova Aula"
+      title="Nova Aula"
       maxWidth="md"
     >
       <View className="gap-4">

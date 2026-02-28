@@ -23,8 +23,10 @@ export function TextField({
         </Text>
       ) : null}
       <TextInput
+        accessibilityLabel={label ?? undefined}
+        accessibilityHint={helperText ?? undefined}
         className={[
-          "mt-2 rounded-input border border-subtle-light bg-app-light px-input py-3 text-base text-strong-light",
+          "mt-2 min-h-[44px] rounded-input border border-subtle-light bg-app-light px-input py-3 text-base text-strong-light",
           "dark:border-subtle-dark dark:bg-app-dark dark:text-strong-dark",
           errorMessage ? "border-red-500" : "",
           className ?? "",

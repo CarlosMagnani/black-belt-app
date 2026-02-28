@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { Check } from "lucide-react-native";
 
 import { useTheme } from "../src/ui/theme/ThemeProvider";
 
@@ -78,7 +79,7 @@ export function RoleCard({
         </View>
         {selected && (
           <View className="h-6 w-6 items-center justify-center rounded-full bg-brand-500">
-            <Text className="text-xs text-white">✓</Text>
+            <Check size={14} color="#fff" strokeWidth={3} />
           </View>
         )}
       </View>

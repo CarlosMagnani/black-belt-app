@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, Text, View } from "react-native";
+import { Image, ScrollView, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 
@@ -7,10 +7,14 @@ import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { DateInput } from "../../components/ui/DateInput";
+import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { Select } from "../../components/ui/Select";
 import { TextField } from "../../components/ui/TextField";
 import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
+import { guessImageExt } from "../../src/core/utils/guess-image-ext";
+import { showToast } from "../../src/core/utils/toast";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 import { BeltBadge } from "../../src/ui/belts/BeltBadge";
 
@@ -29,32 +33,7 @@ const splitFullName = (fullName?: string | null) => {
   return { firstName: first, lastName: rest.join(" ") };
 };
 
-const guessImageExt = (localUri: string, mimeType?: string | null): string => {
-  const guessFromMime = (mime?: string | null): string | null => {
-    const value = (mime ?? "").toLowerCase();
-    if (!value.startsWith("image/")) return null;
-    const subtype = value.slice("image/".length);
-    if (subtype === "jpeg" || subtype === "jpg") return "jpg";
-    if (subtype === "png") return "png";
-    if (subtype === "webp") return "webp";
-    if (subtype === "gif") return "gif";
-    if (subtype === "heic") return "heic";
-    if (subtype === "heif") return "heif";
-    return null;
-  };
-
-  const guessFromUri = (uri: string): string | null => {
-    const match = uri.toLowerCase().match(/\.([a-z0-9]{1,10})(?:$|[?#])/);
-    if (!match?.[1]) return null;
-    const ext = match[1] === "jpeg" ? "jpg" : match[1];
-    if (!/^[a-z0-9]{1,10}$/.test(ext)) return null;
-    return ext;
-  };
-
-  return guessFromMime(mimeType) ?? guessFromUri(localUri) ?? "jpg";
-};
-
-export default function OwnerSettings() {
+function OwnerSettingsScreen() {
   const { academy, isLoading: isAcademyLoading, error: academyError, refresh: refreshAcademy } =
     useOwnerAcademy();
   const { profile, isLoading: isProfileLoading, refresh: refreshProfile } = useAuthProfile();
@@ -77,11 +56,7 @@ export default function OwnerSettings() {
   const [isLogoUploading, setIsLogoUploading] = useState(false);
 
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [academySaveError, setAcademySaveError] = useState<string | null>(null);
-  const [academySaveSuccess, setAcademySaveSuccess] = useState<string | null>(null);
-  const [copyMessage, setCopyMessage] = useState<string | null>(null);
-  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -120,7 +95,6 @@ export default function OwnerSettings() {
     if (!profile?.id) return;
     setIsAvatarUploading(true);
     setProfileError(null);
-    setProfileSuccess(null);
     try {
       const response = await fetch(localUri);
       const blob = await response.blob();
@@ -133,7 +107,7 @@ export default function OwnerSettings() {
         avatarUrl: publicUrl,
       });
       await refreshProfile();
-      setProfileSuccess("Foto do owner atualizada.");
+      showToast({ message: "Foto do owner atualizada.", variant: "success" });
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : "Nao foi possivel atualizar a foto.");
     } finally {
@@ -145,7 +119,6 @@ export default function OwnerSettings() {
     if (isLogoUploading) return;
     setIsLogoUploading(true);
     setAcademySaveError(null);
-    setAcademySaveSuccess(null);
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) return;
@@ -171,7 +144,6 @@ export default function OwnerSettings() {
     if (!profile?.id) return;
     setIsProfileSaving(true);
     setProfileError(null);
-    setProfileSuccess(null);
     try {
       const normalizedFirstName = firstName.trim();
       const normalizedLastName = lastName.trim();
@@ -189,7 +161,7 @@ export default function OwnerSettings() {
       });
 
       await refreshProfile();
-      setProfileSuccess("Perfil do owner atualizado.");
+      showToast({ message: "Perfil do owner atualizado.", variant: "success" });
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : "Nao foi possivel salvar o perfil.");
     } finally {
@@ -207,7 +179,6 @@ export default function OwnerSettings() {
 
     setIsAcademySaving(true);
     setAcademySaveError(null);
-    setAcademySaveSuccess(null);
     try {
       let logoUrlToSave = academyLogoUrl.trim() || null;
 
@@ -237,7 +208,7 @@ export default function OwnerSettings() {
       setAcademyLogoUrl(updated.logoUrl ?? "");
       setAcademyLogoLocalUri(null);
       await refreshAcademy();
-      setAcademySaveSuccess("Configuracoes da academia atualizadas.");
+      showToast({ message: "Configuracoes da academia atualizadas.", variant: "success" });
     } catch (err) {
       setAcademySaveError(
         err instanceof Error ? err.message : "Nao foi possivel salvar a academia."
@@ -251,21 +222,21 @@ export default function OwnerSettings() {
     if (!academy?.inviteCode) return;
     try {
       await Clipboard.setStringAsync(academy.inviteCode);
-      setCopyMessage("Codigo copiado.");
-      setTimeout(() => setCopyMessage(null), 2000);
+      showToast({ message: "Codigo copiado.", variant: "success" });
     } catch {
-      setCopyMessage("Copie o codigo manualmente.");
-      setTimeout(() => setCopyMessage(null), 2000);
+      showToast({ message: "Copie o codigo manualmente.", variant: "info" });
     }
   };
 
   const handleSignOut = async () => {
-    setSignOutError(null);
     try {
       await blackBeltAdapters.auth.signOut();
       // AuthGate handles redirect.
     } catch (err) {
-      setSignOutError(err instanceof Error ? err.message : "Nao foi possivel sair.");
+      showToast({
+        message: err instanceof Error ? err.message : "Nao foi possivel sair.",
+        variant: "error",
+      });
     }
   };
 
@@ -290,11 +261,16 @@ export default function OwnerSettings() {
           ) : null}
 
           {isLoading ? (
-            <Card className="mt-6 flex-row items-center gap-3">
-              <ActivityIndicator color="#6366F1" />
-              <Text className="text-sm text-muted-light dark:text-muted-dark">
-                Carregando dados...
-              </Text>
+            <Card className="mt-6 gap-4">
+              <View className="items-center gap-3">
+                <Skeleton width={80} height={80} borderRadius={40} />
+                <Skeleton height={20} width="40%" />
+                <Skeleton height={14} width="30%" />
+              </View>
+              <View className="gap-3">
+                <Skeleton height={44} width="100%" borderRadius={8} />
+                <Skeleton height={44} width="100%" borderRadius={8} />
+              </View>
             </Card>
           ) : null}
 
@@ -381,16 +357,12 @@ export default function OwnerSettings() {
                 <Text className="text-sm text-red-400">{profileError}</Text>
               </View>
             ) : null}
-            {profileSuccess ? (
-              <View className="rounded-lg bg-emerald-500/10 p-3">
-                <Text className="text-sm text-emerald-600">{profileSuccess}</Text>
-              </View>
-            ) : null}
 
             <Button
-              label={isProfileSaving ? "Salvando perfil..." : "Salvar perfil do owner"}
+              label="Salvar perfil do owner"
               onPress={handleSaveProfile}
               disabled={isProfileSaving || !profile?.id}
+              loading={isProfileSaving}
             />
           </Card>
 
@@ -463,9 +435,8 @@ export default function OwnerSettings() {
                   onPress={() => void handleCopyInviteCode()}
                 />
               </View>
-              {copyMessage ? (
-                <Text className="mt-2 text-xs text-emerald-600">{copyMessage}</Text>
-              ) : null}
+
+
             </Card>
 
             {academySaveError ? (
@@ -473,24 +444,15 @@ export default function OwnerSettings() {
                 <Text className="text-sm text-red-400">{academySaveError}</Text>
               </View>
             ) : null}
-            {academySaveSuccess ? (
-              <View className="rounded-lg bg-emerald-500/10 p-3">
-                <Text className="text-sm text-emerald-600">{academySaveSuccess}</Text>
-              </View>
-            ) : null}
 
             <Button
-              label={isAcademySaving ? "Salvando academia..." : "Salvar academia"}
+              label="Salvar academia"
               onPress={handleSaveAcademy}
               disabled={isAcademySaving || !academy}
+              loading={isAcademySaving}
             />
           </Card>
 
-          {signOutError ? (
-            <View className="mt-4 rounded-lg bg-red-500/10 p-3">
-              <Text className="text-sm text-red-400">{signOutError}</Text>
-            </View>
-          ) : null}
           <View className="mt-6">
             <Button
               label="Sair da conta"
@@ -502,5 +464,13 @@ export default function OwnerSettings() {
         </View>
       </View>
     </ScrollView>
+  );
+}
+
+export default function OwnerSettings() {
+  return (
+    <ErrorBoundary>
+      <OwnerSettingsScreen />
+    </ErrorBoundary>
   );
 }

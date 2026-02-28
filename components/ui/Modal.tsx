@@ -9,8 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
 import { X } from "lucide-react-native";
 
+import { getIconColor } from "../../src/ui/theme/icon-colors";
 import { useTheme } from "../../src/ui/theme/ThemeProvider";
 
 type ModalProps = RNModalProps & {
@@ -37,13 +39,13 @@ export function Modal({
   ...props
 }: ModalProps) {
   const { theme } = useTheme();
-  const iconColor = theme === "dark" ? "#E5E7EB" : "#0F172A";
+  const iconColor = getIconColor(theme, "header");
 
   return (
     <RNModal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
       {...props}
     >
@@ -52,46 +54,56 @@ export function Modal({
         className="flex-1"
       >
         <Pressable
-          className="flex-1 items-center justify-center bg-black/60 px-4"
+          className="flex-1 items-center justify-center px-4"
           onPress={onClose}
         >
-          <Pressable
-            className="w-full rounded-card bg-surface-light p-card dark:bg-surface-dark"
-            style={{ maxWidth: MAX_WIDTH_MAP[maxWidth] }}
-            onPress={(e) => e.stopPropagation()}
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(150)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <Animated.View
+            entering={SlideInDown.duration(300).springify()}
+            exiting={SlideOutDown.duration(200)}
           >
-            {/* Header */}
-            {(title || showCloseButton) ? (
-              <View className="mb-4 flex-row items-center justify-between">
-                {title ? (
-                  <Text className="font-display text-xl text-strong-light dark:text-strong-dark">
-                    {title}
-                  </Text>
-                ) : (
-                  <View />
-                )}
-                {showCloseButton ? (
-                  <Pressable
-                    onPress={onClose}
-                    accessibilityRole="button"
-                    accessibilityLabel="Fechar"
-                    className="rounded-full p-2"
-                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                  >
-                    <X size={20} color={iconColor} />
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
-
-            {/* Content */}
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
+            <Pressable
+              className="w-full rounded-card bg-surface-light p-card dark:bg-surface-dark"
+              style={{ maxWidth: MAX_WIDTH_MAP[maxWidth] }}
+              onPress={(e) => e.stopPropagation()}
             >
-              {children}
-            </ScrollView>
-          </Pressable>
+              {/* Header */}
+              {(title || showCloseButton) ? (
+                <View className="mb-4 flex-row items-center justify-between">
+                  {title ? (
+                    <Text className="font-display text-xl text-strong-light dark:text-strong-dark">
+                      {title}
+                    </Text>
+                  ) : (
+                    <View />
+                  )}
+                  {showCloseButton ? (
+                    <Pressable
+                      onPress={onClose}
+                      accessibilityRole="button"
+                      accessibilityLabel="Fechar"
+                      className="rounded-full p-2"
+                      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                    >
+                      <X size={20} color={iconColor} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {/* Content */}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {children}
+              </ScrollView>
+            </Pressable>
+          </Animated.View>
         </Pressable>
       </KeyboardAvoidingView>
     </RNModal>

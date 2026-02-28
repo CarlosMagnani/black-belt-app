@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { RefreshControl, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ScrollView, Text, useWindowDimensions, View } from "react-native";
 
 import { OwnerSidebar } from "../../components/owner/OwnerSidebar";
 import { ClassList } from "../../components/owner/ClassList";
@@ -7,13 +7,10 @@ import { CreateClassModal } from "../../components/owner/CreateClassModal";
 import { EditClassModal } from "../../components/owner/EditClassModal";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
-import { Skeleton } from "../../components/ui/Skeleton";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
 import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
 import type { AcademyClass } from "../../src/core/ports/blackbelt-ports";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
-import { showToast } from "../../src/core/utils/toast";
 import { supabase } from "../../src/infra/supabase/client";
 
 type InstructorOption = {
@@ -22,17 +19,17 @@ type InstructorOption = {
   name: string | null;
 };
 
-function OwnerScheduleScreen() {
+export default function OwnerSchedule() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
 
-  const { academy, ownerMember, isLoading, error, refresh: refreshAcademy } = useOwnerAcademy();
+  const { academy, ownerMember, isLoading, error } = useOwnerAcademy();
   const { profile } = useAuthProfile();
 
   const [classes, setClasses] = useState<AcademyClass[]>([]);
   const [isClassesLoading, setIsClassesLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -93,44 +90,34 @@ function OwnerScheduleScreen() {
     };
   }, [academy]);
 
-  const loadClasses = useCallback(async (academyId: string) => {
-    setIsClassesLoading(true);
-    try {
-      const list = await blackBeltAdapters.classes.listByAcademy(academyId);
-      setClasses(list);
-    } catch (err) {
-      showToast({
-        message: err instanceof Error ? err.message : "Não foi possível carregar a agenda.",
-        variant: "error",
-      });
-    } finally {
-      setIsClassesLoading(false);
-    }
-  }, []);
-
   // Load classes
   useEffect(() => {
     if (!academy) return;
     let isActive = true;
 
-    void loadClasses(academy.id).then(() => {
-      if (!isActive) return;
-    });
+    const loadClasses = async () => {
+      setIsClassesLoading(true);
+      setLocalError(null);
+      try {
+        const list = await blackBeltAdapters.classes.listByAcademy(academy.id);
+        if (!isActive) return;
+        setClasses(list);
+      } catch (err) {
+        if (!isActive) return;
+        setLocalError(
+          err instanceof Error ? err.message : "Não foi possível carregar a agenda."
+        );
+      } finally {
+        if (isActive) setIsClassesLoading(false);
+      }
+    };
+
+    void loadClasses();
 
     return () => {
       isActive = false;
     };
-  }, [academy, loadClasses]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshAcademy();
-      if (academy) await loadClasses(academy.id);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [academy, loadClasses, refreshAcademy]);
+  }, [academy]);
 
   // Handle create class
   const handleCreateClass = async (data: {
@@ -221,12 +208,7 @@ function OwnerScheduleScreen() {
   const totalClasses = classes.length;
 
   return (
-    <ScrollView
-      className="flex-1"
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} />
-      }
-    >
+    <ScrollView className="flex-1">
       <View className="px-page pb-10 pt-6 web:px-10">
         <View className="mx-auto w-full max-w-[1200px]">
           {/* Desktop: Two column layout */}
@@ -261,7 +243,7 @@ function OwnerScheduleScreen() {
                 </View>
 
                 <Button
-                  label="Nova Aula"
+                  label="➕ Nova Aula"
                   onPress={() => setIsCreateModalOpen(true)}
                   size="md"
                   className={isTablet ? "" : "self-start"}
@@ -272,6 +254,11 @@ function OwnerScheduleScreen() {
               {error ? (
                 <Card className="mt-6" variant="outline">
                   <Text className="text-sm text-red-500">{error}</Text>
+                </Card>
+              ) : null}
+              {localError ? (
+                <Card className="mt-6" variant="outline">
+                  <Text className="text-sm text-red-500">{localError}</Text>
                 </Card>
               ) : null}
 
@@ -328,13 +315,5 @@ function OwnerScheduleScreen() {
         isInstructorsLoading={isInstructorsLoading}
       />
     </ScrollView>
-  );
-}
-
-export default function OwnerSchedule() {
-  return (
-    <ErrorBoundary>
-      <OwnerScheduleScreen />
-    </ErrorBoundary>
   );
 }

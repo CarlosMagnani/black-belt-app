@@ -1,16 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { ScrollView, Text, View } from "react-native";
 
 import { WeekCalendar } from "../../components/calendar/WeekCalendar";
 import { Badge } from "../../components/ui/Badge";
 import { Card } from "../../components/ui/Card";
-import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
-import { Skeleton } from "../../components/ui/Skeleton";
 import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
 import type { CheckinStatus, ClassScheduleItem } from "../../src/core/ports/blackbelt-ports";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
-import { showToast } from "../../src/core/utils/toast";
-import { hapticSuccess } from "../../src/core/utils/haptics";
 
 const getWeekStart = (date: Date) => {
   const day = date.getDay();
@@ -32,25 +28,6 @@ const toISODate = (date: Date) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-function CalendarSkeleton() {
-  return (
-    <Card className="mt-6 gap-3">
-      <View className="flex-row justify-between">
-        <Skeleton width={80} height={20} />
-        <Skeleton width={80} height={20} />
-      </View>
-      <View className="flex-row gap-2">
-        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} width={40} height={60} borderRadius={8} className="flex-1" />
-        ))}
-      </View>
-      {[0, 1, 2].map((i) => (
-        <Skeleton key={`row-${i}`} height={48} />
-      ))}
-    </Card>
-  );
-}
-
 export default function Schedule() {
   const {
     isBooting,
@@ -62,50 +39,52 @@ export default function Schedule() {
   } = useStudentAcademy();
   const [scheduleItems, setScheduleItems] = useState<ClassScheduleItem[]>([]);
   const [isScheduleLoading, setIsScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [checkinStatusByClassId, setCheckinStatusByClassId] = useState<
     Record<string, CheckinStatus>
   >({});
   const [checkinLoadingId, setCheckinLoadingId] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [checkinMessage, setCheckinMessage] = useState<string | null>(null);
 
   const weekStartISO = useMemo(() => toISODate(weekStart), [weekStart]);
   const weekEndISO = useMemo(() => toISODate(addDays(weekStart, 6)), [weekStart]);
 
-  const loadSchedule = useCallback(async () => {
-    if (!academyId) return;
-    setIsScheduleLoading(true);
-    try {
-      const items = await blackBeltAdapters.schedules.getWeeklySchedule(
-        academyId,
-        weekStartISO,
-        weekEndISO
-      );
-      setScheduleItems(items);
-    } catch (err) {
-      showToast({
-        message: err instanceof Error ? err.message : "Nao foi possivel carregar a agenda.",
-        variant: "error",
-      });
-    } finally {
-      setIsScheduleLoading(false);
-    }
-  }, [academyId, weekStartISO, weekEndISO]);
-
   useEffect(() => {
     if (!academyId) return;
-    void loadSchedule();
-  }, [academyId, loadSchedule]);
+    let isActive = true;
 
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await loadSchedule();
-    setIsRefreshing(false);
-  }, [loadSchedule]);
+    const loadSchedule = async () => {
+      setIsScheduleLoading(true);
+      setScheduleError(null);
+      try {
+        const items = await blackBeltAdapters.schedules.getWeeklySchedule(
+          academyId,
+          weekStartISO,
+          weekEndISO
+        );
+        if (!isActive) return;
+        setScheduleItems(items);
+      } catch (err) {
+        if (!isActive) return;
+        setScheduleError(err instanceof Error ? err.message : "Nao foi possivel carregar a agenda.");
+      } finally {
+        if (isActive) setIsScheduleLoading(false);
+      }
+    };
+
+    void loadSchedule();
+
+    return () => {
+      isActive = false;
+    };
+  }, [academyId, weekStartISO, weekEndISO]);
 
   const handleCheckin = async (item: ClassScheduleItem) => {
     if (!academyId || !profile?.id) return;
     setCheckinLoadingId(item.id);
+    setCheckinMessage(null);
+    setScheduleError(null);
     try {
       await blackBeltAdapters.checkins.createCheckin({
         academyId,
@@ -113,72 +92,61 @@ export default function Schedule() {
         studentId: profile.id,
       });
       setCheckinStatusByClassId((prev) => ({ ...prev, [item.id]: "pending" }));
-      void hapticSuccess();
-      showToast({ message: "Check-in enviado para validacao.", variant: "success" });
+      setCheckinMessage("Check-in enviado para validacao.");
     } catch (err) {
-      showToast({
-        message: err instanceof Error ? err.message : "Nao foi possivel registrar o check-in.",
-        variant: "error",
-      });
+      setScheduleError(err instanceof Error ? err.message : "Nao foi possivel registrar o check-in.");
     } finally {
       setCheckinLoadingId(null);
     }
   };
 
-  const error = academyError;
-  const isLoading = isBooting || isAcademyLoading;
+  const error = academyError ?? scheduleError;
 
   return (
-    <ErrorBoundary>
-      <ScrollView
-        className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-        }
-      >
-        <View className="px-page pb-10 pt-6 web:px-10">
-          <View className="mx-auto w-full max-w-[1100px]">
-            <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
-              Agenda semanal
-            </Text>
-            <Text className="mt-2 font-display text-3xl text-strong-light dark:text-strong-dark">
-              Sua programacao de aulas
-            </Text>
-            <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
-              Visualize os treinos recorrentes da semana e planeje sua rotina.
-            </Text>
+    <ScrollView className="flex-1">
+      <View className="px-page pb-10 pt-6 web:px-10">
+        <View className="mx-auto w-full max-w-[1100px]">
+          <Text className="text-xs uppercase tracking-[3px] text-muted-light dark:text-muted-dark">
+            Agenda semanal
+          </Text>
+          <Text className="mt-2 font-display text-3xl text-strong-light dark:text-strong-dark">
+            Sua programacao de aulas
+          </Text>
+          <Text className="mt-2 text-sm text-muted-light dark:text-muted-dark">
+            Visualize os treinos recorrentes da semana e planeje sua rotina.
+          </Text>
 
-            {academy?.name ? (
-              <View className="mt-4 self-start">
-                <Badge label={academy.name} variant="neutral" />
-              </View>
-            ) : null}
+          {academy?.name ? (
+            <View className="mt-4 self-start">
+              <Badge label={academy.name} variant="neutral" />
+            </View>
+          ) : null}
 
-            {error ? (
-              <Card className="mt-6" variant="outline">
-                <Text className="text-sm text-red-500">{error}</Text>
-              </Card>
-            ) : null}
+          {error ? (
+            <Card className="mt-6" variant="outline">
+              <Text className="text-sm text-red-500">{error}</Text>
+            </Card>
+          ) : null}
+          {checkinMessage ? (
+            <Card className="mt-4">
+              <Text className="text-sm text-emerald-600">{checkinMessage}</Text>
+            </Card>
+          ) : null}
 
-            {isLoading || isScheduleLoading ? (
-              <CalendarSkeleton />
-            ) : (
-              <View className="mt-6">
-                <WeekCalendar
-                  weekStart={weekStart}
-                  items={scheduleItems}
-                  isLoading={false}
-                  onPrevWeek={() => setWeekStart((prev) => addDays(prev, -7))}
-                  onNextWeek={() => setWeekStart((prev) => addDays(prev, 7))}
-                  onCheckin={handleCheckin}
-                  checkinStatusByClassId={checkinStatusByClassId}
-                  checkinLoadingId={checkinLoadingId}
-                />
-              </View>
-            )}
+          <View className="mt-6">
+            <WeekCalendar
+              weekStart={weekStart}
+              items={scheduleItems}
+              isLoading={isAcademyLoading || isScheduleLoading}
+              onPrevWeek={() => setWeekStart((prev) => addDays(prev, -7))}
+              onNextWeek={() => setWeekStart((prev) => addDays(prev, 7))}
+              onCheckin={handleCheckin}
+              checkinStatusByClassId={checkinStatusByClassId}
+              checkinLoadingId={checkinLoadingId}
+            />
           </View>
         </View>
-      </ScrollView>
-    </ErrorBoundary>
+      </View>
+    </ScrollView>
   );
 }

@@ -1,6 +1,5 @@
 import React from "react";
 import { Text, View } from "react-native";
-import { CheckCircle } from "lucide-react-native";
 
 type OverdueCounterProps = {
   count: number;
@@ -16,7 +15,7 @@ export function OverdueCounter({ count, className }: OverdueCounterProps) {
           className ?? "",
         ].join(" ")}
       >
-        <CheckCircle size={18} color="#16a34a" />
+        <Text className="text-lg">✓</Text>
         <Text className="text-sm font-medium text-green-800 dark:text-green-400">
           Todos em dia
         </Text>

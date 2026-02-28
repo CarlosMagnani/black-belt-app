@@ -44,9 +44,6 @@ export function DegreeSelector({
           return (
             <Pressable
               key={degree}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`Grau ${degree}`}
               onPress={() => onSelect?.(degree)}
               style={({ pressed }) => ({
                 opacity: pressed ? 0.8 : 1,

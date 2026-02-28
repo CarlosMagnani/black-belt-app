@@ -1,6 +1,5 @@
 import React from "react";
 import { Text, useWindowDimensions, View } from "react-native";
-import { Users2 } from "lucide-react-native";
 
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
@@ -81,7 +80,7 @@ export function PlanCard({ plan, onEdit, onToggleActive, className }: PlanCardPr
 
       {/* Subscriber count */}
       <View className="flex-row items-center gap-2 rounded-lg bg-app-light px-3 py-2 dark:bg-app-dark">
-        <Users2 size={18} color="#94A3B8" />
+        <Text className="text-lg">👥</Text>
         <Text className="text-sm text-muted-light dark:text-muted-dark">
           {plan.subscriber_count ?? 0}{" "}
           {(plan.subscriber_count ?? 0) === 1 ? "aluno inscrito" : "alunos inscritos"}

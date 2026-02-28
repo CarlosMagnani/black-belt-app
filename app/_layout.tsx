@@ -4,7 +4,6 @@ import { useEffect, type ReactNode } from "react";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
-import Toast from "react-native-toast-message";
 
 import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 import { ThemeProvider, useTheme } from "../src/ui/theme/ThemeProvider";
@@ -42,7 +41,6 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <RootShell />
-      <Toast />
     </ThemeProvider>
   );
 }

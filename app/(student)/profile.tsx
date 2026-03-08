@@ -1,27 +1,22 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
-import { MapPin } from "lucide-react-native";
-
+import React, { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { DateInput } from "../../components/ui/DateInput";
-import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 import { Select } from "../../components/ui/Select";
-import { Skeleton } from "../../components/ui/Skeleton";
 import { TextField } from "../../components/ui/TextField";
 import { getErrorMessage } from "../../src/core/errors/get-error-message";
 import { useStudentAcademy } from "../../src/core/hooks/use-student-academy";
-import { guessImageExt } from "../../src/core/utils/guess-image-ext";
-import { showToast } from "../../src/core/utils/toast";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
+
 import { BeltBadge } from "../../src/ui/belts/BeltBadge";
 
 const SEX_OPTIONS = [
   { label: "Masculino", value: "M" },
   { label: "Feminino", value: "F" },
   { label: "Outro", value: "O" },
-  { label: "Prefiro nao informar", value: "N" },
+  { label: "Prefiro não informar", value: "N" },
 ];
 
 const splitFullName = (fullName?: string | null) => {
@@ -32,21 +27,30 @@ const splitFullName = (fullName?: string | null) => {
   return { firstName: first, lastName: rest.join(" ") };
 };
 
-function ProfileSkeleton() {
-  return (
-    <View className="items-center gap-4 py-6">
-      <Skeleton width={120} height={120} borderRadius={60} />
-      <Skeleton width={160} height={20} />
-      <Skeleton width={120} height={14} />
-      <Card className="mt-4 w-full gap-4">
-        <Skeleton height={14} width="30%" />
-        <Skeleton height={44} />
-        <Skeleton height={44} />
-        <Skeleton height={44} />
-      </Card>
-    </View>
-  );
-}
+const guessImageExt = (localUri: string, mimeType?: string | null): string => {
+  const guessFromMime = (mime?: string | null): string | null => {
+    const value = (mime ?? "").toLowerCase();
+    if (!value.startsWith("image/")) return null;
+    const subtype = value.slice("image/".length);
+    if (subtype === "jpeg" || subtype === "jpg") return "jpg";
+    if (subtype === "png") return "png";
+    if (subtype === "webp") return "webp";
+    if (subtype === "gif") return "gif";
+    if (subtype === "heic") return "heic";
+    if (subtype === "heif") return "heif";
+    return null;
+  };
+
+  const guessFromUri = (uri: string): string | null => {
+    const match = uri.toLowerCase().match(/\.([a-z0-9]{1,10})(?:$|[?#])/);
+    if (!match?.[1]) return null;
+    const ext = match[1] === "jpeg" ? "jpg" : match[1];
+    if (!/^[a-z0-9]{1,10}$/.test(ext)) return null;
+    return ext;
+  };
+
+  return guessFromMime(mimeType) ?? guessFromUri(localUri) ?? "jpg";
+};
 
 export default function Profile() {
   const {
@@ -60,7 +64,8 @@ export default function Profile() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   // Form state
   const [firstName, setFirstName] = useState("");
@@ -95,6 +100,7 @@ export default function Profile() {
     if (!profile?.id) return;
 
     setIsUploading(true);
+    setSaveError(null);
 
     try {
       const response = await fetch(localUri);
@@ -108,16 +114,18 @@ export default function Profile() {
       );
       setAvatarUrl(publicUrl);
 
+      // Save to profile
       await blackBeltAdapters.profiles.upsertProfile({
         id: profile.id,
         avatarUrl: publicUrl,
       });
 
       await refreshProfile();
-      showToast({ message: "Foto atualizada!", variant: "success" });
+      setSaveSuccess("Foto atualizada!");
+      setTimeout(() => setSaveSuccess(null), 3000);
     } catch (err) {
       console.error("Upload error:", err);
-      showToast({ message: getErrorMessage(err, "Nao foi possivel fazer upload da foto."), variant: "error" });
+      setSaveError(getErrorMessage(err, "Nao foi possivel fazer upload da foto."));
     } finally {
       setIsUploading(false);
     }
@@ -126,6 +134,8 @@ export default function Profile() {
   const handleSaveProfile = async () => {
     if (!profile?.id) return;
     setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
 
     try {
       const normalizedFirstName = firstName.trim();
@@ -143,9 +153,10 @@ export default function Profile() {
         avatarUrl: avatarUrl.trim() || null,
       });
       await refreshProfile();
-      showToast({ message: "Perfil atualizado com sucesso!", variant: "success" });
+      setSaveSuccess("Perfil atualizado com sucesso!");
+      setTimeout(() => setSaveSuccess(null), 3000);
     } catch (err) {
-      showToast({ message: getErrorMessage(err, "Nao foi possivel salvar seu perfil."), variant: "error" });
+      setSaveError(getErrorMessage(err, "Nao foi possivel salvar seu perfil."));
     } finally {
       setIsSaving(false);
     }
@@ -154,169 +165,169 @@ export default function Profile() {
   const handleSignOut = async () => {
     try {
       await blackBeltAdapters.auth.signOut();
+      // AuthGate handles redirect
     } catch (err) {
-      showToast({ message: getErrorMessage(err, "Nao foi possivel sair."), variant: "error" });
+      setSaveError(getErrorMessage(err, "Nao foi possivel sair."));
     }
   };
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await refreshProfile();
-    setIsRefreshing(false);
-  }, [refreshProfile]);
 
   const isLoading = isBooting || isAcademyLoading;
 
   return (
-    <ErrorBoundary>
-      <ScrollView
-        className="flex-1 bg-app-light dark:bg-app-dark"
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-        }
-      >
-        <View className="px-page pb-10 pt-6">
-          <View className="mx-auto w-full max-w-[600px]">
-            {isLoading ? (
-              <ProfileSkeleton />
-            ) : (
-              <>
-                {/* Header */}
-                <View className="items-center">
-                  <Avatar
-                    uri={avatarUrl}
-                    name={displayName}
-                    size="xl"
-                    editable
-                    onImageSelected={handleAvatarSelected}
-                  />
-                  {isUploading && (
-                    <Text className="mt-2 text-sm text-brand-400">Enviando foto...</Text>
-                  )}
-                  <Text className="mt-4 font-display text-2xl font-semibold text-strong-light dark:text-strong-dark">
-                    {displayName}
-                  </Text>
-                  <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
-                    {profile?.email ?? "Email nao informado"}
-                  </Text>
-                </View>
-
-                {/* Belt Card */}
-                <Card className="mt-6 items-center bg-surface-light dark:bg-surface-dark">
-                  <Text className="mb-3 text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
-                    Faixa atual
-                  </Text>
-                  <BeltBadge
-                    belt={profile?.currentBelt ?? "Branca"}
-                    degree={profile?.beltDegree ?? undefined}
-                  />
-                  <Text className="mt-3 text-xs text-muted-light dark:text-muted-dark">
-                    Alterada apenas pelo professor
-                  </Text>
-                </Card>
-
-                {/* Error State */}
-                {academyError && (
-                  <Card className="mt-6 bg-red-500/10">
-                    <Text className="text-sm text-red-400">{academyError}</Text>
-                  </Card>
-                )}
-
-                {/* Personal Data Form */}
-                <Card className="mt-6 gap-5 bg-surface-light dark:bg-surface-dark">
-                  <View>
-                    <Text className="text-lg font-semibold text-strong-light dark:text-strong-dark">
-                      Dados pessoais
-                    </Text>
-                    <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
-                      Mantenha suas informacoes atualizadas
-                    </Text>
-                  </View>
-
-                  <View className="flex-row gap-3">
-                    <View className="flex-1">
-                      <TextField
-                        label="Nome"
-                        value={firstName}
-                        onChangeText={setFirstName}
-                        placeholder="Seu nome"
-                        autoCapitalize="words"
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <TextField
-                        label="Sobrenome"
-                        value={lastName}
-                        onChangeText={setLastName}
-                        placeholder="Seu sobrenome"
-                        autoCapitalize="words"
-                      />
-                    </View>
-                  </View>
-
-                  <DateInput
-                    label="Data de nascimento"
-                    value={birthDate}
-                    onChangeDate={setBirthDate}
-                  />
-
-                  <Select
-                    label="Sexo"
-                    value={sex}
-                    options={SEX_OPTIONS}
-                    onValueChange={setSex}
-                    placeholder="Selecione..."
-                  />
-
-                  <TextField
-                    label="Numero da federacao"
-                    value={federationNumber}
-                    onChangeText={setFederationNumber}
-                    placeholder="Ex: CBJJ12345"
-                    autoCapitalize="characters"
-                    helperText="CBJJ, IBJJF ou outra federacao"
-                  />
-
-                  <Button
-                    label="Salvar alteracoes"
-                    loading={isSaving}
-                    onPress={handleSaveProfile}
-                    disabled={isSaving || !profile?.id}
-                  />
-                </Card>
-
-                {/* Academy Card */}
-                <Card className="mt-6 bg-surface-light dark:bg-surface-dark">
-                  <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
-                    Academia
-                  </Text>
-                  <Text className="mt-2 font-display text-xl font-semibold text-strong-light dark:text-strong-dark">
-                    {academy?.name ?? "Nao vinculada"}
-                  </Text>
-                  {academy?.city && (
-                    <View className="mt-1 flex-row items-center gap-1">
-                      <MapPin size={12} color="#94A3B8" />
-                      <Text className="text-sm text-muted-light dark:text-muted-dark">
-                        {academy.city}
-                      </Text>
-                    </View>
-                  )}
-                </Card>
-
-                {/* Sign Out */}
-                <View className="mt-6">
-                  <Button
-                    label="Sair da conta"
-                    variant="ghost"
-                    onPress={handleSignOut}
-                    textClassName="text-red-400"
-                  />
-                </View>
-              </>
+    <ScrollView className="flex-1 bg-app-light dark:bg-app-dark">
+      <View className="px-page pb-10 pt-6">
+        <View className="mx-auto w-full max-w-[600px]">
+          {/* Header */}
+          <View className="items-center">
+            <Avatar
+              uri={avatarUrl}
+              name={displayName}
+              size="xl"
+              editable
+              onImageSelected={handleAvatarSelected}
+            />
+            {isUploading && (
+              <Text className="mt-2 text-sm text-brand-400">Enviando foto...</Text>
             )}
+            <Text className="mt-4 font-display text-2xl font-semibold text-strong-light dark:text-strong-dark">
+              {displayName}
+            </Text>
+            <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
+              {profile?.email ?? "Email não informado"}
+            </Text>
+          </View>
+
+          {/* Belt Card */}
+          <Card className="mt-6 items-center bg-surface-light dark:bg-surface-dark">
+            <Text className="mb-3 text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
+              Faixa atual
+            </Text>
+            <BeltBadge
+              belt={profile?.currentBelt ?? "Branca"}
+              degree={profile?.beltDegree ?? undefined}
+            />
+            <Text className="mt-3 text-xs text-muted-light dark:text-muted-dark">
+              Alterada apenas pelo professor
+            </Text>
+          </Card>
+
+          {/* Loading State */}
+          {isLoading && (
+            <Card className="mt-6 flex-row items-center gap-3 bg-surface-light dark:bg-surface-dark">
+              <ActivityIndicator color="#6366F1" />
+              <Text className="text-sm text-muted-light dark:text-muted-dark">
+                Carregando informações...
+              </Text>
+            </Card>
+          )}
+
+          {/* Error State */}
+          {academyError && (
+            <Card className="mt-6 bg-red-500/10">
+              <Text className="text-sm text-red-400">{academyError}</Text>
+            </Card>
+          )}
+
+          {/* Personal Data Form */}
+          <Card className="mt-6 gap-5 bg-surface-light dark:bg-surface-dark">
+            <View>
+              <Text className="text-lg font-semibold text-strong-light dark:text-strong-dark">
+                Dados pessoais
+              </Text>
+              <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
+                Mantenha suas informações atualizadas
+              </Text>
+            </View>
+
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <TextField
+                  label="Nome"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="Seu nome"
+                  autoCapitalize="words"
+                />
+              </View>
+              <View className="flex-1">
+                <TextField
+                  label="Sobrenome"
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder="Seu sobrenome"
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
+
+            <DateInput
+              label="Data de nascimento"
+              value={birthDate}
+              onChangeDate={setBirthDate}
+            />
+
+            <Select
+              label="Sexo"
+              value={sex}
+              options={SEX_OPTIONS}
+              onValueChange={setSex}
+              placeholder="Selecione..."
+            />
+
+            <TextField
+              label="Número da federação"
+              value={federationNumber}
+              onChangeText={setFederationNumber}
+              placeholder="Ex: CBJJ12345"
+              autoCapitalize="characters"
+              helperText="CBJJ, IBJJF ou outra federação"
+            />
+
+            {/* Feedback Messages */}
+            {saveError && (
+              <View className="rounded-lg bg-red-500/10 p-3">
+                <Text className="text-sm text-red-400">{saveError}</Text>
+              </View>
+            )}
+            {saveSuccess && (
+              <View className="rounded-lg bg-green-500/10 p-3">
+                <Text className="text-sm text-green-400">{saveSuccess}</Text>
+              </View>
+            )}
+
+            <Button
+              label={isSaving ? "Salvando..." : "Salvar alterações"}
+              onPress={handleSaveProfile}
+              disabled={isSaving || !profile?.id}
+            />
+          </Card>
+
+          {/* Academy Card */}
+          <Card className="mt-6 bg-surface-light dark:bg-surface-dark">
+            <Text className="text-xs uppercase tracking-widest text-muted-light dark:text-muted-dark">
+              Academia
+            </Text>
+            <Text className="mt-2 font-display text-xl font-semibold text-strong-light dark:text-strong-dark">
+              {academy?.name ?? "Não vinculada"}
+            </Text>
+            {academy?.city && (
+              <Text className="mt-1 text-sm text-muted-light dark:text-muted-dark">
+                📍 {academy.city}
+              </Text>
+            )}
+          </Card>
+
+          {/* Sign Out */}
+          <View className="mt-6">
+            <Button
+              label="Sair da conta"
+              variant="ghost"
+              onPress={handleSignOut}
+              textClassName="text-red-400"
+            />
           </View>
         </View>
-      </ScrollView>
-    </ErrorBoundary>
+      </View>
+    </ScrollView>
   );
 }

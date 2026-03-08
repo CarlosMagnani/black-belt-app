@@ -102,10 +102,8 @@ export function DateInput({
         placeholder={placeholder}
         keyboardType="number-pad"
         maxLength={10}
-        accessibilityLabel={label ?? "Data"}
-        accessibilityHint={helperText ?? "Formato DD/MM/AAAA"}
         className={[
-          "mt-2 rounded-input border px-input py-3 text-base min-h-[44px]",
+          "mt-2 rounded-input border px-input py-3 text-base",
           "border-subtle-light bg-app-light text-strong-light",
           "dark:border-subtle-dark dark:bg-app-dark dark:text-strong-dark",
           errorMessage ? "border-red-500" : "",

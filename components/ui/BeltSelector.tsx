@@ -44,9 +44,6 @@ export function BeltSelector({
           return (
             <Pressable
               key={belt.name}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`Faixa ${belt.name}`}
               onPress={() => onSelect?.(belt.name)}
               style={({ pressed }) => ({
                 opacity: pressed ? 0.8 : 1,

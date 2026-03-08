@@ -5,7 +5,6 @@ import { PlanCard, type Plan, type Periodicity } from "../../components/owner/Pl
 import { CreatePlanModal, type PlanFormData } from "../../components/owner/CreatePlanModal";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
 import { supabase } from "../../src/infra/supabase/client";
 
@@ -41,7 +40,7 @@ const toPlan = (row: PlanRow): Plan => ({
   subscriber_count: 0,
 });
 
-function OwnerPlansScreen() {
+export default function OwnerPlans() {
   const { academy, isLoading: isAcademyLoading, error: academyError } = useOwnerAcademy();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -308,13 +307,5 @@ function OwnerPlansScreen() {
         isSaving={isSaving}
       />
     </ScrollView>
-  );
-}
-
-export default function OwnerPlans() {
-  return (
-    <ErrorBoundary>
-      <OwnerPlansScreen />
-    </ErrorBoundary>
   );
 }

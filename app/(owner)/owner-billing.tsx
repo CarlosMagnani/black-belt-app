@@ -3,10 +3,9 @@ import { ScrollView, Text, View } from "react-native";
 
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
 
-function OwnerBillingScreen() {
+export default function OwnerBilling() {
   const { isLoading, error } = useOwnerAcademy();
 
   return (
@@ -46,13 +45,5 @@ function OwnerBillingScreen() {
         </View>
       </View>
     </ScrollView>
-  );
-}
-
-export default function OwnerBilling() {
-  return (
-    <ErrorBoundary>
-      <OwnerBillingScreen />
-    </ErrorBoundary>
   );
 }

@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Platform, RefreshControl, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Platform, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { HomeHeader } from "../../components/home/HomeHeader";
@@ -8,11 +8,8 @@ import { KpiCard } from "../../components/owner/KpiCard";
 import { OverdueCounter } from "../../components/owner/OverdueCounter";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
-import { Skeleton } from "../../components/ui/Skeleton";
 import { useAuthProfile } from "../../src/core/hooks/use-auth-profile";
 import { useOwnerAcademy } from "../../src/core/hooks/use-owner-academy";
-import { showToast } from "../../src/core/utils/toast";
 import { blackBeltAdapters } from "../../src/infra/supabase/adapters";
 
 // Mock data for attendance rate calculation
@@ -54,21 +51,21 @@ const chunkItems = <T,>(items: T[], size: number): T[][] => {
   return chunks;
 };
 
-function OwnerHomeScreen() {
+export default function OwnerHome() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1180;
   const isTablet = width >= 760;
   const gridColumns = isDesktop ? 3 : isTablet ? 2 : 1;
 
-  const { academy, isLoading, error, refresh: refreshAcademy } = useOwnerAcademy();
+  const { academy, isLoading, error } = useOwnerAcademy();
   const { profile } = useAuthProfile();
   const [membersCount, setMembersCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
   const [isMetricsLoading, setIsMetricsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   const todayWeekday = useMemo(() => new Date().getDay(), []);
 
@@ -164,13 +161,13 @@ function OwnerHomeScreen() {
       },
       {
         key: "plans",
-        label: "Gerenciar planos",
+        label: "💳 Gerenciar planos",
         href: "/owner-plans",
         variant: "secondary",
       },
       {
         key: "professors",
-        label: "Professores",
+        label: "👥 Professores",
         href: "/owner-professors",
         variant: "secondary",
       },
@@ -192,48 +189,37 @@ function OwnerHomeScreen() {
     return rows;
   }, [actionItems, gridColumns, isDesktop]);
 
-  const loadMetrics = useCallback(async (academyId: string) => {
-    setIsMetricsLoading(true);
-    try {
-      const [members, pending, classes] = await Promise.all([
-        blackBeltAdapters.memberships.listByAcademy(academyId),
-        blackBeltAdapters.checkins.listPendingByAcademy(academyId),
-        blackBeltAdapters.classes.listByAcademy(academyId),
-      ]);
-      const studentMembers = members.filter((member) => member.role === "student");
-      setMembersCount(studentMembers.length);
-      setPendingCount(pending.length);
-      setWeekCount(classes.length);
-      setTodayCount(classes.filter((item) => item.weekday === todayWeekday).length);
-    } catch {
-      // Silently fail — metrics will show previous values
-    } finally {
-      setIsMetricsLoading(false);
-    }
-  }, [todayWeekday]);
-
   useEffect(() => {
     if (!academy) return;
     let isActive = true;
 
-    void loadMetrics(academy.id).then(() => {
-      if (!isActive) return;
-    });
+    const loadMetrics = async () => {
+      setIsMetricsLoading(true);
+      try {
+        const [members, pending, classes] = await Promise.all([
+          blackBeltAdapters.memberships.listByAcademy(academy.id),
+          blackBeltAdapters.checkins.listPendingByAcademy(academy.id),
+          blackBeltAdapters.classes.listByAcademy(academy.id),
+        ]);
+        if (!isActive) return;
+        const studentMembers = members.filter((member) => member.role === "student");
+        setMembersCount(studentMembers.length);
+        setPendingCount(pending.length);
+        setWeekCount(classes.length);
+        setTodayCount(classes.filter((item) => item.weekday === todayWeekday).length);
+      } catch {
+        if (!isActive) return;
+      } finally {
+        if (isActive) setIsMetricsLoading(false);
+      }
+    };
+
+    void loadMetrics();
 
     return () => {
       isActive = false;
     };
-  }, [academy, loadMetrics]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshAcademy();
-      if (academy) await loadMetrics(academy.id);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [academy, loadMetrics, refreshAcademy]);
+  }, [academy, todayWeekday]);
 
   const handleCopy = async () => {
     if (!academy?.inviteCode) return;
@@ -243,22 +229,18 @@ function OwnerHomeScreen() {
       }).navigator?.clipboard;
       if (clipboard) {
         await clipboard.writeText(academy.inviteCode);
-        showToast({ message: "Codigo copiado.", variant: "success" });
+        setCopyMessage("Codigo copiado.");
       } else {
-        showToast({ message: "Copie o codigo manualmente.", variant: "info" });
+        setCopyMessage("Copie o codigo manualmente.");
       }
     } else {
-      showToast({ message: "Copie o codigo manualmente.", variant: "info" });
+      setCopyMessage("Copie o codigo manualmente.");
     }
+    setTimeout(() => setCopyMessage(null), 2000);
   };
 
   return (
-    <ScrollView
-      className="flex-1"
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} />
-      }
-    >
+    <ScrollView className="flex-1">
       <View className="pb-10 pt-6">
         <View className="w-full px-page web:mx-auto web:max-w-6xl web:px-10">
           <View className="gap-1">
@@ -300,6 +282,9 @@ function OwnerHomeScreen() {
                 logoUrl={academy.logoUrl}
                 onCopy={handleCopy}
               />
+              {copyMessage ? (
+                <Text className="px-1 text-xs text-emerald-600">{copyMessage}</Text>
+              ) : null}
             </View>
           ) : null}
 
@@ -373,31 +358,12 @@ function OwnerHomeScreen() {
           </View>
 
           {isLoading ? (
-            <View className="mt-6 gap-4">
-              <Card>
-                <Skeleton height={20} width="60%" />
-                <Skeleton height={14} width="40%" className="mt-2" />
-              </Card>
-              <Card>
-                <Skeleton height={20} width="50%" />
-                <Skeleton height={14} width="35%" className="mt-2" />
-              </Card>
-              <Card>
-                <Skeleton height={20} width="55%" />
-                <Skeleton height={14} width="45%" className="mt-2" />
-              </Card>
-            </View>
+            <Text className="mt-6 text-sm text-muted-light dark:text-muted-dark">
+              Carregando dados do owner...
+            </Text>
           ) : null}
         </View>
       </View>
     </ScrollView>
-  );
-}
-
-export default function OwnerHome() {
-  return (
-    <ErrorBoundary>
-      <OwnerHomeScreen />
-    </ErrorBoundary>
   );
 }

@@ -202,7 +202,7 @@ export function EditClassModal({
     <Modal
       visible={visible}
       onClose={onClose}
-      title="Editar Aula"
+      title="✏️ Editar Aula"
       maxWidth="md"
     >
       <View className="gap-4">
@@ -346,7 +346,7 @@ export function EditClassModal({
             />
           </View>
           <Button
-            label={isDeleting ? "Removendo..." : "Remover Aula"}
+            label={isDeleting ? "Removendo..." : "🗑️ Remover Aula"}
             variant="ghost"
             onPress={handleDelete}
             disabled={isBusy}

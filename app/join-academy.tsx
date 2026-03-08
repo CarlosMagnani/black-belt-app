@@ -235,7 +235,7 @@ export default function JoinAcademy() {
                       </Text>
                       {academy.city && (
                         <Text className="mt-0.5 text-sm text-text-secondary-dark">
-                          {academy.city}
+                          📍 {academy.city}
                         </Text>
                       )}
                     </View>

@@ -12,9 +12,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { ErrorBoundary } from "../components/ui/ErrorBoundary";
 import { TextField } from "../components/ui/TextField";
-import { hapticLight } from "../src/core/utils/haptics";
 import { blackBeltAdapters } from "../src/infra/supabase/adapters";
 
 type Mode = "signin" | "signup";
@@ -60,7 +58,6 @@ export default function Auth() {
   };
 
   return (
-    <ErrorBoundary>
     <SafeAreaView className="flex-1 bg-app-dark">
       {/* Gradient background effects */}
       <View className="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl" />
@@ -235,6 +232,5 @@ export default function Auth() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
-    </ErrorBoundary>
   );
 }

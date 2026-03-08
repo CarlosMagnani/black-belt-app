@@ -80,8 +80,8 @@ export function Select({
           className="flex-1 items-center justify-center bg-black/60"
           onPress={() => setIsOpen(false)}
         >
-          <View className="m-4 w-full max-w-sm rounded-2xl bg-surface-dark p-2">
-            <Text className="px-4 py-3 text-lg font-semibold text-text-primary-dark">
+          <View className="m-4 w-full max-w-sm rounded-2xl bg-surface-light dark:bg-surface-dark p-2">
+            <Text className="px-4 py-3 text-lg font-semibold text-strong-light dark:text-strong-dark">
               {label ?? "Selecione"}
             </Text>
             <ScrollView className="max-h-80">
@@ -103,7 +103,7 @@ export function Select({
                       "text-base",
                       option.value === value
                         ? "font-semibold text-white"
-                        : "text-text-primary-dark",
+                        : "text-strong-light dark:text-strong-dark",
                     ].join(" ")}
                   >
                     {option.label}

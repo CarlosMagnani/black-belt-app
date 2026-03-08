@@ -54,10 +54,7 @@ export function BeltSelector({
               })}
             >
               <View
-                className={[
-                  "items-center justify-center rounded-xl px-5 py-4",
-                  isSelected ? "ring-2 ring-brand-500" : "",
-                ].join(" ")}
+                className="items-center justify-center rounded-xl px-5 py-4"
                 style={{
                   backgroundColor: belt.color,
                   borderWidth: isSelected ? 3 : belt.borderColor ? 1 : 0,

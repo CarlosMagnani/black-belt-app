@@ -91,11 +91,11 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === "primary" ? "#fff" : "#8B5CF6"}
+          color={variant === "primary" ? "#fff" : "#6366F1"}
           size="small"
         />
       ) : label ? (
-        <Text className={[styles.text, "font-body text-sm", textClassName ?? ""].join(" ")}>
+        <Text className={[styles.text, "font-body font-medium text-sm", textClassName ?? ""].join(" ")}>
           {label}
         </Text>
       ) : (

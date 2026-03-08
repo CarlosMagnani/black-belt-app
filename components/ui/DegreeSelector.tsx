@@ -15,7 +15,7 @@ type DegreeSelectorProps = {
 const getMaxDegrees = (belt?: BeltName): number => {
   if (!belt) return 4;
   if (belt === "Branca") return 4;
-  if (belt === "Preta") return 6; // Dan degrees
+  if (belt === "Preta") return 7; // Dan degrees 0-7
   return 4; // Blue, Purple, Brown
 };
 
@@ -57,13 +57,13 @@ export function DegreeSelector({
                   "h-12 w-12 items-center justify-center rounded-xl",
                   isSelected
                     ? "bg-brand-600"
-                    : "border border-subtle-dark bg-surface-dark",
+                    : "border border-subtle-light dark:border-subtle-dark bg-surface-light dark:bg-surface-dark",
                 ].join(" ")}
               >
                 <Text
                   className={[
                     "text-lg font-semibold",
-                    isSelected ? "text-white" : "text-text-primary-dark",
+                    isSelected ? "text-white" : "text-strong-light dark:text-strong-dark",
                   ].join(" ")}
                 >
                   {degree}

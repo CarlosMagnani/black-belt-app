@@ -1,0 +1,34 @@
+# dependencies
+node_modules/
+
+# environment variables
+.env
+.env.local
+.env.*.local
+
+# build output
+dist/
+build/
+.next/
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# local Claude Code settings (machine-specific)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# logs
+*.log
+npm-debug.log*
+
+# Railway
+.railway/

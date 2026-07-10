@@ -2,7 +2,7 @@
 
 ## 1. Current Goal
 
-Connect the React authentication flow to the completed Fastify/Supabase Auth backend boundary.
+Configure the development database, then build the role-specific onboarding flow.
 
 Backend authentication and Supabase project configuration completed on 2026-07-10:
 
@@ -17,14 +17,23 @@ Backend authentication and Supabase project configuration completed on 2026-07-1
 - Email/password signup is enabled with confirmation required, anonymous signup disabled, and an 8-character minimum password.
 - Public API roles can no longer execute the privileged `public.rls_auto_enable()` event-trigger function; the security advisor reports no findings.
 
+Frontend authentication completed on 2026-07-10:
+
+- Login and registration pages follow the existing BlackBelt mobile-first design system in Brazilian Portuguese.
+- Registration uses email/password only, requires a matching 8-character password, and sends users to a confirmation-email screen.
+- The confirmation screen can resend the signup email; its redirect restores the Supabase session and opens the existing role-selection handoff.
+- Session restoration, route guards, and logout are implemented with `@supabase/supabase-js`.
+- Existing owner/student role cards are recreated as the post-login destination; their full onboarding routes are intentionally deferred.
+
 Next implementation focus:
 
 - Configure a real `DATABASE_URL` locally. `SUPABASE_URL` is already configured for development.
 - Create/apply the initial Prisma migration against the development database.
-- Add the frontend Supabase client for registration, login, refresh persistence, logout, and password reset.
-- Send the Supabase access token to `GET /auth/me` and protected API routes.
+- Build the owner and student onboarding routes behind the role-selection cards.
+- Send the Supabase access token to `GET /auth/me` and protected API routes after the local database is ready.
+- Implement password recovery as the next separate auth slice.
 
-Open risk: live end-to-end token verification still requires the frontend Supabase client and a confirmed test user. Local tests verify the same ES256/JWKS path with generated keys.
+Open risk: live end-to-end signup and confirmation still need a disposable confirmed test account. The frontend deliberately does not call `/auth/me` until the application database and its first migration exist.
 
 Commands run:
 
@@ -36,6 +45,8 @@ npm audit --omit=dev
 npx prisma validate
 npx prisma format
 git diff --check
+npm run build
+npm run lint
 ```
 
 ---

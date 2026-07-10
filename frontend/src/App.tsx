@@ -1,8 +1,52 @@
+import { useEffect, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AuthPage, ConfirmationPage } from './features/auth/AuthPage'
+import { RoleChoicePage } from './features/auth/RoleChoicePage'
+import { supabase } from './lib/supabase'
+
 function App() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [isLoadingSession, setIsLoadingSession] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setIsLoadingSession(false)
+    })
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession)
+      setIsLoadingSession(false)
+    })
+
+    return () => subscription.subscription.unsubscribe()
+  }, [])
+
+  if (isLoadingSession) {
+    return <SessionLoading />
+  }
+
   return (
-    <div className="min-h-screen bg-bg text-text">
-      <p className="p-6 font-mono text-muted-2 text-xs tracking-widest uppercase">BlackBelt — scaffold ok</p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/entrar" element={session ? <Navigate to="/boas-vindas" replace /> : <AuthPage mode="login" />} />
+        <Route path="/criar-conta" element={session ? <Navigate to="/boas-vindas" replace /> : <AuthPage mode="register" />} />
+        <Route path="/confirmar-email" element={session ? <Navigate to="/boas-vindas" replace /> : <ConfirmationPage />} />
+        <Route path="/boas-vindas" element={session ? <RoleChoicePage /> : <Navigate to="/entrar" replace />} />
+        <Route path="*" element={<Navigate to={session ? '/boas-vindas' : '/entrar'} replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+function SessionLoading() {
+  return (
+    <main className="session-loading bb-grain" aria-live="polite">
+      <p className="eyebrow">BLACK BELT</p>
+      <div className="dot-loader" aria-label="Carregando sessão"><span /><span /><span /></div>
+      <p>Ajustando sua faixa...</p>
+    </main>
   )
 }
 

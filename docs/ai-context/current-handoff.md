@@ -7,23 +7,21 @@ Update it at the end of every working session.
 
 ## Current Goal
 
-Stack fully confirmed. Ready to scaffold the project.
+Backend scaffold complete. Next: first screen (ScreenSplash) and then Supabase project setup + JWT auth plugin.
 
 ## Context
 
-BlackBelt is a BJJ academy management platform (MVP). No application code exists yet. Harness Engineering complete. Tech stack locked. Next session starts the scaffold.
-
-Design handoff: `design_handoff_black_belt/README.md` — high-fidelity, final.
+BlackBelt is a BJJ academy management platform (MVP). Frontend scaffold is done and builds clean. Tech stack locked. Design handoff: `design_handoff_black_belt/README.md` — high-fidelity, final.
 
 ## Current Status
 
 - [x] Harness Engineering files created
 - [x] Tech stack fully confirmed — no open questions
 - [x] ADRs created for all major decisions
-- [ ] Project scaffold: NOT STARTED
+- [x] Frontend scaffold: COMPLETE (`frontend/` — Vite + React + TS + Tailwind v4 + BlackBelt tokens)
+- [x] Backend scaffold: COMPLETE (`backend/` — Fastify + TS + Prisma 7 + all 8 models)
 - [ ] Application code: NOT STARTED
-- [ ] Backend: NOT STARTED
-- [ ] Database schema / migrations: NOT STARTED
+- [ ] Database schema / migrations: NOT STARTED (schema written, no DB connected yet)
 - [ ] Authentication: NOT STARTED
 
 ## Confirmed Stack
@@ -32,9 +30,9 @@ Design handoff: `design_handoff_black_belt/README.md` — high-fidelity, final.
 |----------|--------|
 | Architecture | Modular Monolith |
 | Frontend | React + Vite + TypeScript |
-| Styling | Tailwind CSS |
+| Styling | Tailwind CSS v4 (via @tailwindcss/vite) |
 | Router | React Router v7 |
-| Server state | TanStack Query |
+| Server state | TanStack Query v5 |
 | Backend | Fastify + TypeScript |
 | Database | PostgreSQL + Prisma |
 | Auth | Supabase Auth |
@@ -43,42 +41,40 @@ Design handoff: `design_handoff_black_belt/README.md` — high-fidelity, final.
 | Forms | React Hook Form |
 | Tests | Vitest |
 
-## Decisions Made
+## Frontend Scaffold Details
 
-| Decision | Rationale |
-|----------|-----------|
-| Tailwind CSS | Fastest way to implement design tokens as utilities, consistent dark surfaces, red accent, sharp geometry |
-| React Router v7 | Simple, mature, enough for MVP PWA navigation |
-| TanStack Query | Handles fetching, mutations, cache, loading/error states without custom plumbing |
-| Railway | Fast setup for API + DB + env vars + logs. No infra complexity before product is validated |
+- **Location:** `C:\Projects\black-belt-app\frontend\`
+- **Tailwind version:** v4, configured via `@tailwindcss/vite` plugin (NO tailwind.config.js, NO postcss.config.js)
+- **Design tokens:** Defined in `src/index.css` under `@theme {}` — exact BlackBelt tokens
+- **Token → Tailwind utility mapping:** `--color-bg` → `bg-bg`, `--color-text` → `text-text`, `--color-muted-2` → `text-muted-2`, `--font-mono` → `font-mono`, etc.
+- **Google Fonts:** Loaded in `index.html` — Archivo Black, Anton, Inter, JetBrains Mono
+- **vite-plugin-pwa:** Installed but NOT configured yet (scaffold only)
+- **Build output:** `dist/assets/index-*.css` (6.65 kB), `dist/assets/index-*.js` (190.61 kB) — clean build
 
-## Files Changed
+## Files Changed This Session
 
-- `docs/ai-context/03-technical-stack.md` — all TBDs resolved
+- `backend/` — entire backend scaffold created (Phase 0)
+- `backend/package.json` — npm project with all deps + scripts
+- `backend/tsconfig.json` — TS config (module: Node16, target: ES2022, strict mode)
+- `backend/prisma/schema.prisma` — all 8 models (Prisma 7 compatible, no url in datasource)
+- `backend/prisma.config.ts` — Prisma 7 config file (datasource URL, migration path)
+- `backend/.env` — local dev env vars (not committed)
+- `backend/.env.example` — env template (committed)
+- `backend/src/config/env.ts` — Zod env validation
+- `backend/src/lib/prisma.ts` — PrismaClient singleton
+- `backend/src/app.ts` — Fastify app builder with cors + helmet + health route
+- `backend/src/server.ts` — entry point
+- `backend/src/modules/{auth,academy,membership,schedule,checkin,belt,users}/` — module folders with .gitkeep
+- `backend/src/plugins/`, `middleware/`, `lib/`, `types/`, `config/` — scaffold folders
 - `docs/ai-context/current-handoff.md` — this file
-- `docs/ai-context/01-architecture.md` — updated to Modular Monolith
-- `docs/adr/ADR-001-fastify.md` — created
-- `docs/adr/ADR-002-prisma.md` — created
-- `docs/adr/ADR-003-supabase-auth.md` — created
-- `docs/adr/ADR-004-modular-monolith.md` — created
-- `docs/adr/ADR-005-tailwind.md` — created
-- `docs/adr/ADR-006-react-router-v7.md` — created
-- `docs/adr/ADR-007-tanstack-query.md` — created
-- `docs/adr/ADR-008-railway.md` — created
-- Obsidian `008 - Tech Stack.md` — updated
 
 ## Next Steps
 
-1. Initialize frontend: `npm create vite@latest blackbelt-web -- --template react-ts`
-2. Initialize backend: `mkdir blackbelt-api && cd blackbelt-api && npm init -y`
-3. Install frontend deps: `react-router-dom`, `@tanstack/react-query`, `react-hook-form`, `zod`
-4. Install backend deps: `fastify`, `@fastify/jwt`, `@fastify/cors`, `zod`, `prisma`, `@prisma/client`
-5. Set up Tailwind in frontend project
-6. Create Prisma schema from `docs/ai-context/04-data-model.md`
-7. Set up Supabase project (get `SUPABASE_JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`)
-8. Set up folder structure per `docs/ai-context/01-architecture.md`
-9. Apply design tokens as Tailwind config (colors, fonts, spacing from design handoff)
-10. Build first screen: Splash / Role Split (`ScreenSplash`)
+1. Set up Supabase project (get `SUPABASE_JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`)
+2. Set up Railway project — provision PostgreSQL, get `DATABASE_URL`
+3. Run `prisma migrate dev --name init` once DB is connected
+4. Implement `@fastify/jwt` plugin in `src/plugins/` for Supabase JWT validation
+5. Build first screen: Splash / Role Split (`ScreenSplash`) — see `design_handoff_black_belt/README.md` §1
 
 ## Open Questions
 
@@ -88,27 +84,45 @@ None. Stack is fully locked.
 
 - Supabase Auth + Fastify: JWT verification requires `@fastify/jwt` with `SUPABASE_JWT_SECRET`. Not plug-and-play.
 - Prisma + Supabase Postgres: needs two connection URLs (`DATABASE_URL` pooler port 6543, `DIRECT_URL` port 5432)
-- Tailwind + design tokens: configure `tailwind.config.ts` to extend theme with exact BlackBelt tokens — do not use Tailwind defaults for colors
 - Design handoff uses Babel-in-browser — do not copy to production
 
 ## Tests Executed
 
-- No tests yet (no application code)
+- Frontend: `npm run build` — succeeded (0 errors, 0 warnings)
+- Frontend: `npm run dev` — server started at localhost:5173 in 256ms
+- Backend: `npx prisma generate` — succeeded (Prisma Client v7.8.0 generated)
+- Backend: `npx tsc --noEmit` — succeeded (0 errors)
 
 ## Commands Executed
 
 ```
-# Commit: 2f85999
-git add AGENTS.md CLAUDE.md design_handoff_black_belt/ docs/ .ai/ .claude/ .gitattributes .gitignore
-git commit -m "docs: add harness engineering foundation and lock stack"
-# 64 files, 7404 insertions
+# Session: frontend scaffold (Phase 0)
+cd C:\Projects\black-belt-app\frontend
+npm create vite@latest . -- --template react-ts
+npm install
+npm install react-router-dom @tanstack/react-query react-hook-form zod
+npm install -D tailwindcss @tailwindcss/vite vite-plugin-pwa
+npm run build  # ✓ built in 111ms
+npm run dev    # ✓ ready in 256ms
+
+# Session: backend scaffold (Phase 0)
+cd C:\Projects\black-belt-app\backend
+npm init -y
+npm install fastify @fastify/jwt @fastify/cors @fastify/helmet zod prisma @prisma/client dotenv
+npm install -D typescript @types/node ts-node tsx nodemon
+npx prisma init --datasource-provider postgresql
+npx prisma generate  # ✓ Prisma Client v7.8.0 generated
+npx tsc --noEmit     # ✓ 0 errors
 ```
 
 ## Notes for the Next AI
 
 - Read `design_handoff_black_belt/README.md` before touching any UI
-- Tailwind must be configured with BlackBelt design tokens — see `docs/ai-context/04-design-rules.md`
-- Do NOT use Tailwind color defaults (slate, gray, red-500) — use custom tokens only
+- Tailwind v4 — token syntax is `@theme {}` in CSS, NOT `tailwind.config.js`. Do NOT create a config file.
+- Do NOT use Tailwind color defaults (slate, gray, red-500) — use custom token names only (bg, surface, red, muted, etc.)
 - Auth flow: Supabase handles login UI or headless → returns JWT → Fastify validates
 - Modular monolith: each feature module owns routes + controller + service + domain + repository
+- Prisma version is 7.8.0 — breaking changes from 5/6: no `url` in schema.prisma datasource block; URL goes in `prisma.config.ts`; generator kept as `prisma-client-js` (deliberate — the new `prisma-client` generator targets `src/generated/prisma` and assumes ESM; `prisma-client-js` is correct for CommonJS Node backend)
+- TypeScript version is 6.0.3 — use `"module": "Node16"` + `"moduleResolution": "node16"` (not CommonJS/node which is deprecated)
+- Backend `.env` is protected by root `.gitignore` pattern `.env` — do NOT add a backend-specific .gitignore entry for it
 - Update this file at the end of every session

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlackBelt — Solo Dev Launch Analysis</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0A0A0A;
+      color: #F5F5F5;
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 40px 24px 80px;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      border-bottom: 1px solid #242424;
+      padding-bottom: 32px;
+      margin-bottom: 40px;
+    }
+
+    .eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #6B6B6B;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 32px;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      line-height: 0.95;
+      margin-bottom: 16px;
+    }
+
+    h1 span { color: #FF3B3B; }
+
+    .subtitle {
+      color: #8E8E93;
+      font-size: 14px;
+      max-width: 560px;
+    }
+
+    /* Sections */
+    section {
+      margin-bottom: 48px;
+    }
+
+    h2 {
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #FF3B3B;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #242424;
+    }
+
+    p {
+      color: #C8C8C8;
+      margin-bottom: 12px;
+    }
+
+    strong { color: #F5F5F5; }
+
+    /* Core loop */
+    .loop-block {
+      background: #161616;
+      border: 1px solid #242424;
+      padding: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #C8C8C8;
+      line-height: 2;
+    }
+
+    .loop-block .arrow { color: #FF3B3B; }
+
+    /* Cut table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead tr {
+      background: #161616;
+    }
+
+    th {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #6B6B6B;
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid #242424;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1a1a1a;
+      color: #C8C8C8;
+      font-size: 13px;
+      vertical-align: top;
+    }
+
+    td:first-child {
+      color: #F5F5F5;
+      white-space: nowrap;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    /* Phases */
+    .phase {
+      background: #111111;
+      border: 1px solid #242424;
+      margin-bottom: 12px;
+    }
+
+    .phase-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid #242424;
+      cursor: pointer;
+    }
+
+    .phase-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #FF3B3B;
+      flex-shrink: 0;
+    }
+
+    .phase-title {
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      flex: 1;
+    }
+
+    .phase-days {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: #6B6B6B;
+      letter-spacing: 0.1em;
+    }
+
+    .phase-body {
+      padding: 16px 18px;
+    }
+
+    .phase-body ul {
+      list-style: none;
+      margin-bottom: 12px;
+    }
+
+    .phase-body li {
+      color: #C8C8C8;
+      font-size: 13px;
+      padding: 4px 0;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .phase-body li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: #3a3a3a;
+    }
+
+    .phase-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #6B6B6B;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+
+    /* Risks */
+    .risk {
+      background: #111111;
+      border: 1px solid #242424;
+      border-left: 3px solid #FF3B3B;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+
+    .risk-title {
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 13px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .risk p {
+      margin: 0;
+      font-size: 13px;
+    }
+
+    /* Defer list */
+    .defer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+
+    .defer-item {
+      background: #111111;
+      border: 1px solid #242424;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #8E8E93;
+    }
+
+    .defer-item span {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #6B6B6B;
+      margin-bottom: 4px;
+    }
+
+    /* Outcome box */
+    .outcome {
+      background: #161616;
+      border: 1px solid #2F2F2F;
+      padding: 24px;
+    }
+
+    .outcome h3 {
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .outcome ul {
+      list-style: none;
+    }
+
+    .outcome li {
+      font-size: 13px;
+      color: #C8C8C8;
+      padding: 5px 0;
+      padding-left: 18px;
+      position: relative;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .outcome li:last-child { border-bottom: none; }
+
+    .outcome li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #FF3B3B;
+      font-size: 11px;
+    }
+
+    .estimate {
+      margin-top: 20px;
+      background: #0A0A0A;
+      border: 1px solid #FF3B3B;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .estimate-num {
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 36px;
+      color: #FF3B3B;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .estimate-label {
+      font-size: 13px;
+      color: #8E8E93;
+    }
+
+    .estimate-label strong { color: #F5F5F5; display: block; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="eyebrow">Solo Dev Launch Analysis · 2026-05-19</div>
+    <h1>BlackBelt<br /><span>Priority</span> Plan</h1>
+    <p class="subtitle">
+      The v0.1.0 roadmap lists ~40 items — that's 3–4 months solo.
+      This plan defines the smallest slice that gets a real academy using the product.
+    </p>
+  </header>
+
+  <!-- Core Loop -->
+  <section>
+    <h2>The Non-Negotiable Core Loop</h2>
+    <p>These 7 capabilities must exist before the product has any value. Nothing else ships until this loop works end-to-end.</p>
+    <div class="loop-block">
+      Owner creates academy <span class="arrow">→</span> invite code generated<br />
+      <span class="arrow">→</span> Student enters code <span class="arrow">→</span> joins academy<br />
+      <span class="arrow">→</span> Owner creates class schedule<br />
+      <span class="arrow">→</span> Student sees today's classes <span class="arrow">→</span> requests check-in<br />
+      <span class="arrow">→</span> Owner approves check-in<br />
+      <span class="arrow">→</span> Counter increments <span class="arrow">→</span> belt progress updates<br />
+      <span class="arrow">→</span> Owner promotes student manually
+    </div>
+  </section>
+
+  <!-- Cut from v0.1.0 -->
+  <section>
+    <h2>What to Cut from v0.1.0</h2>
+    <p>These items are in the current roadmap and should be deferred to v0.2.0.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Why Cut</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Membership Plans (entire section)</td>
+          <td>No payment = no user value. Admin paperwork with zero functional benefit for the first academy.</td>
+        </tr>
+        <tr>
+          <td>Professor management</td>
+          <td>Adds a full permissions surface. Owner-only v1. Owner can teach classes too.</td>
+        </tr>
+        <tr>
+          <td>Password reset</td>
+          <td>Use Supabase dashboard for early users. Manual is fine for 5 academies.</td>
+        </tr>
+        <tr>
+          <td>Owner Dashboard — Revenue Card</td>
+          <td>Requires manual subscription data nobody will enter. No payment processing anyway.</td>
+        </tr>
+        <tr>
+          <td>Owner Dashboard — Activity Feed</td>
+          <td>Nice UX, zero decision value at launch.</td>
+        </tr>
+        <tr>
+          <td>Owner Dashboard — Academy Pulse</td>
+          <td>Needs enough check-in history to be meaningful. Useless for a new academy day one.</td>
+        </tr>
+        <tr>
+          <td>Owner Dashboard — Live Mat</td>
+          <td>Requires real-time class status. Build the static schedule first.</td>
+        </tr>
+        <tr>
+          <td>Student — Streak / heat strip</td>
+          <td>UI-heavy. Replace with "X classes this week."</td>
+        </tr>
+        <tr>
+          <td>Student — Monthly stats card</td>
+          <td>Same as above. No data history to fill it at launch.</td>
+        </tr>
+        <tr>
+          <td>Class occupancy tracking</td>
+          <td>Adds complexity to class creation. Cut for v1.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Phases -->
+  <section>
+    <h2>Phase Plan</h2>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">00</span>
+        <span class="phase-title">Scaffold</span>
+        <span class="phase-days">2–3 days</span>
+      </div>
+      <div class="phase-body">
+        <p>One-time setup everything else runs on. Do it properly — don't come back to it.</p>
+        <ul>
+          <li>Init frontend: Vite + React + TypeScript + Tailwind (with BlackBelt tokens in tailwind.config.ts)</li>
+          <li>Init backend: Fastify + TypeScript + Prisma + Zod</li>
+          <li>Deploy empty shell to Railway — confirm env vars and Postgres connection work</li>
+          <li>Apply full Prisma schema (all 8 models) — build it now, use only what you need</li>
+          <li>Set up folder structure per architecture doc</li>
+        </ul>
+        <div class="phase-tag">Critical spike</div>
+        <ul>
+          <li><strong>Supabase Auth + Fastify JWT</strong> — spike in isolation before building features on top. Confirm SUPABASE_JWT_SECRET validates correctly via @fastify/jwt. If it takes more than 1 day, evaluate switching to simple JWT-in-Postgres.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">01</span>
+        <span class="phase-title">Auth + Onboarding</span>
+        <span class="phase-days">5–7 days</span>
+      </div>
+      <div class="phase-body">
+        <p>Gets users into the product with the right role.</p>
+        <div class="phase-tag">Backend</div>
+        <ul>
+          <li>POST /auth/register, POST /auth/login, POST /auth/logout</li>
+          <li>Auth middleware — JWT validation on all protected routes</li>
+          <li>POST /academy — create academy, generate invite code, enforce one-per-owner</li>
+          <li>POST /academy/join — validate invite code, create AcademyMember</li>
+          <li>GET /academy/:id/invite — return invite code for owner</li>
+        </ul>
+        <div class="phase-tag">Frontend</div>
+        <ul>
+          <li>ScreenSplash — role split (Master vs Aluno)</li>
+          <li>ScreenOwner — 3-step onboarding (academy → profile + belt picker → invite code reveal)</li>
+          <li>ScreenStudent — 3-step onboarding (code entry + verify → profile → belt picker)</li>
+          <li>BeltPicker widget + BeltVisual widget</li>
+          <li>Route guards — redirect unauthenticated users</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">02</span>
+        <span class="phase-title">Class Schedule</span>
+        <span class="phase-days">4–5 days</span>
+      </div>
+      <div class="phase-body">
+        <p>Owner builds the academy's weekly schedule. Students see it.</p>
+        <div class="phase-tag">Backend</div>
+        <ul>
+          <li>POST /schedule — create class (day, time, duration, instructor, location, level)</li>
+          <li>PUT /schedule/:id — edit class</li>
+          <li>PATCH /schedule/:id/deactivate — soft delete</li>
+          <li>GET /schedule — list active classes for the academy</li>
+        </ul>
+        <div class="phase-tag">Frontend</div>
+        <ul>
+          <li>Owner: class creation form + weekly schedule view</li>
+          <li>Student: today's classes list + weekly view</li>
+          <li>ClassRow component (time block + title + professor + level)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">03</span>
+        <span class="phase-title">Check-in Loop</span>
+        <span class="phase-days">4–5 days</span>
+      </div>
+      <div class="phase-body">
+        <p>The core value exchange. Students attend, owners confirm. This is the product.</p>
+        <div class="phase-tag">Backend</div>
+        <ul>
+          <li>POST /checkin — student requests (status starts pending, one per class per date)</li>
+          <li>GET /checkin/pending — owner sees pending list</li>
+          <li>PATCH /checkin/:id/approve — triggers belt progression check</li>
+          <li>PATCH /checkin/:id/reject</li>
+          <li>Domain rule enforced server-side: student cannot approve their own check-in</li>
+        </ul>
+        <div class="phase-tag">Frontend</div>
+        <ul>
+          <li>Student: ScreenClass — class detail + check-in button (simple button in v1)</li>
+          <li>Owner: pending check-in list with approve / reject actions</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">04</span>
+        <span class="phase-title">Belt Progression</span>
+        <span class="phase-days">3–4 days</span>
+      </div>
+      <div class="phase-body">
+        <p>Turns check-ins into meaningful progress. The domain logic that makes BJJ management real.</p>
+        <div class="phase-tag">Backend</div>
+        <ul>
+          <li>On check-in approval: increment approved_classes_at_level</li>
+          <li>If count ≥ 24: advance degree (or belt if degree = 4), reset counter</li>
+          <li>POST /belt/promote — owner manually promotes, creates BeltProgressionEvent</li>
+          <li>GET /students/:id/belt — current belt, degree, progress count</li>
+        </ul>
+        <div class="phase-tag">Domain rules (pure functions, tested)</div>
+        <ul>
+          <li>isBeltAdvancementEligible(approvedClasses) → boolean</li>
+          <li>calculateNextRank(belt, degree) → { belt, degree }</li>
+          <li>isCheckInSelfApproval(studentId, approverId) → boolean</li>
+        </ul>
+        <div class="phase-tag">Frontend</div>
+        <ul>
+          <li>Student home: belt progress bar (X/24 to next degree) + current belt visual</li>
+          <li>Owner: promotion queue + promote button</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">05</span>
+        <span class="phase-title">Minimal Dashboards</span>
+        <span class="phase-days">3–4 days</span>
+      </div>
+      <div class="phase-body">
+        <p>The home screens after onboarding. Stripped to what's actionable on day one.</p>
+        <div class="phase-tag">Student home</div>
+        <ul>
+          <li>Today's date + greeting</li>
+          <li>Belt progress bar</li>
+          <li>Today's classes</li>
+          <li>Recent check-in status (approved / pending / rejected)</li>
+        </ul>
+        <div class="phase-tag">Owner home</div>
+        <ul>
+          <li>Today's schedule</li>
+          <li>Pending check-ins count (the action item)</li>
+          <li>Student count by belt — roster snapshot (single query, worth it)</li>
+          <li>Promotion queue — students ready to advance</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Risks -->
+  <section>
+    <h2>Technical Risks</h2>
+
+    <div class="risk">
+      <div class="risk-title">Supabase Auth + Fastify JWT</div>
+      <p>The handoff flags this as "not plug-and-play." Spike it in Phase 0 before building anything on top. If it takes more than 1 day, evaluate a simple jsonwebtoken + custom middleware — at MVP scale it's equivalent.</p>
+    </div>
+
+    <div class="risk">
+      <div class="risk-title">Tailwind + Design Tokens</div>
+      <p>Do this once in Phase 0. Extend the theme with BlackBelt tokens, disable Tailwind defaults. If Tailwind defaults creep in (slate-700, red-500) the design breaks and is hard to audit later.</p>
+    </div>
+
+    <div class="risk">
+      <div class="risk-title">Prisma + Railway Postgres</div>
+      <p>Railway's managed Postgres uses a simple single connection URL — no pooler complexity unlike Supabase Postgres. Confirm DATABASE_URL works with a single connection string before configuring anything else.</p>
+    </div>
+  </section>
+
+  <!-- Design Polish Deferral -->
+  <section>
+    <h2>Design Polish — Deferred to v0.2.0</h2>
+    <p>The design handoff is high-fidelity and final. But for a solo developer, the interaction model matters more than visual polish in v1. These are additive — they don't change any data model or API.</p>
+    <div class="defer-grid">
+      <div class="defer-item"><span>v1 → button</span>Slide-to-confirm</div>
+      <div class="defer-item"><span>v1 → off</span>Film grain overlay</div>
+      <div class="defer-item"><span>v1 → static dot</span>Pulse halos</div>
+      <div class="defer-item"><span>v1 → none</span>Stagger animations</div>
+      <div class="defer-item"><span>v1 → spinner</span>Dot loader</div>
+      <div class="defer-item"><span>v1 → fade / none</span>Page enter transitions</div>
+    </div>
+  </section>
+
+  <!-- Outcome -->
+  <section>
+    <h2>What This Buys You</h2>
+    <div class="outcome">
+      <h3>A real BJJ academy owner can:</h3>
+      <ul>
+        <li>Create an academy and generate an invite code</li>
+        <li>Share the code — students join and set their starting belt</li>
+        <li>Post the weekly schedule</li>
+        <li>Students request check-ins after class</li>
+        <li>Owner approves them from their phone in 30 seconds</li>
+        <li>Belt progress updates automatically</li>
+        <li>Owner promotes a student when they hit 24 classes</li>
+      </ul>
+
+      <div class="estimate">
+        <div class="estimate-num">6–8</div>
+        <div class="estimate-label">
+          <strong>weeks to a working v1 in production</strong>
+          Working consistently, solo. One real academy using it. Everything else is polish on a proven foundation.
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  owner
+  professor
+  student
+}
+
+enum MemberStatus {
+  active
+  inactive
+  suspended
+}
+
+enum Belt {
+  white
+  blue
+  purple
+  brown
+  black
+  coral
+  red
+}
+
+enum CheckInStatus {
+  pending
+  approved
+  rejected
+}
+
+enum SubscriptionStatus {
+  active
+  overdue
+  cancelled
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  nickname     String?
+  avatarUrl    String?  @map("avatar_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  academy              Academy?
+  academyMemberships   AcademyMember[]
+  beltChangesPerformed BeltProgressionEvent[] @relation("PerformedBy")
+  checkInsReviewed     CheckIn[]              @relation("ReviewedBy")
+
+  @@map("users")
+}
+
+model Academy {
+  id         String   @id @default(uuid())
+  name       String
+  city       String
+  inviteCode String   @unique @map("invite_code")
+  ownerId    String   @unique @map("owner_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  owner           User            @relation(fields: [ownerId], references: [id])
+  members         AcademyMember[]
+  classSchedules  ClassSchedule[]
+  membershipPlans MembershipPlan[]
+  checkIns        CheckIn[]
+
+  @@map("academies")
+}
+
+model AcademyMember {
+  id         String       @id @default(uuid())
+  academyId  String       @map("academy_id")
+  userId     String       @map("user_id")
+  role       Role
+  status     MemberStatus @default(active)
+  joinedAt   DateTime     @default(now()) @map("joined_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  academy              Academy               @relation(fields: [academyId], references: [id])
+  user                 User                  @relation(fields: [userId], references: [id])
+  studentBelt          StudentBelt?
+  membershipSubscription MembershipSubscription?
+  checkIns             CheckIn[]
+  beltProgressionEvents BeltProgressionEvent[]
+
+  @@unique([userId, academyId])
+  @@map("academy_members")
+}
+
+model StudentBelt {
+  id                    String   @id @default(uuid())
+  academyMemberId       String   @unique @map("academy_member_id")
+  belt                  Belt     @default(white)
+  degree                Int      @default(0)
+  approvedClassesAtLevel Int     @default(0) @map("approved_classes_at_level")
+  lastChangedAt         DateTime @default(now()) @map("last_changed_at")
+  changedBy             String   @map("changed_by")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  academyMember     AcademyMember          @relation(fields: [academyMemberId], references: [id])
+  progressionEvents BeltProgressionEvent[]
+
+  @@map("student_belts")
+}
+
+model BeltProgressionEvent {
+  id              String   @id @default(uuid())
+  studentBeltId   String   @map("student_belt_id")
+  academyMemberId String   @map("academy_member_id")
+  previousBelt    Belt     @map("previous_belt")
+  previousDegree  Int      @map("previous_degree")
+  newBelt         Belt     @map("new_belt")
+  newDegree       Int      @map("new_degree")
+  reason          String?
+  performedBy     String   @map("performed_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  studentBelt   StudentBelt   @relation(fields: [studentBeltId], references: [id])
+  academyMember AcademyMember @relation(fields: [academyMemberId], references: [id])
+  performer     User          @relation("PerformedBy", fields: [performedBy], references: [id])
+
+  @@map("belt_progression_events")
+}
+
+model ClassSchedule {
+  id              String   @id @default(uuid())
+  academyId       String   @map("academy_id")
+  title           String
+  dayOfWeek       Int      @map("day_of_week")
+  startTime       String   @map("start_time")
+  durationMinutes Int      @map("duration_minutes")
+  location        String?
+  level           String?
+  instructorId    String   @map("instructor_id")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  academy  Academy   @relation(fields: [academyId], references: [id])
+  checkIns CheckIn[]
+
+  @@map("class_schedules")
+}
+
+model CheckIn {
+  id              String        @id @default(uuid())
+  academyId       String        @map("academy_id")
+  studentMemberId String        @map("student_member_id")
+  classScheduleId String        @map("class_schedule_id")
+  classDate       DateTime      @map("class_date") @db.Date
+  status          CheckInStatus @default(pending)
+  reviewedBy      String?       @map("reviewed_by")
+  reviewedAt      DateTime?     @map("reviewed_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  academy       Academy       @relation(fields: [academyId], references: [id])
+  studentMember AcademyMember @relation(fields: [studentMemberId], references: [id])
+  classSchedule ClassSchedule @relation(fields: [classScheduleId], references: [id])
+  reviewer      User?         @relation("ReviewedBy", fields: [reviewedBy], references: [id])
+
+  @@unique([studentMemberId, classScheduleId, classDate])
+  @@map("check_ins")
+}
+
+model MembershipPlan {
+  id         String   @id @default(uuid())
+  academyId  String   @map("academy_id")
+  name       String
+  priceCents Int      @map("price_cents")
+  currency   String   @default("BRL")
+  periodDays Int      @map("period_days")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  academy       Academy                @relation(fields: [academyId], references: [id])
+  subscriptions MembershipSubscription[]
+
+  @@map("membership_plans")
+}
+
+model MembershipSubscription {
+  id              String             @id @default(uuid())
+  academyMemberId String             @unique @map("academy_member_id")
+  planId          String             @map("plan_id")
+  status          SubscriptionStatus @default(active)
+  startedAt       DateTime           @map("started_at") @db.Date
+  expiresAt       DateTime           @map("expires_at") @db.Date
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  academyMember AcademyMember  @relation(fields: [academyMemberId], references: [id])
+  plan          MembershipPlan @relation(fields: [planId], references: [id])
+
+  @@map("membership_subscriptions")
+}

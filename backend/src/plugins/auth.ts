@@ -10,5 +10,6 @@ type AuthPluginOptions = {
 
 export async function authPlugin(app: FastifyInstance, options: AuthPluginOptions) {
   app.decorateRequest('authenticatedUser')
+  app.decorateRequest('userOnboardingRole')
   await authRoutes(app, options.authService, options.verifyAccessToken)
 }

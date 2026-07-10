@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export type SupabaseJwtPayload = {
   sub: string
   email: string
@@ -18,8 +20,15 @@ export type AuthenticatedUser = {
 
 export type AccessTokenVerifier = (token: string) => Promise<SupabaseJwtPayload>
 
+export const onboardingRoleSchema = z.object({
+  role: z.enum(['owner', 'student']),
+})
+
+export type OnboardingRoleInput = z.infer<typeof onboardingRoleSchema>
+
 declare module 'fastify' {
   interface FastifyRequest {
     authenticatedUser?: AuthenticatedUser
+    userOnboardingRole?: 'owner' | 'student' | null
   }
 }

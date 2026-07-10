@@ -1,9 +1,37 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { apiClient } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 
 export function RoleChoicePage() {
+  const navigate = useNavigate()
   const [selectedRole, setSelectedRole] = useState<'owner' | 'student' | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [isSigningOut, setIsSigningOut] = useState(false)
+
+  async function handleRoleSelect(role: 'owner' | 'student') {
+    setSelectedRole(role)
+    setIsSubmitting(true)
+    setError(null)
+
+    const { error: apiError } = await apiClient<{
+      user: { id: string; email: string; fullName: string; onboardingRole: string }
+    }>('/auth/onboarding', {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+    })
+
+    setIsSubmitting(false)
+
+    if (apiError) {
+      setError(apiError.message || 'Não foi possível selecionar o papel. Tente novamente.')
+      setSelectedRole(null)
+      return
+    }
+
+    navigate(role === 'owner' ? '/onboarding/mestre' : '/onboarding/aluno')
+  }
 
   async function signOut() {
     setIsSigningOut(true)
@@ -34,21 +62,28 @@ export function RoleChoicePage() {
             kicker="01 / MESTRE"
             title="GERENCIO MINHA ACADEMIA"
             subtitle="Academia, equipe, agenda e alunos."
-            onClick={() => setSelectedRole('owner')}
+            onClick={() => handleRoleSelect('owner')}
+            disabled={isSubmitting}
           />
           <RoleCard
             icon={<ShieldIcon />}
             kicker="02 / ALUNO"
             title="TREINO NO TATAME"
             subtitle="Aulas, presença e evolução na faixa."
-            onClick={() => setSelectedRole('student')}
+            onClick={() => handleRoleSelect('student')}
+            disabled={isSubmitting}
           />
         </div>
-        {selectedRole ? (
+        {error && (
+          <p className="role-notice" role="alert">
+            {error}
+          </p>
+        )}
+        {selectedRole && !error && (
           <p className="role-notice" role="status">
             {selectedRole === 'owner' ? 'Onboarding de mestre' : 'Onboarding de aluno'} será o próximo passo.
           </p>
-        ) : null}
+        )}
         <p className="role-page__footer">OSS · RESPEITE A ARTE</p>
       </section>
     </main>
@@ -61,15 +96,17 @@ function RoleCard({
   onClick,
   subtitle,
   title,
+  disabled,
 }: {
   icon: React.ReactNode
   kicker: string
   onClick: () => void
   subtitle: string
   title: string
+  disabled?: boolean
 }) {
   return (
-    <button className="role-card" type="button" onClick={onClick}>
+    <button className="role-card" type="button" onClick={onClick} disabled={disabled}>
       <span className="role-card__icon" aria-hidden="true">{icon}</span>
       <span className="role-card__copy">
         <small>{kicker}</small>

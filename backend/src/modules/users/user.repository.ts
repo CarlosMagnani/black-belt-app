@@ -1,4 +1,4 @@
-import type { User } from '@prisma/client'
+import type { OnboardingRole, User } from '@prisma/client'
 import { prisma } from '../../lib/prisma'
 
 export type SyncUserInput = {
@@ -9,6 +9,7 @@ export type SyncUserInput = {
 
 export interface UserRepository {
   sync(input: SyncUserInput): Promise<User>
+  setOnboardingRole(userId: string, role: OnboardingRole): Promise<User>
 }
 
 export class PrismaUserRepository implements UserRepository {
@@ -17,6 +18,13 @@ export class PrismaUserRepository implements UserRepository {
       where: { id: input.id },
       create: input,
       update: { email: input.email },
+    })
+  }
+
+  setOnboardingRole(userId: string, role: OnboardingRole) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { onboardingRole: role },
     })
   }
 }

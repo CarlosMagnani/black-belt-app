@@ -24,6 +24,7 @@ export function createAuthenticate(authService: AuthService, verifyAccessToken: 
         email: user.email,
         fullName: user.fullName,
       }
+      request.userOnboardingRole = user.onboardingRole
     } catch (error) {
       request.log.error(
         { err: error, event: 'auth_user_sync_failed', userId: payload.sub },

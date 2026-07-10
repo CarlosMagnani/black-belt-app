@@ -1,9 +1,10 @@
-import type { User } from '@prisma/client'
+import type { OnboardingRole, User } from '@prisma/client'
 import type { UserRepository } from '../users/user.repository'
 import type { SupabaseJwtPayload } from './auth.types'
 
 export interface AuthService {
   syncAuthenticatedUser(payload: SupabaseJwtPayload): Promise<User>
+  setOnboardingRole(userId: string, role: OnboardingRole): Promise<User>
 }
 
 export class DefaultAuthService implements AuthService {
@@ -15,6 +16,10 @@ export class DefaultAuthService implements AuthService {
       email: payload.email,
       fullName: getFullName(payload),
     })
+  }
+
+  setOnboardingRole(userId: string, role: OnboardingRole) {
+    return this.userRepository.setOnboardingRole(userId, role)
   }
 }
 

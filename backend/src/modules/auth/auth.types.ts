@@ -16,6 +16,8 @@ export type AuthenticatedUser = {
   fullName: string
 }
 
+export type AccessTokenVerifier = (token: string) => Promise<SupabaseJwtPayload>
+
 declare module 'fastify' {
   interface FastifyRequest {
     authenticatedUser?: AuthenticatedUser

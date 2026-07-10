@@ -1,19 +1,14 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { AuthService } from './auth.service'
-import type { SupabaseJwtPayload } from './auth.types'
+import type { AccessTokenVerifier, SupabaseJwtPayload } from './auth.types'
 
-export function createAuthenticate(authService: AuthService) {
+export function createAuthenticate(authService: AuthService, verifyAccessToken: AccessTokenVerifier) {
   return async function authenticate(request: FastifyRequest, reply: FastifyReply) {
     let payload: SupabaseJwtPayload
 
     try {
-      payload = await request.jwtVerify<SupabaseJwtPayload>({
-        requiredClaims: ['sub', 'email', 'role'],
-      })
-
-      if (payload.role !== 'authenticated' || !payload.sub || !payload.email) {
-        throw new Error('Invalid authenticated user claims')
-      }
+      const token = getBearerToken(request.headers.authorization)
+      payload = await verifyAccessToken(token)
     } catch {
       request.log.warn({ event: 'auth_failed' }, 'Authentication failed')
       return reply.code(401).send({
@@ -40,4 +35,14 @@ export function createAuthenticate(authService: AuthService) {
       })
     }
   }
+}
+
+function getBearerToken(authorization: string | undefined) {
+  const match = authorization?.match(/^Bearer\s+(\S+)$/i)
+
+  if (!match) {
+    throw new Error('Missing bearer token')
+  }
+
+  return match[1]
 }

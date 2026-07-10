@@ -4,7 +4,6 @@ import { buildApp } from './app'
 
 async function start() {
   const app = buildApp({
-    jwtSecret: env.SUPABASE_JWT_SECRET,
     supabaseUrl: env.SUPABASE_URL,
   })
 

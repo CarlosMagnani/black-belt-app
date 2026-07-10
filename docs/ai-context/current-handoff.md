@@ -4,23 +4,27 @@
 
 Connect the React authentication flow to the completed Fastify/Supabase Auth backend boundary.
 
-Backend authentication completed on 2026-07-10:
+Backend authentication and Supabase project configuration completed on 2026-07-10:
 
-- Fastify validates Supabase HS256 access tokens using the configured secret.
-- Verification enforces the Supabase project issuer, `authenticated` audience, required identity claims, and token expiration.
+- Fastify validates Supabase ES256 access tokens with `jose` and the project's public JWKS endpoint.
+- Verification enforces ES256, the Supabase project issuer, `authenticated` audience, required identity claims, and token expiration.
 - `GET /auth/me` is the first protected endpoint and returns the local application user.
 - The first protected request upserts the Supabase user into the Prisma `User` table.
 - Authentication failures use the `{ data, error }` API envelope without exposing token or database details.
 - The local `password_hash` field is nullable because Supabase Auth owns password storage.
+- Supabase project `black-belt-app` (`lvwaruajmfwkajbkbbuq`) is active and healthy.
+- Development Site URL is `http://localhost:5173`; `http://localhost:5173/**` is allowed for redirects.
+- Email/password signup is enabled with confirmation required, anonymous signup disabled, and an 8-character minimum password.
+- Public API roles can no longer execute the privileged `public.rls_auto_enable()` event-trigger function; the security advisor reports no findings.
 
 Next implementation focus:
 
-- Configure real `DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_JWT_SECRET` values locally.
+- Configure a real `DATABASE_URL` locally. `SUPABASE_URL` is already configured for development.
 - Create/apply the initial Prisma migration against the development database.
 - Add the frontend Supabase client for registration, login, refresh persistence, logout, and password reset.
 - Send the Supabase access token to `GET /auth/me` and protected API routes.
 
-Open risk: the accepted auth ADR uses the legacy shared JWT secret. Current Supabase guidance recommends migrating to asymmetric signing keys and JWKS verification. Changing that accepted auth flow requires owner approval.
+Open risk: live end-to-end token verification still requires the frontend Supabase client and a confirmed test user. Local tests verify the same ES256/JWKS path with generated keys.
 
 Commands run:
 
@@ -28,6 +32,7 @@ Commands run:
 npm run db:generate
 npm run build
 npm test
+npm audit --omit=dev
 npx prisma validate
 npx prisma format
 git diff --check

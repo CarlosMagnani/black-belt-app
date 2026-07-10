@@ -6,6 +6,8 @@ Accepted
 ## Date
 2026-05-10
 
+Amended 2026-07-10 to use asymmetric JWT signing and JWKS verification.
+
 ## Owner
 CarlosMagnani
 
@@ -36,22 +38,22 @@ Use Supabase Auth.
 - No custom password hashing or refresh token rotation
 - Email/password, magic link, and OAuth built-in
 - Password reset email handled automatically
-- JWTs are standard — Fastify verifies them with `@fastify/jwt` + `SUPABASE_JWT_SECRET`
+- JWTs are standard — Fastify verifies ES256 tokens with `jose` and Supabase's public JWKS endpoint
 - Supabase dashboard for user management during development
 
 ## Negative Consequences
 
 - Vendor dependency on Supabase
-- Supabase Auth is not plug-and-play with Fastify — requires manual JWT verification middleware
+- Supabase Auth is not plug-and-play with Fastify — requires a small JWT verification middleware
 - User table in our DB must be kept in sync with Supabase auth.users (via webhook or on first API call)
 
 ## Impact
 
-Auth module, all protected routes, Fastify JWT plugin setup.
+Auth module, all protected routes, and remote JWKS verification setup.
 
 ## Rollback Plan
 
-JWTs are standard. Switching auth providers means changing token issuance only. Our `User` table already exists independently. Fastify verification middleware would need updating, not the business logic.
+JWTs are standard. Switching auth providers means changing token issuance and the verifier's issuer/JWKS configuration. Our `User` table already exists independently, so business logic remains unchanged.
 
 ---
 
@@ -60,8 +62,10 @@ JWTs are standard. Switching auth providers means changing token issuance only. 
 Integration pattern:
 1. Frontend calls Supabase Auth SDK to login → receives JWT
 2. Frontend sends JWT in `Authorization: Bearer <token>` header
-3. Fastify middleware verifies JWT using `SUPABASE_JWT_SECRET`
+3. Fastify middleware verifies the ES256 JWT against `<SUPABASE_URL>/auth/v1/.well-known/jwks.json`
 4. Middleware extracts `sub` (user UUID) and attaches to request
 5. On first call from a new user, create row in our `User` table
 
-Required env vars: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`
+Required backend auth env var: `SUPABASE_URL`
+
+The frontend uses the project's publishable API key. The legacy JWT secret and secret/service-role keys are never exposed to clients.

@@ -62,7 +62,7 @@ Stack fully confirmed. No open decisions.
 
 - High performance, low overhead
 - Excellent TypeScript support (typed request/reply with generics)
-- Plugin ecosystem: `@fastify/jwt`, `@fastify/cors`, `@fastify/helmet`
+- Plugin ecosystem: `@fastify/cors`, `@fastify/helmet`
 - No framework magic — explicit and readable
 
 **API Style:** REST
@@ -72,8 +72,8 @@ Stack fully confirmed. No open decisions.
 
 **Authentication:** Supabase Auth
 - Managed auth — no custom password hashing or session storage
-- Supabase issues JWTs; Fastify validates on each request via `@fastify/jwt`
-- Required env var: `SUPABASE_JWT_SECRET`
+- Supabase issues ES256 JWTs; Fastify validates each request with `jose` against Supabase's public JWKS endpoint
+- Required backend env var: `SUPABASE_URL`
 - User sync: on first login, create a row in our `User` table if not exists
 
 **Input Validation:** Zod
@@ -173,11 +173,11 @@ See `docs/ai-context/04-data-model.md` for entity definitions.
 ```
 DATABASE_URL=
 SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_JWT_SECRET=
 NODE_ENV=production
 PORT=3000
 ```
+
+The frontend uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Secret and legacy JWT keys must never be exposed through `VITE_` variables.
 
 **CI:** GitHub Actions
 - On PR: lint + type check + unit tests

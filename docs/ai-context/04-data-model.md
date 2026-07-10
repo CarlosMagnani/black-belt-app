@@ -12,7 +12,7 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 |-------|------|-------|
 | id | UUID | Primary key |
 | email | string | Unique, used for auth |
-| password_hash | string | Never store plaintext |
+| password_hash | string | Nullable and unused while Supabase Auth owns passwords; never store plaintext |
 | full_name | string | Required |
 | nickname | string | Optional (apelido) |
 | avatar_url | string | Optional, profile photo |
@@ -25,7 +25,7 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 
 **Constraints:**
 - Email must be unique across all users
-- Password hash is never exposed via API
+- Password hash is managed by Supabase Auth, remains unset in the application database, and is never exposed via API
 
 ---
 

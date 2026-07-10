@@ -44,7 +44,7 @@ enum SubscriptionStatus {
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
-  passwordHash String   @map("password_hash")
+  passwordHash String?  @map("password_hash")
   fullName     String   @map("full_name")
   nickname     String?
   avatarUrl    String?  @map("avatar_url")
@@ -68,7 +68,7 @@ model Academy {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  owner           User            @relation(fields: [ownerId], references: [id])
+  owner           User             @relation(fields: [ownerId], references: [id])
   members         AcademyMember[]
   classSchedules  ClassSchedule[]
   membershipPlans MembershipPlan[]
@@ -78,36 +78,36 @@ model Academy {
 }
 
 model AcademyMember {
-  id         String       @id @default(uuid())
-  academyId  String       @map("academy_id")
-  userId     String       @map("user_id")
-  role       Role
-  status     MemberStatus @default(active)
-  joinedAt   DateTime     @default(now()) @map("joined_at")
-  createdAt  DateTime     @default(now()) @map("created_at")
-  updatedAt  DateTime     @updatedAt @map("updated_at")
+  id        String       @id @default(uuid())
+  academyId String       @map("academy_id")
+  userId    String       @map("user_id")
+  role      Role
+  status    MemberStatus @default(active)
+  joinedAt  DateTime     @default(now()) @map("joined_at")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
 
-  academy              Academy               @relation(fields: [academyId], references: [id])
-  user                 User                  @relation(fields: [userId], references: [id])
-  studentBelt          StudentBelt?
+  academy                Academy                 @relation(fields: [academyId], references: [id])
+  user                   User                    @relation(fields: [userId], references: [id])
+  studentBelt            StudentBelt?
   membershipSubscription MembershipSubscription?
-  checkIns             CheckIn[]
-  beltProgressionEvents BeltProgressionEvent[]
+  checkIns               CheckIn[]
+  beltProgressionEvents  BeltProgressionEvent[]
 
   @@unique([userId, academyId])
   @@map("academy_members")
 }
 
 model StudentBelt {
-  id                    String   @id @default(uuid())
-  academyMemberId       String   @unique @map("academy_member_id")
-  belt                  Belt     @default(white)
-  degree                Int      @default(0)
-  approvedClassesAtLevel Int     @default(0) @map("approved_classes_at_level")
-  lastChangedAt         DateTime @default(now()) @map("last_changed_at")
-  changedBy             String   @map("changed_by")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                     String   @id @default(uuid())
+  academyMemberId        String   @unique @map("academy_member_id")
+  belt                   Belt     @default(white)
+  degree                 Int      @default(0)
+  approvedClassesAtLevel Int      @default(0) @map("approved_classes_at_level")
+  lastChangedAt          DateTime @default(now()) @map("last_changed_at")
+  changedBy              String   @map("changed_by")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
   academyMember     AcademyMember          @relation(fields: [academyMemberId], references: [id])
   progressionEvents BeltProgressionEvent[]
@@ -186,7 +186,7 @@ model MembershipPlan {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  academy       Academy                @relation(fields: [academyId], references: [id])
+  academy       Academy                  @relation(fields: [academyId], references: [id])
   subscriptions MembershipSubscription[]
 
   @@map("membership_plans")

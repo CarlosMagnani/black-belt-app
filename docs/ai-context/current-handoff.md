@@ -2,15 +2,36 @@
 
 ## 1. Current Goal
 
-Configure the BlackBelt project to be AI-ready using a simple Harness Engineering structure for MVP development.
+Connect the React authentication flow to the completed Fastify/Supabase Auth backend boundary.
 
-The current focus is:
+Backend authentication completed on 2026-07-10:
 
-- Preserve the existing BlackBelt product vision.
-- Preserve the existing high-fidelity design direction.
-- Build the first version as a React PWA.
-- Keep the architecture simple for MVP.
-- Prepare the repository so ChatGPT, Claude Code, OpenCode, and future AI agents can work consistently.
+- Fastify validates Supabase HS256 access tokens using the configured secret.
+- Verification enforces the Supabase project issuer, `authenticated` audience, required identity claims, and token expiration.
+- `GET /auth/me` is the first protected endpoint and returns the local application user.
+- The first protected request upserts the Supabase user into the Prisma `User` table.
+- Authentication failures use the `{ data, error }` API envelope without exposing token or database details.
+- The local `password_hash` field is nullable because Supabase Auth owns password storage.
+
+Next implementation focus:
+
+- Configure real `DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_JWT_SECRET` values locally.
+- Create/apply the initial Prisma migration against the development database.
+- Add the frontend Supabase client for registration, login, refresh persistence, logout, and password reset.
+- Send the Supabase access token to `GET /auth/me` and protected API routes.
+
+Open risk: the accepted auth ADR uses the legacy shared JWT secret. Current Supabase guidance recommends migrating to asymmetric signing keys and JWKS verification. Changing that accepted auth flow requires owner approval.
+
+Commands run:
+
+```txt
+npm run db:generate
+npm run build
+npm test
+npx prisma validate
+npx prisma format
+git diff --check
+```
 
 ---
 

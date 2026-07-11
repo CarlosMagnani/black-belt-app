@@ -3,6 +3,9 @@ import { z } from 'zod'
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   SUPABASE_URL: z.url(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  STORAGE_BUCKET: z.string().min(1).default('academy-media'),
+  STORAGE_PROVIDER: z.enum(['supabase']).default('supabase'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3001),
 })

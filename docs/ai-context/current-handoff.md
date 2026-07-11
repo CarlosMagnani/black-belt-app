@@ -33,11 +33,18 @@ Owner onboarding UI completed on 2026-07-10:
 - Invite copy/share controls operate only on the visibly labelled local preview. The final action explains that backend creation is still pending.
 - Returning to the role screen from the first onboarding step can resume the owner flow in the same browser navigation session without attempting to save the already-selected role again.
 
+Media storage foundation completed on 2026-07-10:
+
+- Supabase project `lvwaruajmfwkajbkbbuq` now has a private `academy-media` bucket restricted to JPEG, PNG, and WebP files up to 5 MB.
+- Storage object RLS is enabled and there are no browser-facing Storage policies. Future uploads must go through the backend using its server-only service-role key.
+- Backend code uses an `ObjectStorage` port and factory; `SupabaseObjectStorage` is the current adapter. Academy use cases must depend on the port rather than Supabase directly, so a future provider only requires another adapter and one factory change.
+
 Next implementation focus:
 
 - Configure a real `DATABASE_URL` locally. `SUPABASE_URL` is already configured for development.
 - Create/apply the initial Prisma migration against the development database.
-- Build the owner onboarding API slice: academy creation, owner membership/profile details, Supabase Storage uploads for academy logo and owner photo, and a server-generated invite code. Connect the existing owner UI only after that contract is ready.
+- Configure `SUPABASE_SERVICE_ROLE_KEY` in the backend-only environment before implementing uploads. Never put it in the frontend environment.
+- Build the owner onboarding API slice: academy creation, owner membership/profile details, uploads through the `ObjectStorage` port for academy logo and owner photo, and a server-generated invite code. Connect the existing owner UI only after that contract is ready.
 - Build the student onboarding route and its invite-verification API slice.
 - Send the Supabase access token to `GET /auth/me` and protected API routes after the local database is ready.
 - Implement password recovery as the next separate auth slice.

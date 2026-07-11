@@ -2,7 +2,7 @@
 
 ## 1. Current Goal
 
-Configure the development database, then build the role-specific onboarding flow.
+Configure the development database, then connect the role-specific onboarding flows to their APIs.
 
 Backend authentication and Supabase project configuration completed on 2026-07-10:
 
@@ -25,15 +25,24 @@ Frontend authentication completed on 2026-07-10:
 - Session restoration, route guards, and logout are implemented with `@supabase/supabase-js`.
 - Existing owner/student role cards are recreated as the post-login destination; their full onboarding routes are intentionally deferred.
 
+Owner onboarding UI completed on 2026-07-10:
+
+- `/onboarding/mestre` is now a mobile-first, three-step owner onboarding flow: academy details, owner profile/grade, and invite preview.
+- Academy logo and owner-photo controls are optional local previews: JPEG, PNG, or WebP files up to 5 MB, with replace/remove actions and no crop editor.
+- The flow uses local React state only. It validates required academy, city, name, and belt fields but does not create an academy, profile, invitation, or QR code in the backend.
+- Invite copy/share controls operate only on the visibly labelled local preview. The final action explains that backend creation is still pending.
+- Returning to the role screen from the first onboarding step can resume the owner flow in the same browser navigation session without attempting to save the already-selected role again.
+
 Next implementation focus:
 
 - Configure a real `DATABASE_URL` locally. `SUPABASE_URL` is already configured for development.
 - Create/apply the initial Prisma migration against the development database.
-- Build the owner and student onboarding routes behind the role-selection cards.
+- Build the owner onboarding API slice: academy creation, owner membership/profile details, Supabase Storage uploads for academy logo and owner photo, and a server-generated invite code. Connect the existing owner UI only after that contract is ready.
+- Build the student onboarding route and its invite-verification API slice.
 - Send the Supabase access token to `GET /auth/me` and protected API routes after the local database is ready.
 - Implement password recovery as the next separate auth slice.
 
-Open risk: live end-to-end signup and confirmation still need a disposable confirmed test account. The frontend deliberately does not call `/auth/me` until the application database and its first migration exist.
+Open risk: live end-to-end signup and confirmation still need a disposable confirmed test account. The owner onboarding screen has not been manually exercised behind the authenticated route for the same reason. The frontend deliberately does not call `/auth/me` until the application database and its first migration exist.
 
 Commands run:
 

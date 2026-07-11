@@ -3,19 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthPage, ConfirmationPage } from './features/auth/AuthPage'
 import { RoleChoicePage } from './features/auth/RoleChoicePage'
+import { OwnerOnboardingPage } from './features/onboarding/OwnerOnboardingPage'
 import { supabase } from './lib/supabase'
-
-function OwnerOnboardingPlaceholder() {
-  return (
-    <main className="onboarding-placeholder bb-grain">
-      <section className="page-enter">
-        <p className="eyebrow">ONBOARDING MESTRE</p>
-        <h1>CRIAR ACADEMIA</h1>
-        <p>Em breve...</p>
-      </section>
-    </main>
-  )
-}
 
 function StudentOnboardingPlaceholder() {
   return (
@@ -58,7 +47,7 @@ function App() {
         <Route path="/criar-conta" element={session ? <Navigate to="/boas-vindas" replace /> : <AuthPage mode="register" />} />
         <Route path="/confirmar-email" element={session ? <Navigate to="/boas-vindas" replace /> : <ConfirmationPage />} />
         <Route path="/boas-vindas" element={session ? <RoleChoicePage /> : <Navigate to="/entrar" replace />} />
-        <Route path="/onboarding/mestre" element={session ? <OwnerOnboardingPlaceholder /> : <Navigate to="/entrar" replace />} />
+        <Route path="/onboarding/mestre" element={session ? <OwnerOnboardingPage /> : <Navigate to="/entrar" replace />} />
         <Route path="/onboarding/aluno" element={session ? <StudentOnboardingPlaceholder /> : <Navigate to="/entrar" replace />} />
         <Route path="*" element={<Navigate to={session ? '/boas-vindas' : '/entrar'} replace />} />
       </Routes>

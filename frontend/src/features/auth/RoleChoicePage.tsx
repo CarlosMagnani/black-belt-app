@@ -1,16 +1,27 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiClient } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 
 export function RoleChoicePage() {
+  const location = useLocation()
   const navigate = useNavigate()
   const [selectedRole, setSelectedRole] = useState<'owner' | 'student' | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const returningOwner = location.state?.onboardingRole === 'owner'
 
   async function handleRoleSelect(role: 'owner' | 'student') {
+    if (returningOwner) {
+      if (role === 'owner') {
+        navigate('/onboarding/mestre')
+      } else {
+        setError('Seu papel de mestre já foi selecionado. Continue o onboarding da academia.')
+      }
+      return
+    }
+
     setSelectedRole(role)
     setIsSubmitting(true)
     setError(null)

@@ -11,11 +11,15 @@ import { createObjectStorage } from './modules/storage/create-object-storage'
 import { DefaultAcademyService, type AcademyService } from './modules/academy/academy.service'
 import { PrismaAcademyRepository } from './modules/academy/academy.repository'
 import { academyRoutes } from './modules/academy/academy.routes'
+import { DefaultMembershipService, type MembershipService } from './modules/membership/membership.service'
+import { PrismaMembershipRepository } from './modules/membership/membership.repository'
+import { membershipRoutes } from './modules/membership/membership.routes'
 
 type BuildAppOptions = {
   academyService?: AcademyService
   authService?: AuthService
   logger?: boolean
+  membershipService?: MembershipService
   supabaseUrl: string
   supabaseSecretKey?: string
   storageBucket?: string
@@ -29,6 +33,7 @@ export function buildApp(options: BuildAppOptions) {
   const verifyAccessToken = options.verifyAccessToken ?? createSupabaseTokenVerifier(options.supabaseUrl)
 
   const academyService = options.academyService ?? createDefaultAcademyService(options)
+  const membershipService = options.membershipService ?? createDefaultMembershipService(options)
 
   app.register(cors, { origin: true })
   app.register(helmet)
@@ -45,6 +50,7 @@ export function buildApp(options: BuildAppOptions) {
 
   app.register(async (app) => {
     await academyRoutes(app, academyService, authService, verifyAccessToken)
+    await membershipRoutes(app, membershipService, authService, verifyAccessToken)
   })
 
   app.get('/health', async () => ({ status: 'ok' }))
@@ -61,4 +67,15 @@ function createDefaultAcademyService(options: BuildAppOptions) {
   })
 
   return new DefaultAcademyService(new PrismaAcademyRepository(), objectStorage)
+}
+
+function createDefaultMembershipService(options: BuildAppOptions) {
+  const objectStorage = createObjectStorage({
+    provider: 'supabase',
+    supabaseUrl: options.supabaseUrl,
+    secretKey: options.supabaseSecretKey ?? '',
+    bucket: options.storageBucket ?? 'academy-media',
+  })
+
+  return new DefaultMembershipService(new PrismaMembershipRepository(), objectStorage)
 }

@@ -179,6 +179,7 @@ button:disabled { cursor: not-allowed; }
 .onboarding-page__content { flex: 1; padding: 26px 24px; }
 .onboarding-page__footer { position: sticky; bottom: 0; z-index: 1; padding: 12px 24px max(24px, env(safe-area-inset-bottom)); border-top: 1px solid var(--color-line); background: rgba(10,10,10,.96); }
 .onboarding-page__action { width: 100%; }
+.onboarding-submit-error { margin: 0 0 10px; border-left: 4px solid var(--color-red); background: var(--color-surface-2); padding: 10px 12px; color: var(--color-text-2); font-size: 12px; line-height: 1.45; }
 .onboarding-step h1 { margin: 0; font-family: var(--font-display); font-size: clamp(2.3rem, 11vw, 3rem); line-height: .93; letter-spacing: -.04em; }
 .onboarding-step h1 span { color: var(--color-red); }
 .onboarding-step__lead { margin: 14px 0 28px; color: var(--color-muted-2); font-size: 14px; line-height: 1.55; }

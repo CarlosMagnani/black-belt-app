@@ -5,7 +5,7 @@ import { buildApp } from './app'
 async function start() {
   const app = buildApp({
     supabaseUrl: env.SUPABASE_URL,
-    supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+    supabaseSecretKey: env.SUPABASE_SECRET_KEY,
     storageBucket: env.STORAGE_BUCKET,
   })
 

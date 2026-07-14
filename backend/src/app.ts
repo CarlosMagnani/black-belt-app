@@ -8,16 +8,17 @@ import type { AccessTokenVerifier } from './modules/auth/auth.types'
 import { PrismaUserRepository } from './modules/users/user.repository'
 import { authPlugin } from './plugins/auth'
 import { createObjectStorage } from './modules/storage/create-object-storage'
-import { DefaultAcademyService } from './modules/academy/academy.service'
+import { DefaultAcademyService, type AcademyService } from './modules/academy/academy.service'
 import { PrismaAcademyRepository } from './modules/academy/academy.repository'
 import { academyRoutes } from './modules/academy/academy.routes'
 
 type BuildAppOptions = {
+  academyService?: AcademyService
   authService?: AuthService
   logger?: boolean
   supabaseUrl: string
-  supabaseServiceRoleKey: string
-  storageBucket: string
+  supabaseSecretKey?: string
+  storageBucket?: string
   verifyAccessToken?: AccessTokenVerifier
 }
 
@@ -27,19 +28,12 @@ export function buildApp(options: BuildAppOptions) {
   const authService = options.authService ?? new DefaultAuthService(userRepository)
   const verifyAccessToken = options.verifyAccessToken ?? createSupabaseTokenVerifier(options.supabaseUrl)
 
-  const objectStorage = createObjectStorage({
-    provider: 'supabase',
-    supabaseUrl: options.supabaseUrl,
-    serviceRoleKey: options.supabaseServiceRoleKey,
-    bucket: options.storageBucket,
-  })
-
-  const academyRepository = new PrismaAcademyRepository()
-  const academyService = new DefaultAcademyService(academyRepository, userRepository, objectStorage)
+  const academyService = options.academyService ?? createDefaultAcademyService(options)
 
   app.register(cors, { origin: true })
   app.register(helmet)
   app.register(multipart, {
+    throwFileSizeLimit: false,
     limits: {
       fileSize: 5 * 1024 * 1024,
     },
@@ -56,4 +50,15 @@ export function buildApp(options: BuildAppOptions) {
   app.get('/health', async () => ({ status: 'ok' }))
 
   return app
+}
+
+function createDefaultAcademyService(options: BuildAppOptions) {
+  const objectStorage = createObjectStorage({
+    provider: 'supabase',
+    supabaseUrl: options.supabaseUrl,
+    secretKey: options.supabaseSecretKey ?? '',
+    bucket: options.storageBucket ?? 'academy-media',
+  })
+
+  return new DefaultAcademyService(new PrismaAcademyRepository(), objectStorage)
 }

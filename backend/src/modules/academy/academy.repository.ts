@@ -1,50 +1,66 @@
-import type { Academy, AcademyMember, Role } from '@prisma/client'
+import type { Academy, Belt, User } from '@prisma/client'
 import { prisma } from '../../lib/prisma'
 
-export type CreateAcademyInput = {
-  name: string
-  city: string
-  logoUrl: string | null
+export type CreateOwnerOnboardingInput = {
+  academyCity: string
+  academyName: string
+  avatarUrl: string | null
   inviteCode: string
+  logoUrl: string | null
+  ownerBelt: Belt
+  ownerDegree: number
   ownerId: string
+  ownerNickname: string
 }
 
-export type CreateAcademyMemberInput = {
-  academyId: string
-  userId: string
-  role: Role
+export type CreateOwnerOnboardingResult = {
+  academy: Academy
+  owner: User
 }
 
 export interface AcademyRepository {
-  create(input: CreateAcademyInput): Promise<Academy>
-  createMember(input: CreateAcademyMemberInput): Promise<AcademyMember>
+  createOwnerOnboarding(input: CreateOwnerOnboardingInput): Promise<CreateOwnerOnboardingResult>
   findByOwnerId(ownerId: string): Promise<Academy | null>
-  updateLogoUrl(academyId: string, logoUrl: string | null): Promise<Academy>
 }
 
 export class PrismaAcademyRepository implements AcademyRepository {
-  async create(input: CreateAcademyInput): Promise<Academy> {
-    return prisma.academy.create({
-      data: input,
-    })
-  }
+  async createOwnerOnboarding(input: CreateOwnerOnboardingInput): Promise<CreateOwnerOnboardingResult> {
+    return prisma.$transaction(async (tx) => {
+      const academy = await tx.academy.create({
+        data: {
+          name: input.academyName,
+          city: input.academyCity,
+          logoUrl: input.logoUrl,
+          inviteCode: input.inviteCode,
+          ownerId: input.ownerId,
+        },
+      })
 
-  async createMember(input: CreateAcademyMemberInput): Promise<AcademyMember> {
-    return prisma.academyMember.create({
-      data: input,
+      await tx.academyMember.create({
+        data: {
+          academyId: academy.id,
+          userId: input.ownerId,
+          role: 'owner',
+        },
+      })
+
+      const owner = await tx.user.update({
+        where: { id: input.ownerId },
+        data: {
+          nickname: input.ownerNickname,
+          belt: input.ownerBelt,
+          degree: input.ownerDegree,
+          avatarUrl: input.avatarUrl,
+        },
+      })
+
+      return { academy, owner }
     })
   }
 
   async findByOwnerId(ownerId: string): Promise<Academy | null> {
     return prisma.academy.findUnique({
       where: { ownerId },
-    })
-  }
-
-  async updateLogoUrl(academyId: string, logoUrl: string | null): Promise<Academy> {
-    return prisma.academy.update({
-      where: { id: academyId },
-      data: { logoUrl },
     })
   }
 }

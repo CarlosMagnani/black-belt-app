@@ -4,7 +4,7 @@ import { SupabaseObjectStorage } from './supabase-object-storage'
 type ObjectStorageConfig = {
   bucket: string
   provider: 'supabase'
-  serviceRoleKey: string
+  secretKey: string
   supabaseUrl: string
 }
 
@@ -13,7 +13,7 @@ export function createObjectStorage(config: ObjectStorageConfig): ObjectStorage 
     case 'supabase':
       return new SupabaseObjectStorage({
         bucket: config.bucket,
-        serviceRoleKey: config.serviceRoleKey,
+        secretKey: config.secretKey,
         supabaseUrl: config.supabaseUrl,
       })
   }

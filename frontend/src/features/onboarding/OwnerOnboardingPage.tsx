@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { apiClient } from '../../lib/api'
 
 const BELTS = [
   { id: 'white', label: 'BRANCA', color: '#E9E9E9' },
@@ -16,8 +17,27 @@ type ImageKind = 'academyLogo' | 'ownerPhoto'
 type ImageErrors = Partial<Record<ImageKind, string>>
 
 type ImagePreview = {
+  file: File
   name: string
   url: string
+}
+
+type OwnerOnboardingResponse = {
+  academy: {
+    city: string
+    id: string
+    inviteCode: string
+    logoUrl: string | null
+    name: string
+  }
+  owner: {
+    avatarUrl: string | null
+    belt: BeltId
+    degree: number
+    fullName: string
+    id: string
+    nickname: string | null
+  }
 }
 
 export function OwnerOnboardingPage() {
@@ -33,9 +53,9 @@ export function OwnerOnboardingPage() {
   const [ownerPhoto, setOwnerPhoto] = useState<ImagePreview | null>(null)
   const [imageErrors, setImageErrors] = useState<ImageErrors>({})
   const [inviteNotice, setInviteNotice] = useState<string | null>(null)
-  const [completionNotice, setCompletionNotice] = useState<string | null>(null)
-
-  const inviteCode = useMemo(() => createInvitePreview(academyName), [academyName])
+  const [createdAcademy, setCreatedAcademy] = useState<OwnerOnboardingResponse | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
   useEffect(() => () => releasePreview(academyLogo), [academyLogo])
   useEffect(() => () => releasePreview(ownerPhoto), [ownerPhoto])
@@ -46,13 +66,18 @@ export function OwnerOnboardingPage() {
       return
     }
 
+    if (step === 2) {
+      navigate('/mestre', { replace: true })
+      return
+    }
+
     setErrors({})
     setInviteNotice(null)
-    setCompletionNotice(null)
+    setSubmissionError(null)
     setStep((currentStep) => currentStep - 1)
   }
 
-  function continueOnboarding() {
+  async function continueOnboarding() {
     const nextErrors = validateStep(step, { academyName, city, professorName, belt })
     setErrors(nextErrors)
 
@@ -61,20 +86,73 @@ export function OwnerOnboardingPage() {
     }
 
     setInviteNotice(null)
-    setCompletionNotice(null)
-    setStep((currentStep) => Math.min(currentStep + 1, 2))
+    setSubmissionError(null)
+
+    if (step === 0) {
+      setStep(1)
+      return
+    }
+
+    if (step === 1 && belt) {
+      await submitOwnerOnboarding(belt)
+    }
+  }
+
+  async function submitOwnerOnboarding(selectedBelt: BeltId) {
+    const formData = new FormData()
+    formData.append('academyName', academyName.trim())
+    formData.append('academyCity', city.trim())
+    formData.append('ownerNickname', professorName.trim())
+    formData.append('ownerBelt', selectedBelt)
+    formData.append('ownerDegree', String(stripes))
+
+    if (academyLogo) formData.append('logo', academyLogo.file)
+    if (ownerPhoto) formData.append('photo', ownerPhoto.file)
+
+    setIsSubmitting(true)
+
+    try {
+      const result = await apiClient<OwnerOnboardingResponse>('/onboarding/owner', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (result.error?.code === 'ACADEMY_EXISTS') {
+        navigate('/mestre', {
+          replace: true,
+          state: { notice: 'Sua academia já está criada.' },
+        })
+        return
+      }
+
+      if (result.error || !result.data) {
+        setSubmissionError(getOnboardingErrorMessage(result.error?.code))
+        return
+      }
+
+      setCreatedAcademy(result.data)
+      setStep(2)
+    } catch {
+      setSubmissionError('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   async function copyInviteCode() {
+    if (!createdAcademy) return
+
     try {
-      await navigator.clipboard.writeText(inviteCode)
-      setInviteNotice('Prévia do código copiada.')
+      await navigator.clipboard.writeText(createdAcademy.academy.inviteCode)
+      setInviteNotice('Código de convite copiado.')
     } catch {
       setInviteNotice('Não foi possível copiar. Selecione o código para copiar.')
     }
   }
 
   async function shareInviteCode() {
+    if (!createdAcademy) return
+
     if (!navigator.share) {
       setInviteNotice('Compartilhamento não está disponível neste dispositivo.')
       return
@@ -82,21 +160,17 @@ export function OwnerOnboardingPage() {
 
     try {
       await navigator.share({
-        title: `Convite para ${academyName.trim() || 'sua academia'}`,
-        text: `Prévia do convite: ${inviteCode}`,
+        title: `Convite para ${createdAcademy.academy.name}`,
+        text: `Use o código ${createdAcademy.academy.inviteCode} para entrar na academia ${createdAcademy.academy.name}.`,
       })
-      setInviteNotice('Prévia aberta para compartilhamento.')
+      setInviteNotice('Convite aberto para compartilhamento.')
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return
       }
 
-      setInviteNotice('Não foi possível compartilhar esta prévia.')
+      setInviteNotice('Não foi possível compartilhar o convite.')
     }
-  }
-
-  function finishPreview() {
-    setCompletionNotice('Prévia concluída. A criação da academia será conectada ao backend na próxima etapa.')
   }
 
   function handleImageSelection(kind: ImageKind, event: ChangeEvent<HTMLInputElement>) {
@@ -111,7 +185,7 @@ export function OwnerOnboardingPage() {
       return
     }
 
-    const preview = { name: file.name, url: URL.createObjectURL(file) }
+    const preview = { file, name: file.name, url: URL.createObjectURL(file) }
     setImageErrors((currentErrors) => ({ ...currentErrors, [kind]: undefined }))
 
     if (kind === 'academyLogo') {
@@ -177,11 +251,10 @@ export function OwnerOnboardingPage() {
             onStripesChange={setStripes}
           />
         )}
-        {step === 2 && (
+        {step === 2 && createdAcademy && (
           <InviteStep
-            academyName={academyName}
-            code={inviteCode}
-            completionNotice={completionNotice}
+            academyName={createdAcademy.academy.name}
+            code={createdAcademy.academy.inviteCode}
             notice={inviteNotice}
             onCopy={copyInviteCode}
             onShare={shareInviteCode}
@@ -189,8 +262,15 @@ export function OwnerOnboardingPage() {
         )}
       </section>
       <footer className="onboarding-page__footer">
-        <button className="button button--primary onboarding-page__action" type="button" onClick={step === 2 ? finishPreview : continueOnboarding}>
-          {step === 2 ? 'Abrir academia →' : 'Continuar →'}
+        {submissionError && <p className="onboarding-submit-error" role="alert">{submissionError}</p>}
+        <button
+          aria-busy={isSubmitting}
+          className="button button--primary onboarding-page__action"
+          disabled={isSubmitting}
+          type="button"
+          onClick={step === 2 ? () => navigate('/mestre', { replace: true }) : continueOnboarding}
+        >
+          {isSubmitting ? 'CRIANDO ACADEMIA...' : step === 2 ? 'Abrir academia →' : 'Continuar →'}
         </button>
       </footer>
     </main>
@@ -281,7 +361,7 @@ function ProfileStep({
       <h1>QUEM É O<br /><span>PROFESSOR?</span></h1>
       <p className="onboarding-step__lead">Sua faixa aparece no perfil e nas promoções de aluno.</p>
       <label className="form-field onboarding-profile-name">
-        <span>Seu nome</span>
+        <span>Nome no tatame</span>
         <input autoComplete="name" aria-invalid={Boolean(errors.professorName)} onChange={(event) => onProfessorNameChange(event.target.value)} placeholder="Ex.: Professor Carlos" value={professorName} />
         {errors.professorName && <small className="form-field__error">{errors.professorName}</small>}
       </label>
@@ -396,14 +476,12 @@ function BeltPicker({
 function InviteStep({
   academyName,
   code,
-  completionNotice,
   notice,
   onCopy,
   onShare,
 }: {
   academyName: string
   code: string
-  completionNotice: string | null
   notice: string | null
   onCopy: () => void
   onShare: () => void
@@ -412,12 +490,12 @@ function InviteStep({
     <div className="onboarding-step page-enter">
       <h1>SUA PORTA DE<br /><span>ENTRADA.</span></h1>
       <p className="onboarding-step__lead">Compartilhe este código com os alunos para que entrem na <strong>{academyName}</strong>.</p>
-      <section className="invite-code-card" aria-label="Prévia do código de convite">
+      <section className="invite-code-card" aria-label="Código de convite da academia">
         <span className="invite-code-card__corner invite-code-card__corner--top-left" aria-hidden="true" />
         <span className="invite-code-card__corner invite-code-card__corner--top-right" aria-hidden="true" />
         <span className="invite-code-card__corner invite-code-card__corner--bottom-left" aria-hidden="true" />
         <span className="invite-code-card__corner invite-code-card__corner--bottom-right" aria-hidden="true" />
-        <p>PRÉVIA DO CÓDIGO DE CONVITE</p>
+        <p>CÓDIGO DE CONVITE</p>
         <output>{code}</output>
         <small>30 DIAS QUANDO ATIVO · ROTACIONÁVEL</small>
       </section>
@@ -430,11 +508,9 @@ function InviteStep({
         <div className="invite-qr-card__code" aria-hidden="true"><QrPreview seed={code} /></div>
         <div>
           <p className="eyebrow">QR CODE</p>
-          <p>O aluno aponta a câmera e entra direto quando sua academia estiver ativa.</p>
+          <p>A versão escaneável do convite será disponibilizada em uma próxima etapa.</p>
         </div>
       </section>
-      <p className="onboarding-preview-note">Esta é uma prévia local. Nada foi salvo ou enviado ainda.</p>
-      {completionNotice && <p className="onboarding-notice onboarding-notice--completion" role="status">{completionNotice}</p>}
     </div>
   )
 }
@@ -483,11 +559,6 @@ function validateStep(step: number, values: { academyName: string; city: string;
   return errors
 }
 
-function createInvitePreview(academyName: string) {
-  const prefix = academyName.replace(/\s/g, '').toUpperCase().slice(0, 4) || 'TEAM'
-  return `BB-${prefix}-7K2`
-}
-
 function validateImageFile(file: File) {
   const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp']
 
@@ -500,6 +571,23 @@ function validateImageFile(file: File) {
   }
 
   return null
+}
+
+function getOnboardingErrorMessage(code: string | undefined) {
+  switch (code) {
+    case 'MEDIA_UPLOAD_FAILED':
+      return 'Não foi possível enviar uma das imagens. Seus dados foram mantidos; tente novamente.'
+    case 'FILE_TOO_LARGE':
+      return 'Uma das imagens ultrapassa o limite de 5 MB.'
+    case 'INVALID_FILE_TYPE':
+      return 'Envie apenas imagens JPEG, PNG ou WebP.'
+    case 'UNAUTHORIZED':
+      return 'Sua sessão expirou. Entre novamente para concluir o cadastro.'
+    case 'FORBIDDEN':
+      return 'Seu perfil não está configurado como mestre. Volte e selecione o perfil correto.'
+    default:
+      return 'Não foi possível criar a academia. Seus dados foram mantidos; tente novamente.'
+  }
 }
 
 function releasePreview(preview: ImagePreview | null) {

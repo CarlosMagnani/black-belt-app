@@ -6,13 +6,13 @@ import { SupabaseObjectStorage } from '../src/modules/storage/supabase-object-st
 
 const storage = new SupabaseObjectStorage({
   bucket: 'academy-media',
-  serviceRoleKey: 'server-only-test-key',
+  secretKey: 'sb_secret_server-only-test-key',
   supabaseUrl: 'https://blackbelt-test.supabase.co/',
   fetch: async (input, init) => {
     assert.equal(input, 'https://blackbelt-test.supabase.co/storage/v1/object/academy-media/owners/user-1/avatar%20photo.png')
     assert.equal(init?.method, 'POST')
-    assert.equal(init?.headers?.apikey, 'server-only-test-key')
-    assert.equal(init?.headers?.authorization, 'Bearer server-only-test-key')
+    assert.equal(init?.headers?.apikey, 'sb_secret_server-only-test-key')
+    assert.equal(init?.headers?.authorization, undefined)
     assert.equal(init?.headers?.['content-type'], 'image/png')
     assert.equal(init?.headers?.['x-upsert'], 'false')
     return new Response(null, { status: 200 })
@@ -32,7 +32,7 @@ test('stores an object through the Supabase Storage API', async () => {
 test('hides Supabase Storage failures from callers', async () => {
   const failingStorage = new SupabaseObjectStorage({
     bucket: 'academy-media',
-    serviceRoleKey: 'server-only-test-key',
+    secretKey: 'sb_secret_server-only-test-key',
     supabaseUrl: 'https://blackbelt-test.supabase.co',
     fetch: async () => new Response('provider details', { status: 500 }),
   })
@@ -51,7 +51,7 @@ test('creates the configured storage provider behind the ObjectStorage port', ()
   const configuredStorage = createObjectStorage({
     bucket: 'academy-media',
     provider: 'supabase',
-    serviceRoleKey: 'server-only-test-key',
+    secretKey: 'sb_secret_server-only-test-key',
     supabaseUrl: 'https://blackbelt-test.supabase.co',
   })
 

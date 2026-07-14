@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthPage, ConfirmationPage } from './features/auth/AuthPage'
 import { RoleChoicePage } from './features/auth/RoleChoicePage'
 import { OwnerOnboardingPage } from './features/onboarding/OwnerOnboardingPage'
@@ -13,6 +13,22 @@ function StudentOnboardingPlaceholder() {
         <p className="eyebrow">ONBOARDING ALUNO</p>
         <h1>ENTRAR NA ACADEMIA</h1>
         <p>Em breve...</p>
+      </section>
+    </main>
+  )
+}
+
+function OwnerHomePlaceholder() {
+  const location = useLocation()
+  const notice = (location.state as { notice?: string } | null)?.notice
+
+  return (
+    <main className="onboarding-placeholder bb-grain">
+      <section className="page-enter">
+        <p className="eyebrow">ÁREA DO MESTRE</p>
+        <h1>ACADEMIA CRIADA</h1>
+        {notice && <p className="role-notice" role="status">{notice}</p>}
+        <p>O painel da sua academia será construído na próxima etapa.</p>
       </section>
     </main>
   )
@@ -48,6 +64,7 @@ function App() {
         <Route path="/confirmar-email" element={session ? <Navigate to="/boas-vindas" replace /> : <ConfirmationPage />} />
         <Route path="/boas-vindas" element={session ? <RoleChoicePage /> : <Navigate to="/entrar" replace />} />
         <Route path="/onboarding/mestre" element={session ? <OwnerOnboardingPage /> : <Navigate to="/entrar" replace />} />
+        <Route path="/mestre" element={session ? <OwnerHomePlaceholder /> : <Navigate to="/entrar" replace />} />
         <Route path="/onboarding/aluno" element={session ? <StudentOnboardingPlaceholder /> : <Navigate to="/entrar" replace />} />
         <Route path="*" element={<Navigate to={session ? '/boas-vindas' : '/entrar'} replace />} />
       </Routes>

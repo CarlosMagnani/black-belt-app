@@ -1,10 +1,8 @@
 import { randomBytes } from 'crypto'
-import type { Belt, User } from '@prisma/client'
+import type { Belt } from '@prisma/client'
 import type { AcademyRepository } from './academy.repository'
-import type { UserRepository } from '../users/user.repository'
-import type { ObjectStorage } from '../storage/object-storage'
+import type { MediaContentType, ObjectStorage } from '../storage/object-storage'
 import { ObjectStorageError } from '../storage/object-storage'
-import { prisma } from '../../lib/prisma'
 
 export type CreateOwnerAcademyInput = {
   userId: string
@@ -13,8 +11,8 @@ export type CreateOwnerAcademyInput = {
   ownerNickname: string
   ownerBelt: Belt
   ownerDegree: number
-  logo?: { content: Uint8Array; contentType: string } | null
-  photo?: { content: Uint8Array; contentType: string } | null
+  logo?: { content: Uint8Array; contentType: MediaContentType } | null
+  photo?: { content: Uint8Array; contentType: MediaContentType } | null
 }
 
 export type OwnerOnboardingResult = {
@@ -42,7 +40,6 @@ export interface AcademyService {
 export class DefaultAcademyService implements AcademyService {
   constructor(
     private readonly academyRepository: AcademyRepository,
-    private readonly userRepository: UserRepository,
     private readonly objectStorage: ObjectStorage
   ) {}
 
@@ -61,7 +58,7 @@ export class DefaultAcademyService implements AcademyService {
         await this.objectStorage.store({
           key: logoKey,
           content: input.logo.content,
-          contentType: input.logo.contentType as any,
+          contentType: input.logo.contentType,
         })
         logoUrl = logoKey
       } catch (error) {
@@ -78,7 +75,7 @@ export class DefaultAcademyService implements AcademyService {
         await this.objectStorage.store({
           key: photoKey,
           content: input.photo.content,
-          contentType: input.photo.contentType as any,
+          contentType: input.photo.contentType,
         })
         avatarUrl = photoKey
       } catch (error) {
@@ -95,36 +92,16 @@ export class DefaultAcademyService implements AcademyService {
     const inviteCode = this.generateInviteCode()
 
     try {
-      const result = await prisma.$transaction(async (tx) => {
-        const academy = await tx.academy.create({
-          data: {
-            name: input.academyName,
-            city: input.academyCity,
-            logoUrl,
-            inviteCode,
-            ownerId: input.userId,
-          },
-        })
-
-        await tx.academyMember.create({
-          data: {
-            academyId: academy.id,
-            userId: input.userId,
-            role: 'owner',
-          },
-        })
-
-        const owner = await tx.user.update({
-          where: { id: input.userId },
-          data: {
-            nickname: input.ownerNickname,
-            belt: input.ownerBelt,
-            degree: input.ownerDegree,
-            avatarUrl,
-          },
-        })
-
-        return { academy, owner }
+      const result = await this.academyRepository.createOwnerOnboarding({
+        academyName: input.academyName,
+        academyCity: input.academyCity,
+        avatarUrl,
+        inviteCode,
+        logoUrl,
+        ownerBelt: input.ownerBelt,
+        ownerDegree: input.ownerDegree,
+        ownerId: input.userId,
+        ownerNickname: input.ownerNickname,
       })
 
       return {

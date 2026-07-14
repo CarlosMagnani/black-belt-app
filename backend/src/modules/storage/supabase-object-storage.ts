@@ -8,20 +8,20 @@ import {
 type SupabaseObjectStorageOptions = {
   bucket: string
   fetch?: typeof fetch
-  serviceRoleKey: string
+  secretKey: string
   supabaseUrl: string
 }
 
 export class SupabaseObjectStorage implements ObjectStorage {
   private readonly bucket: string
   private readonly fetch: typeof fetch
-  private readonly serviceRoleKey: string
+  private readonly secretKey: string
   private readonly supabaseUrl: string
 
   constructor(options: SupabaseObjectStorageOptions) {
     this.bucket = options.bucket
     this.fetch = options.fetch ?? globalThis.fetch
-    this.serviceRoleKey = options.serviceRoleKey
+    this.secretKey = options.secretKey
     this.supabaseUrl = options.supabaseUrl.replace(/\/$/, '')
   }
 
@@ -29,8 +29,7 @@ export class SupabaseObjectStorage implements ObjectStorage {
     const response = await this.fetch(this.objectUrl(input.key), {
       method: 'POST',
       headers: {
-        apikey: this.serviceRoleKey,
-        authorization: `Bearer ${this.serviceRoleKey}`,
+        apikey: this.secretKey,
         'content-type': input.contentType,
         'x-upsert': 'false',
       },
@@ -58,8 +57,7 @@ export class SupabaseObjectStorage implements ObjectStorage {
 
   private headers(extraHeaders: Record<string, string> = {}) {
     return {
-      apikey: this.serviceRoleKey,
-      authorization: `Bearer ${this.serviceRoleKey}`,
+      apikey: this.secretKey,
       ...extraHeaders,
     }
   }

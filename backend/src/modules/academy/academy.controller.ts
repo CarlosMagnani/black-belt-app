@@ -2,8 +2,9 @@ import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { AcademyService } from './academy.service'
 import { AcademyAlreadyExistsError, MediaUploadError } from './academy.service'
 import type { Belt } from '@prisma/client'
+import type { MediaContentType } from '../storage/object-storage'
 
-const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED_CONTENT_TYPES: MediaContentType[] = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
 
 export async function createOwnerAcademy(
@@ -27,26 +28,25 @@ export async function createOwnerAcademy(
   }
 
   const parts = request.parts()
+  let oversizedFileField: string | null = null
   let academyName: string | undefined
   let academyCity: string | undefined
   let ownerNickname: string | undefined
   let ownerBelt: Belt | undefined
   let ownerDegree: number | undefined
-  let logo: { content: Uint8Array; contentType: string } | null = null
-  let photo: { content: Uint8Array; contentType: string } | null = null
+  let logo: { content: Uint8Array; contentType: MediaContentType } | null = null
+  let photo: { content: Uint8Array; contentType: MediaContentType } | null = null
 
   for await (const part of parts) {
     if (part.type === 'file') {
       const buffer = await part.toBuffer()
       
-      if (buffer.length > MAX_FILE_SIZE) {
-        return reply.code(400).send({
-          data: null,
-          error: { code: 'FILE_TOO_LARGE', message: `${part.fieldname} exceeds 5MB limit` },
-        })
+      if (part.file.truncated || buffer.length > MAX_FILE_SIZE) {
+        oversizedFileField ??= part.fieldname
+        continue
       }
 
-      if (!ALLOWED_CONTENT_TYPES.includes(part.mimetype)) {
+      if (!isAllowedContentType(part.mimetype)) {
         return reply.code(400).send({
           data: null,
           error: { code: 'INVALID_FILE_TYPE', message: `${part.fieldname} must be JPEG, PNG, or WebP` },
@@ -75,17 +75,17 @@ export async function createOwnerAcademy(
     }
   }
 
-  if (!academyName || !academyCity || !ownerNickname || !ownerBelt || ownerDegree === undefined) {
+  if (oversizedFileField) {
     return reply.code(400).send({
       data: null,
-      error: { code: 'MISSING_FIELDS', message: 'academyName, academyCity, ownerNickname, ownerBelt, and ownerDegree are required' },
+      error: { code: 'FILE_TOO_LARGE', message: `${oversizedFileField} exceeds 5MB limit` },
     })
   }
 
-  if (!ownerNickname.trim()) {
+  if (!academyName?.trim() || !academyCity?.trim() || !ownerNickname?.trim() || !ownerBelt || ownerDegree === undefined) {
     return reply.code(400).send({
       data: null,
-      error: { code: 'INVALID_NICKNAME', message: 'ownerNickname cannot be blank' },
+      error: { code: 'MISSING_FIELDS', message: 'academyName, academyCity, ownerNickname, ownerBelt, and ownerDegree are required' },
     })
   }
 
@@ -97,7 +97,7 @@ export async function createOwnerAcademy(
     })
   }
 
-  if (ownerDegree < 0 || ownerDegree > 4) {
+  if (!Number.isInteger(ownerDegree) || ownerDegree < 0 || ownerDegree > 4) {
     return reply.code(400).send({
       data: null,
       error: { code: 'INVALID_DEGREE', message: 'ownerDegree must be between 0 and 4' },
@@ -107,8 +107,8 @@ export async function createOwnerAcademy(
   try {
     const result = await academyService.createOwnerAcademy({
       userId: user.id,
-      academyName,
-      academyCity,
+      academyName: academyName.trim(),
+      academyCity: academyCity.trim(),
       ownerNickname: ownerNickname.trim(),
       ownerBelt,
       ownerDegree,
@@ -141,4 +141,8 @@ export async function createOwnerAcademy(
       error: { code: 'INTERNAL_ERROR', message: 'Could not create academy' },
     })
   }
+}
+
+function isAllowedContentType(contentType: string): contentType is MediaContentType {
+  return ALLOWED_CONTENT_TYPES.includes(contentType as MediaContentType)
 }

@@ -2,7 +2,7 @@
 
 ## 1. Current Goal
 
-Build the student onboarding route and connect the owner onboarding frontend to the backend API.
+Build the student onboarding route and its invite-verification API slice. The owner onboarding UI and API are now connected end to end.
 
 Backend authentication and Supabase project configuration completed on 2026-07-10:
 
@@ -15,7 +15,7 @@ Backend authentication and Supabase project configuration completed on 2026-07-1
 - Supabase project `black-belt-app` (`lvwaruajmfwkajbkbbuq`) is active and healthy.
 - Development Site URL is `http://localhost:5173`; `http://localhost:5173/**` is allowed for redirects.
 - Email/password signup is enabled with confirmation required, anonymous signup disabled, and an 8-character minimum password.
-- Public API roles can no longer execute the privileged `public.rls_auto_enable()` event-trigger function; the security advisor reports no findings.
+- Public API roles can no longer execute the privileged `public.rls_auto_enable()` event-trigger function. The current Supabase security advisor only warns that leaked-password protection is disabled.
 
 Frontend authentication completed on 2026-07-10:
 
@@ -25,19 +25,22 @@ Frontend authentication completed on 2026-07-10:
 - Session restoration, route guards, and logout are implemented with `@supabase/supabase-js`.
 - Existing owner/student role cards are recreated as the post-login destination; their full onboarding routes are intentionally deferred.
 
-Owner onboarding UI completed on 2026-07-10:
+Owner onboarding UI completed on 2026-07-14:
 
-- `/onboarding/mestre` is now a mobile-first, three-step owner onboarding flow: academy details, owner profile/grade, and invite preview.
-- Academy logo and owner-photo controls are optional local previews: JPEG, PNG, or WebP files up to 5 MB, with replace/remove actions and no crop editor.
-- The flow uses local React state only. It validates required academy, city, name, and belt fields but does not create an academy, profile, invitation, or QR code in the backend.
-- Invite copy/share controls operate only on the visibly labelled local preview. The final action explains that backend creation is still pending.
+- `/onboarding/mestre` is a mobile-first, three-step owner onboarding flow: academy details, owner profile/grade, and successful invite reveal.
+- Academy logo and owner-photo controls remain optional local previews before submission: JPEG, PNG, or WebP files up to 5 MB, with replace/remove actions and no crop editor.
+- Step 2 submits multipart data to `POST /onboarding/owner`. Failures keep all fields and selected files in place for retry; a duplicate academy redirects safely to `/mestre`.
+- Step 3 is only shown after a successful API response and uses the real server-generated invite code for copy/share actions.
+- The owner profile field is labelled `Nome no tatame` and maps to `ownerNickname`; it does not overwrite the authenticated full name.
+- `/mestre` is a protected minimal destination. The full owner dashboard is intentionally deferred.
 - Returning to the role screen from the first onboarding step can resume the owner flow in the same browser navigation session without attempting to save the already-selected role again.
 
 Media storage foundation completed on 2026-07-10:
 
 - Supabase project `lvwaruajmfwkajbkbbuq` now has a private `academy-media` bucket restricted to JPEG, PNG, and WebP files up to 5 MB.
-- Storage object RLS is enabled and there are no browser-facing Storage policies. Future uploads must go through the backend using its server-only service-role key.
+- Storage object RLS is enabled and there are no browser-facing Storage policies. Uploads go through the backend using its server-only modern `sb_secret_...` key.
 - Backend code uses an `ObjectStorage` port and factory; `SupabaseObjectStorage` is the current adapter. Academy use cases must depend on the port rather than Supabase directly, so a future provider only requires another adapter and one factory change.
+- The live adapter upload/delete smoke test passed, and verification confirmed no test object remained in the bucket.
 
 Docker containerization for local development completed on 2026-07-14:
 
@@ -61,26 +64,29 @@ Role assignment API slice completed on 2026-07-14:
 
 Owner onboarding API slice completed on 2026-07-14:
 
-- `POST /onboarding/owner` accepts multipart form data: `academyName`, `academyCity`, `ownerBelt`, `ownerDegree`, `logo` (file), `photo` (file).
-- Creates `Academy`, `AcademyMember` (role: owner), uploads logo and photo via `ObjectStorage` port, updates `User.belt`, `User.degree`, and `User.avatarUrl`.
+- `POST /onboarding/owner` accepts multipart form data: `academyName`, `academyCity`, `ownerNickname`, `ownerBelt`, `ownerDegree`, `logo` (file), `photo` (file).
+- Uploads logo and photo via the `ObjectStorage` port, then atomically creates `Academy` and `AcademyMember` (role: owner) and updates `User.nickname`, `User.belt`, `User.degree`, and `User.avatarUrl`.
 - Invite code generated server-side: `BB-XXXXXX` format, 6 random alphanumeric characters using `crypto.randomBytes`.
 - Owner's belt and degree stored on `User` as static metadata (not tracked for progression — progression is for students and professors only via `StudentBelt`).
 - Returns 409 Conflict if user already owns an academy (domain rule: one owner = one academy).
 - File validation: 5 MB max, JPEG/PNG/WebP only, enforced server-side.
 - `@fastify/multipart` registered with file size limit.
-- `ObjectStorage` wired into `buildApp()` via factory with `SUPABASE_SERVICE_ROLE_KEY` and `STORAGE_BUCKET`.
+- The Prisma transaction lives in `PrismaAcademyRepository`; the academy service has no direct Prisma dependency.
+- `ObjectStorage` is wired into `buildApp()` via the factory with `SUPABASE_SECRET_KEY` and `STORAGE_BUCKET`. The Supabase adapter sends the modern secret through `apikey` and does not use it as a Bearer JWT.
 - New fields added to Prisma schema: `User.belt` (nullable Belt enum), `User.degree` (Int, default 0), `Academy.logoUrl` (nullable text).
 - Migration `20260714190000_add_owner_onboarding_fields` created and applied.
 - New academy module: repository, service, controller, routes under `backend/src/modules/academy/`.
 
 Next implementation focus:
 
-- Configure `SUPABASE_SERVICE_ROLE_KEY` in the backend `.env` (get from Supabase dashboard → Settings → API).
-- Connect the existing owner onboarding frontend to `POST /onboarding/owner` — replace the local preview flow with an actual API call using multipart form data.
 - Build the student onboarding route and its invite-verification API slice.
 - Implement password recovery as the next separate auth slice.
 
-Open risk: live end-to-end signup and confirmation still need a disposable confirmed test account. The owner onboarding screen has not been manually exercised end-to-end with the new backend API.
+Open risks:
+
+- Live end-to-end signup and confirmation still need a disposable confirmed test account.
+- The full browser flow has not yet been submitted with a disposable owner because that would create real academy records; backend HTTP tests and the reversible live Storage smoke test pass.
+- Supabase leaked-password protection remains disabled and should be enabled separately in Auth settings.
 
 Commands run:
 
@@ -94,6 +100,7 @@ npx prisma format
 git diff --check
 npm run build
 npm run lint
+Live Supabase Storage upload/delete smoke test
 docker-compose build
 docker-compose up
 ```

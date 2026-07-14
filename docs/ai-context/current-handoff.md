@@ -2,7 +2,7 @@
 
 ## 1. Current Goal
 
-Configure the development database, then connect the role-specific onboarding flows to their APIs.
+Build the student onboarding route and connect the owner onboarding frontend to the backend API.
 
 Backend authentication and Supabase project configuration completed on 2026-07-10:
 
@@ -39,17 +39,48 @@ Media storage foundation completed on 2026-07-10:
 - Storage object RLS is enabled and there are no browser-facing Storage policies. Future uploads must go through the backend using its server-only service-role key.
 - Backend code uses an `ObjectStorage` port and factory; `SupabaseObjectStorage` is the current adapter. Academy use cases must depend on the port rather than Supabase directly, so a future provider only requires another adapter and one factory change.
 
+Docker containerization for local development completed on 2026-07-14:
+
+- `docker-compose.yml` at project root runs Postgres 16 (Alpine) and backend (Node 20 Alpine) containers.
+- Backend uses bind mount + `tsx watch` for hot-reload on code changes.
+- `entrypoint.sh` generates Prisma client, runs `prisma migrate deploy`, then starts the dev server.
+- Resource limits: 256M RAM / 0.5 CPU for Postgres, 512M RAM / 1.0 CPU for backend.
+- Postgres tuned for dev: `shared_buffers=64MB`, `effective_cache_size=128MB`, `work_mem=4MB`, `max_connections=20`.
+- Named volume `postgres_data` for persistence across container restarts.
+- Frontend runs natively (not containerized) — Vite dev server with HMR.
+- Root `.env` holds Docker/Postgres credentials and Supabase vars. Backend `.env` holds app-specific vars with `DATABASE_URL` pointing to Docker Postgres.
+
+Role assignment API slice completed on 2026-07-14:
+
+- `POST /auth/onboarding` accepts `{ role: 'owner' | 'student' }` and persists the selection.
+- `OnboardingRole` enum (owner/student) added to Prisma schema; `onboardingRole` nullable field on `User`.
+- Role selection is one-time: 409 Conflict if `onboardingRole` is already set.
+- Auth middleware attaches `userOnboardingRole` to request for downstream authorization checks.
+- Frontend `RoleChoicePage` calls the endpoint on card click and navigates to `/onboarding/mestre` or `/onboarding/aluno`.
+- Professor role is not selectable during onboarding — it is an academy-level assignment, not a self-selection.
+
+Owner onboarding API slice completed on 2026-07-14:
+
+- `POST /onboarding/owner` accepts multipart form data: `academyName`, `academyCity`, `ownerBelt`, `ownerDegree`, `logo` (file), `photo` (file).
+- Creates `Academy`, `AcademyMember` (role: owner), uploads logo and photo via `ObjectStorage` port, updates `User.belt`, `User.degree`, and `User.avatarUrl`.
+- Invite code generated server-side: `BB-XXXXXX` format, 6 random alphanumeric characters using `crypto.randomBytes`.
+- Owner's belt and degree stored on `User` as static metadata (not tracked for progression — progression is for students and professors only via `StudentBelt`).
+- Returns 409 Conflict if user already owns an academy (domain rule: one owner = one academy).
+- File validation: 5 MB max, JPEG/PNG/WebP only, enforced server-side.
+- `@fastify/multipart` registered with file size limit.
+- `ObjectStorage` wired into `buildApp()` via factory with `SUPABASE_SERVICE_ROLE_KEY` and `STORAGE_BUCKET`.
+- New fields added to Prisma schema: `User.belt` (nullable Belt enum), `User.degree` (Int, default 0), `Academy.logoUrl` (nullable text).
+- Migration `20260714190000_add_owner_onboarding_fields` created and applied.
+- New academy module: repository, service, controller, routes under `backend/src/modules/academy/`.
+
 Next implementation focus:
 
-- Configure a real `DATABASE_URL` locally. `SUPABASE_URL` is already configured for development.
-- Create/apply the initial Prisma migration against the development database.
-- Configure `SUPABASE_SERVICE_ROLE_KEY` in the backend-only environment before implementing uploads. Never put it in the frontend environment.
-- Build the owner onboarding API slice: academy creation, owner membership/profile details, uploads through the `ObjectStorage` port for academy logo and owner photo, and a server-generated invite code. Connect the existing owner UI only after that contract is ready.
+- Configure `SUPABASE_SERVICE_ROLE_KEY` in the backend `.env` (get from Supabase dashboard → Settings → API).
+- Connect the existing owner onboarding frontend to `POST /onboarding/owner` — replace the local preview flow with an actual API call using multipart form data.
 - Build the student onboarding route and its invite-verification API slice.
-- Send the Supabase access token to `GET /auth/me` and protected API routes after the local database is ready.
 - Implement password recovery as the next separate auth slice.
 
-Open risk: live end-to-end signup and confirmation still need a disposable confirmed test account. The owner onboarding screen has not been manually exercised behind the authenticated route for the same reason. The frontend deliberately does not call `/auth/me` until the application database and its first migration exist.
+Open risk: live end-to-end signup and confirmation still need a disposable confirmed test account. The owner onboarding screen has not been manually exercised end-to-end with the new backend API.
 
 Commands run:
 
@@ -63,6 +94,8 @@ npx prisma format
 git diff --check
 npm run build
 npm run lint
+docker-compose build
+docker-compose up
 ```
 
 ---

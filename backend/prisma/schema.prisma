@@ -54,6 +54,8 @@ model User {
   nickname        String?
   avatarUrl       String?         @map("avatar_url")
   onboardingRole  OnboardingRole? @map("onboarding_role")
+  belt            Belt?
+  degree          Int             @default(0)
   createdAt       DateTime        @default(now()) @map("created_at")
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
@@ -69,6 +71,7 @@ model Academy {
   id         String   @id @default(uuid())
   name       String
   city       String
+  logoUrl    String?  @map("logo_url")
   inviteCode String   @unique @map("invite_code")
   ownerId    String   @unique @map("owner_id")
   createdAt  DateTime @default(now()) @map("created_at")

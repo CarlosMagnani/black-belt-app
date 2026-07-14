@@ -3,11 +3,14 @@ import type { Belt, User } from '@prisma/client'
 import type { AcademyRepository } from './academy.repository'
 import type { UserRepository } from '../users/user.repository'
 import type { ObjectStorage } from '../storage/object-storage'
+import { ObjectStorageError } from '../storage/object-storage'
+import { prisma } from '../../lib/prisma'
 
 export type CreateOwnerAcademyInput = {
   userId: string
   academyName: string
   academyCity: string
+  ownerNickname: string
   ownerBelt: Belt
   ownerDegree: number
   logo?: { content: Uint8Array; contentType: string } | null
@@ -25,6 +28,7 @@ export type OwnerOnboardingResult = {
   owner: {
     id: string
     fullName: string
+    nickname: string | null
     avatarUrl: string | null
     belt: Belt | null
     degree: number
@@ -48,96 +52,115 @@ export class DefaultAcademyService implements AcademyService {
       throw new AcademyAlreadyExistsError()
     }
 
-    const inviteCode = this.generateInviteCode()
-    const academyId = crypto.randomUUID()
-    const memberTransaction = await this.createAcademyAndMember(
-      academyId,
-      input,
-      inviteCode
-    )
-
     let logoUrl: string | null = null
     let avatarUrl: string | null = null
 
     if (input.logo) {
-      const logoKey = `academies/${memberTransaction.academyId}/logo`
-      await this.objectStorage.store({
-        key: logoKey,
-        content: input.logo.content,
-        contentType: input.logo.contentType as any,
-      })
-      logoUrl = logoKey
+      try {
+        const logoKey = `academies/${input.userId}/logo`
+        await this.objectStorage.store({
+          key: logoKey,
+          content: input.logo.content,
+          contentType: input.logo.contentType as any,
+        })
+        logoUrl = logoKey
+      } catch (error) {
+        if (error instanceof ObjectStorageError) {
+          throw new MediaUploadError('logo')
+        }
+        throw error
+      }
     }
 
     if (input.photo) {
-      const photoKey = `users/${input.userId}/avatar`
-      await this.objectStorage.store({
-        key: photoKey,
-        content: input.photo.content,
-        contentType: input.photo.contentType as any,
+      try {
+        const photoKey = `users/${input.userId}/avatar`
+        await this.objectStorage.store({
+          key: photoKey,
+          content: input.photo.content,
+          contentType: input.photo.contentType as any,
+        })
+        avatarUrl = photoKey
+      } catch (error) {
+        if (error instanceof ObjectStorageError) {
+          if (logoUrl) {
+            await this.safeDeleteObject(logoUrl)
+          }
+          throw new MediaUploadError('photo')
+        }
+        throw error
+      }
+    }
+
+    const inviteCode = this.generateInviteCode()
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const academy = await tx.academy.create({
+          data: {
+            name: input.academyName,
+            city: input.academyCity,
+            logoUrl,
+            inviteCode,
+            ownerId: input.userId,
+          },
+        })
+
+        await tx.academyMember.create({
+          data: {
+            academyId: academy.id,
+            userId: input.userId,
+            role: 'owner',
+          },
+        })
+
+        const owner = await tx.user.update({
+          where: { id: input.userId },
+          data: {
+            nickname: input.ownerNickname,
+            belt: input.ownerBelt,
+            degree: input.ownerDegree,
+            avatarUrl,
+          },
+        })
+
+        return { academy, owner }
       })
-      avatarUrl = photoKey
+
+      return {
+        academy: {
+          id: result.academy.id,
+          name: result.academy.name,
+          city: result.academy.city,
+          logoUrl: result.academy.logoUrl,
+          inviteCode: result.academy.inviteCode,
+        },
+        owner: {
+          id: result.owner.id,
+          fullName: result.owner.fullName,
+          nickname: result.owner.nickname,
+          avatarUrl: result.owner.avatarUrl,
+          belt: result.owner.belt,
+          degree: result.owner.degree,
+        },
+      }
+    } catch (error) {
+      if (logoUrl) {
+        await this.safeDeleteObject(logoUrl)
+      }
+      if (avatarUrl) {
+        await this.safeDeleteObject(avatarUrl)
+      }
+      throw error
     }
+  }
 
-    const academy = await this.updateAcademyLogo(memberTransaction.academyId, logoUrl)
-    const owner = await this.updateOwnerProfile(
-      input.userId,
-      input.ownerBelt,
-      input.ownerDegree,
-      avatarUrl
-    )
-
-    return {
-      academy: {
-        id: academy.id,
-        name: academy.name,
-        city: academy.city,
-        logoUrl: academy.logoUrl,
-        inviteCode: academy.inviteCode,
-      },
-      owner: {
-        id: owner.id,
-        fullName: owner.fullName,
-        avatarUrl: owner.avatarUrl,
-        belt: owner.belt,
-        degree: owner.degree,
-      },
+  private async safeDeleteObject(key: string): Promise<void> {
+    try {
+      await this.objectStorage.delete(key)
+    } catch {
+      // best-effort cleanup; orphaned objects are preferable to a broken flow
     }
-  }
-
-  private async createAcademyAndMember(
-    academyId: string,
-    input: CreateOwnerAcademyInput,
-    inviteCode: string
-  ) {
-    const academy = await this.academyRepository.create({
-      name: input.academyName,
-      city: input.academyCity,
-      logoUrl: null,
-      inviteCode,
-      ownerId: input.userId,
-    })
-
-    const member = await this.academyRepository.createMember({
-      academyId: academy.id,
-      userId: input.userId,
-      role: 'owner',
-    })
-
-    return { academyId: academy.id, memberId: member.id }
-  }
-
-  private async updateAcademyLogo(academyId: string, logoUrl: string | null) {
-    return this.academyRepository.updateLogoUrl(academyId, logoUrl)
-  }
-
-  private async updateOwnerProfile(
-    userId: string,
-    belt: Belt,
-    degree: number,
-    avatarUrl: string | null
-  ): Promise<User> {
-    return this.userRepository.updateProfile(userId, { belt, degree, avatarUrl })
   }
 
   private generateInviteCode(): string {
@@ -156,5 +179,12 @@ export class AcademyAlreadyExistsError extends Error {
   constructor() {
     super('User already owns an academy')
     this.name = 'AcademyAlreadyExistsError'
+  }
+}
+
+export class MediaUploadError extends Error {
+  constructor(public readonly field: string) {
+    super(`Could not upload ${field}`)
+    this.name = 'MediaUploadError'
   }
 }

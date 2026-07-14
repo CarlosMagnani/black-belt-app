@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { AcademyService } from './academy.service'
-import { AcademyAlreadyExistsError } from './academy.service'
+import { AcademyAlreadyExistsError, MediaUploadError } from './academy.service'
 import type { Belt } from '@prisma/client'
 
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -29,6 +29,7 @@ export async function createOwnerAcademy(
   const parts = request.parts()
   let academyName: string | undefined
   let academyCity: string | undefined
+  let ownerNickname: string | undefined
   let ownerBelt: Belt | undefined
   let ownerDegree: number | undefined
   let logo: { content: Uint8Array; contentType: string } | null = null
@@ -64,6 +65,8 @@ export async function createOwnerAcademy(
         academyName = String(part.value)
       } else if (part.fieldname === 'academyCity') {
         academyCity = String(part.value)
+      } else if (part.fieldname === 'ownerNickname') {
+        ownerNickname = String(part.value)
       } else if (part.fieldname === 'ownerBelt') {
         ownerBelt = String(part.value) as Belt
       } else if (part.fieldname === 'ownerDegree') {
@@ -72,10 +75,17 @@ export async function createOwnerAcademy(
     }
   }
 
-  if (!academyName || !academyCity || !ownerBelt || ownerDegree === undefined) {
+  if (!academyName || !academyCity || !ownerNickname || !ownerBelt || ownerDegree === undefined) {
     return reply.code(400).send({
       data: null,
-      error: { code: 'MISSING_FIELDS', message: 'academyName, academyCity, ownerBelt, and ownerDegree are required' },
+      error: { code: 'MISSING_FIELDS', message: 'academyName, academyCity, ownerNickname, ownerBelt, and ownerDegree are required' },
+    })
+  }
+
+  if (!ownerNickname.trim()) {
+    return reply.code(400).send({
+      data: null,
+      error: { code: 'INVALID_NICKNAME', message: 'ownerNickname cannot be blank' },
     })
   }
 
@@ -99,6 +109,7 @@ export async function createOwnerAcademy(
       userId: user.id,
       academyName,
       academyCity,
+      ownerNickname: ownerNickname.trim(),
       ownerBelt,
       ownerDegree,
       logo,
@@ -114,6 +125,13 @@ export async function createOwnerAcademy(
       return reply.code(409).send({
         data: null,
         error: { code: 'ACADEMY_EXISTS', message: 'You already own an academy' },
+      })
+    }
+
+    if (error instanceof MediaUploadError) {
+      return reply.code(422).send({
+        data: null,
+        error: { code: 'MEDIA_UPLOAD_FAILED', message: `Could not upload ${error.field}. Please try again.` },
       })
     }
     

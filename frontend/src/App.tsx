@@ -4,19 +4,9 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthPage, ConfirmationPage } from './features/auth/AuthPage'
 import { RoleChoicePage } from './features/auth/RoleChoicePage'
 import { OwnerOnboardingPage } from './features/onboarding/OwnerOnboardingPage'
+import { StudentHomePage } from './features/onboarding/StudentHomePage'
+import { StudentOnboardingPage } from './features/onboarding/StudentOnboardingPage'
 import { supabase } from './lib/supabase'
-
-function StudentOnboardingPlaceholder() {
-  return (
-    <main className="onboarding-placeholder bb-grain">
-      <section className="page-enter">
-        <p className="eyebrow">ONBOARDING ALUNO</p>
-        <h1>ENTRAR NA ACADEMIA</h1>
-        <p>Em breve...</p>
-      </section>
-    </main>
-  )
-}
 
 function OwnerHomePlaceholder() {
   const location = useLocation()
@@ -65,7 +55,8 @@ function App() {
         <Route path="/boas-vindas" element={session ? <RoleChoicePage /> : <Navigate to="/entrar" replace />} />
         <Route path="/onboarding/mestre" element={session ? <OwnerOnboardingPage /> : <Navigate to="/entrar" replace />} />
         <Route path="/mestre" element={session ? <OwnerHomePlaceholder /> : <Navigate to="/entrar" replace />} />
-        <Route path="/onboarding/aluno" element={session ? <StudentOnboardingPlaceholder /> : <Navigate to="/entrar" replace />} />
+        <Route path="/onboarding/aluno" element={session ? <StudentOnboardingPage /> : <Navigate to="/entrar" replace />} />
+        <Route path="/aluno" element={session ? <StudentHomePage /> : <Navigate to="/entrar" replace />} />
         <Route path="*" element={<Navigate to={session ? '/boas-vindas' : '/entrar'} replace />} />
       </Routes>
     </BrowserRouter>

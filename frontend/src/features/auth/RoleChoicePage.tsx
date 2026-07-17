@@ -10,14 +10,14 @@ export function RoleChoicePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const returningOwner = location.state?.onboardingRole === 'owner'
+  const returningRole = (location.state as { onboardingRole?: 'owner' | 'student' } | null)?.onboardingRole
 
   async function handleRoleSelect(role: 'owner' | 'student') {
-    if (returningOwner) {
-      if (role === 'owner') {
-        navigate('/onboarding/mestre')
+    if (returningRole) {
+      if (role === returningRole) {
+        navigate(getOnboardingRoute(role))
       } else {
-        setError('Seu papel de mestre já foi selecionado. Continue o onboarding da academia.')
+        setError(`Seu papel de ${returningRole === 'owner' ? 'mestre' : 'aluno'} já foi selecionado. Continue o onboarding atual.`)
       }
       return
     }
@@ -35,13 +35,30 @@ export function RoleChoicePage() {
 
     setIsSubmitting(false)
 
+    if (apiError?.code === 'ROLE_ALREADY_SET') {
+      const currentUser = await apiClient<{
+        user: { onboardingRole: 'owner' | 'student' | null }
+      }>('/auth/me')
+      const persistedRole = currentUser.data?.user.onboardingRole
+
+      if (persistedRole === role) {
+        navigate(getOnboardingRoute(role))
+      } else {
+        setError(persistedRole
+          ? `Seu papel de ${persistedRole === 'owner' ? 'mestre' : 'aluno'} já foi selecionado. Continue o onboarding atual.`
+          : 'Não foi possível recuperar seu papel. Tente novamente.')
+        setSelectedRole(null)
+      }
+      return
+    }
+
     if (apiError) {
       setError(apiError.message || 'Não foi possível selecionar o papel. Tente novamente.')
       setSelectedRole(null)
       return
     }
 
-    navigate(role === 'owner' ? '/onboarding/mestre' : '/onboarding/aluno')
+    navigate(getOnboardingRoute(role))
   }
 
   async function signOut() {
@@ -135,4 +152,8 @@ function CrownIcon() {
 
 function ShieldIcon() {
   return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 20 6v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z" stroke="currentColor" strokeWidth="1.7" /><path d="m8.5 12 2.2 2.2 4.8-5" stroke="currentColor" strokeWidth="1.7" /></svg>
+}
+
+function getOnboardingRoute(role: 'owner' | 'student') {
+  return role === 'owner' ? '/onboarding/mestre' : '/onboarding/aluno'
 }

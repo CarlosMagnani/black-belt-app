@@ -246,4 +246,24 @@ button:disabled { cursor: not-allowed; }
 .onboarding-preview-note { margin: 14px 0 0; color: var(--color-muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; line-height: 1.45; }
 .onboarding-notice--completion { margin-top: 14px; }
 
+.student-invite-field input { font-family: var(--font-mono); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.student-invite-status { display: flex; min-height: 76px; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; border: 1px dashed var(--color-line-2); background: var(--color-surface); padding: 14px; color: var(--color-muted-2); text-align: center; }
+.student-invite-status.is-verified { justify-content: flex-start; border-style: solid; border-color: var(--color-red-deep); background: linear-gradient(90deg, rgba(255,59,59,.1), var(--color-surface)); text-align: left; }
+.student-invite-status > p { margin: 0; font-size: 12px; }
+.student-invite-status .dot-loader { margin-right: 2px; }
+.student-invite-status__check { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; background: var(--color-red); color: var(--color-text); font-family: var(--font-display); font-size: 20px; }
+.student-invite-status strong, .student-invite-status small { display: block; }
+.student-invite-status strong { font-family: var(--font-display); font-size: 18px; line-height: 1; }
+.student-invite-status small { margin-top: 6px; color: var(--color-muted-2); font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em; }
+
+.student-home { display: grid; min-height: 100dvh; place-items: center; background: radial-gradient(circle at 50% 18%, rgba(255,59,59,.2), transparent 30%), var(--color-bg); color: var(--color-text); padding: max(32px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom)); }
+.student-home > section { width: min(100%, 430px); }
+.student-home h1 { margin: 0; font-family: var(--font-display); font-size: clamp(3.2rem, 15vw, 4.8rem); line-height: .82; letter-spacing: -.045em; }
+.student-home__academy { display: grid; margin-top: 34px; border: 1px solid var(--color-line); background: var(--color-surface); padding: 22px; }
+.student-home__academy > small { color: var(--color-red); font-family: var(--font-mono); font-size: 9px; letter-spacing: .16em; }
+.student-home__academy > strong { margin-top: 10px; font-family: var(--font-display); font-size: 27px; line-height: 1; }
+.student-home__academy > span { margin-top: 7px; color: var(--color-muted-2); font-size: 13px; }
+.student-home__belt { margin-top: 20px; border-top: 1px solid var(--color-line); padding-top: 16px; color: var(--color-text-2); font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; }
+.student-home__next { margin: 22px 0 0; color: var(--color-muted-2); font-size: 13px; line-height: 1.55; }
+
 @media (prefers-reduced-motion: reduce) { .page-enter, .dot-loader span { animation: none; } .bb-grain::after { display: none; } }

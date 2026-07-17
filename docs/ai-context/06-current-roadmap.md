@@ -5,21 +5,21 @@
 These are the features required to make BlackBelt minimally viable. Nothing else gets built until these work end-to-end.
 
 ### Authentication
-- [ ] User registration (email + password)
-- [ ] User login
-- [ ] Session persistence (JWT + refresh token)
-- [ ] Logout
+- [x] User registration (email + password)
+- [x] User login
+- [x] Session persistence (JWT + refresh token)
+- [x] Logout
 - [ ] Password reset (basic email flow)
 
 ### Onboarding
-- [ ] Role selection screen (Owner vs Student)
-- [ ] Owner onboarding: academy name, city, professor profile, belt selection
-- [ ] Student onboarding: enter invite code, verify, profile setup, belt selection
-- [ ] Onboarding completion → redirect to correct home screen
+- [x] Role selection screen (Owner vs Student)
+- [x] Owner onboarding: academy name, city, professor profile, belt selection
+- [x] Student onboarding: enter invite code, verify, profile setup, belt selection
+- [x] Onboarding completion → redirect to correct home screen
 
 ### Academy Management (Owner)
-- [ ] Academy creation with generated invite code
-- [ ] Invite code display and sharing
+- [x] Academy creation with generated invite code
+- [x] Invite code display and sharing
 - [ ] Student roster view
 - [ ] Professor management (add/remove professor role)
 
@@ -70,7 +70,7 @@ After v0.1.0 is stable and being used by at least one academy:
 - [ ] Email notifications for check-in approval/rejection
 - [ ] Academy settings editing (name, city, invite code rotation)
 - [ ] Professor-side class management (professors manage their own classes)
-- [ ] Profile photo upload for students
+- [x] Profile photo upload for students (delivered with onboarding)
 - [ ] Class-level filtering on the student schedule view
 
 ---

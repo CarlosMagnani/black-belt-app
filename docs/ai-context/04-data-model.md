@@ -16,6 +16,9 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 | full_name | string | Required |
 | nickname | string | Optional (apelido) |
 | avatar_url | string | Optional, profile photo |
+| onboarding_role | enum | Nullable one-time choice: `owner` or `student` |
+| belt | enum | Optional static rank metadata for owner/professor profiles; not the student rank source |
+| degree | integer | Static owner/professor profile degree; defaults to 0 |
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
@@ -26,6 +29,7 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 **Constraints:**
 - Email must be unique across all users
 - Password hash is managed by Supabase Auth, remains unset in the application database, and is never exposed via API
+- A student's current rank is read from `StudentBelt`, never from `User.belt` or `User.degree`
 
 ---
 
@@ -75,11 +79,12 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 - Belongs to one `Academy`
 - Belongs to one `User`
 - If role = `student`, has one `StudentBelt`
-- If role = `student`, has one `MembershipSubscription`
+- If role = `student`, may have one `MembershipSubscription`
 
 **Constraints:**
 - One user can only have one membership per academy
 - (user_id, academy_id) must be unique
+- During the MVP, a student may have only one academy membership; the join use case and a partial unique database index enforce this across academies
 - Owner cannot also be a student in the same academy
 
 ---
@@ -105,7 +110,9 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 - Has many `BeltProgressionEvent` (history log)
 
 **Constraints:**
-- Students cannot modify their own belt — `changed_by` must be an owner or professor
+- During first academy join only, the student may create their initial belt and degree and `changed_by` records that student
+- After initial creation, students cannot modify their own belt — `changed_by` must be an owner or professor
+- Initial `StudentBelt` creation is not a progression event; later belt or degree changes must create a `BeltProgressionEvent`
 - degree is 0–4
 - Belt order: white → blue → purple → brown → black → coral → red
 - `approved_classes_at_level` resets to 0 on belt or degree advance

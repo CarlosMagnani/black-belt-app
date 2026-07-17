@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import type { Academy, AcademyMember, User } from '@prisma/client'
+import type { Academy, AcademyMember, StudentBelt, User } from '@prisma/client'
 import { buildApp } from '../src/app'
 import type {
   CreateStudentOnboardingInput,
   MembershipRepository,
 } from '../src/modules/membership/membership.repository'
+import { StudentMembershipConflictError } from '../src/modules/membership/membership.repository'
 import {
   AlreadyMemberError,
   DefaultMembershipService,
@@ -25,8 +26,8 @@ const student: User = {
   nickname: 'Helio',
   avatarUrl: `users/${studentId}/avatar`,
   onboardingRole: 'student',
-  belt: 'blue',
-  degree: 1,
+  belt: null,
+  degree: 0,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 }
@@ -53,6 +54,18 @@ const member: AcademyMember = {
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 }
 
+const studentBelt: StudentBelt = {
+  id: 'student-belt-id',
+  academyMemberId: member.id,
+  belt: 'blue',
+  degree: 1,
+  approvedClassesAtLevel: 0,
+  lastChangedAt: new Date('2026-01-01T00:00:00Z'),
+  changedBy: studentId,
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
+}
+
 test('student onboarding stores media and persists the complete flow through the repository', async () => {
   const storedObjects: StoreObjectInput[] = []
   let persistedInput: CreateStudentOnboardingInput | undefined
@@ -63,9 +76,12 @@ test('student onboarding stores media and persists the complete flow through the
     async findMemberByUserId() {
       return null
     },
+    async findStudentMembershipByUserId() {
+      return null
+    },
     async createStudentOnboarding(input) {
       persistedInput = input
-      return { academy, student }
+      return { academy, member, student, studentBelt }
     },
   }
   const storage: ObjectStorage = {
@@ -94,6 +110,9 @@ test('student onboarding stores media and persists the complete flow through the
   assert.equal(persistedInput?.nickname, 'Helio')
   assert.equal(result.academy.name, academy.name)
   assert.equal(result.student.nickname, student.nickname)
+  assert.equal(result.studentBelt.belt, studentBelt.belt)
+  assert.equal(result.studentBelt.degree, studentBelt.degree)
+  assert.equal(result.membership.id, member.id)
 
   await Promise.resolve()
 })
@@ -197,6 +216,103 @@ test('student onboarding rejects user already in an academy', async () => {
   )
 })
 
+test('student onboarding maps a concurrent database membership conflict to already-member', async () => {
+  const repository: MembershipRepository = {
+    async findAcademyByInviteCode() {
+      return academy
+    },
+    async findMemberByUserId() {
+      return null
+    },
+    async findStudentMembershipByUserId() {
+      return null
+    },
+    async createStudentOnboarding() {
+      throw new StudentMembershipConflictError()
+    },
+  }
+  const storage: ObjectStorage = {
+    async store() {
+      throw new Error('should not be called')
+    },
+    async delete() {},
+  }
+  const service = new DefaultMembershipService(repository, storage)
+
+  await assert.rejects(
+    service.joinAcademy({
+      userId: studentId,
+      inviteCode: 'BB-ABC123',
+      nickname: 'Helio',
+      belt: 'blue',
+      degree: 1,
+    }),
+    (error: Error) => error instanceof AlreadyMemberError
+  )
+})
+
+test('student onboarding normalizes an invite code before verification', async () => {
+  let receivedCode: string | undefined
+  const repository: MembershipRepository = {
+    async findAcademyByInviteCode(inviteCode) {
+      receivedCode = inviteCode
+      return academy
+    },
+    async findMemberByUserId() {
+      return null
+    },
+    async findStudentMembershipByUserId() {
+      return null
+    },
+    async createStudentOnboarding() {
+      throw new Error('should not be called')
+    },
+  }
+  const storage: ObjectStorage = {
+    async store() {
+      throw new Error('should not be called')
+    },
+    async delete() {},
+  }
+  const service = new DefaultMembershipService(repository, storage)
+
+  const result = await service.verifyInviteCode('  bb-abc123  ')
+
+  assert.equal(receivedCode, academy.inviteCode)
+  assert.deepEqual(result, { id: academy.id, name: academy.name, city: academy.city })
+})
+
+test('student membership status comes from AcademyMember and StudentBelt', async () => {
+  const repository: MembershipRepository = {
+    async findAcademyByInviteCode() {
+      return academy
+    },
+    async findMemberByUserId() {
+      return member
+    },
+    async findStudentMembershipByUserId() {
+      return { academy, member, student, studentBelt }
+    },
+    async createStudentOnboarding() {
+      throw new Error('should not be called')
+    },
+  }
+  const storage: ObjectStorage = {
+    async store() {
+      throw new Error('should not be called')
+    },
+    async delete() {},
+  }
+  const service = new DefaultMembershipService(repository, storage)
+
+  const result = await service.getStudentMembership(studentId)
+
+  assert.equal(result?.membership.id, member.id)
+  assert.equal(result?.studentBelt.belt, 'blue')
+  assert.equal(result?.studentBelt.degree, 1)
+  assert.equal(result?.student.belt, undefined)
+})
+
 test('POST /onboarding/student trims fields and returns the academy and student result', async () => {
   let receivedInput: Parameters<MembershipService['joinAcademy']>[0] | undefined
   const membershipService: MembershipService = {
@@ -217,7 +333,7 @@ test('POST /onboarding/student trims fields and returns the academy and student 
   }
   const app = createTestApp(membershipService)
   const response = await app.inject(multipartRequest({
-    inviteCode: `  ${academy.inviteCode}  `,
+    inviteCode: '  bb-abc123  ',
     nickname: '  Helio  ',
     belt: 'blue',
     degree: '1',
@@ -398,13 +514,115 @@ test('POST /onboarding/student rejects an invalid belt before calling the servic
   const response = await app.inject(multipartRequest({
     inviteCode: 'BB-ABC123',
     nickname: 'Helio',
-    belt: 'gold',
+    belt: 'coral',
     degree: '1',
   }))
 
   assert.equal(response.statusCode, 400)
   assert.equal(response.json().error.code, 'INVALID_BELT')
   assert.equal(serviceWasCalled, false)
+
+  await app.close()
+})
+
+test('POST /onboarding/student/verify-invite returns academy identity without joining', async () => {
+  let receivedCode: string | undefined
+  const membershipService: MembershipService = {
+    async verifyInviteCode(inviteCode) {
+      receivedCode = inviteCode
+      return { id: academy.id, name: academy.name, city: academy.city }
+    },
+    async getStudentMembership() {
+      return null
+    },
+    async joinAcademy() {
+      throw new Error('should not be called')
+    },
+  }
+  const app = createTestApp(membershipService)
+  const response = await app.inject({
+    method: 'POST',
+    url: '/onboarding/student/verify-invite',
+    headers: {
+      authorization: 'Bearer test-token',
+      'content-type': 'application/json',
+    },
+    payload: JSON.stringify({ inviteCode: '  bb-abc123  ' }),
+  })
+
+  assert.equal(response.statusCode, 200)
+  assert.equal(receivedCode, 'bb-abc123')
+  assert.deepEqual(response.json().data.academy, {
+    id: academy.id,
+    name: academy.name,
+    city: academy.city,
+  })
+
+  await app.close()
+})
+
+test('GET /memberships/me returns the active academy and StudentBelt', async () => {
+  const membershipResult = {
+    academy: { id: academy.id, name: academy.name, city: academy.city },
+    membership: { id: member.id, joinedAt: member.joinedAt, status: member.status },
+    student: {
+      id: student.id,
+      fullName: student.fullName,
+      nickname: student.nickname,
+      avatarUrl: student.avatarUrl,
+    },
+    studentBelt: {
+      approvedClassesAtLevel: studentBelt.approvedClassesAtLevel,
+      belt: studentBelt.belt,
+      degree: studentBelt.degree,
+    },
+  }
+  const membershipService: MembershipService = {
+    async verifyInviteCode() {
+      throw new Error('should not be called')
+    },
+    async getStudentMembership() {
+      return membershipResult
+    },
+    async joinAcademy() {
+      throw new Error('should not be called')
+    },
+  }
+  const app = createTestApp(membershipService)
+  const response = await app.inject({
+    method: 'GET',
+    url: '/memberships/me',
+    headers: { authorization: 'Bearer test-token' },
+  })
+
+  assert.equal(response.statusCode, 200)
+  assert.equal(response.json().data.academy.name, academy.name)
+  assert.equal(response.json().data.studentBelt.belt, 'blue')
+
+  await app.close()
+})
+
+test('GET /memberships/me reports a student who has not joined yet', async () => {
+  const membershipService: MembershipService = {
+    async verifyInviteCode() {
+      throw new Error('should not be called')
+    },
+    async getStudentMembership() {
+      return null
+    },
+    async joinAcademy() {
+      throw new Error('should not be called')
+    },
+  }
+  const app = createTestApp(membershipService)
+  const response = await app.inject({
+    method: 'GET',
+    url: '/memberships/me',
+    headers: { authorization: 'Bearer test-token' },
+  })
+
+  assert.equal(response.statusCode, 404)
+  assert.equal(response.json().error.code, 'MEMBERSHIP_NOT_FOUND')
 
   await app.close()
 })

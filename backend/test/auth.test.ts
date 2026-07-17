@@ -187,7 +187,14 @@ test('GET /auth/me syncs and returns a valid Supabase user', async () => {
   assert.equal(response.statusCode, 200)
   assert.equal(syncedSubject, testUser.id)
   assert.deepEqual(response.json(), {
-    data: { user: { id: testUser.id, email: testUser.email, fullName: testUser.fullName } },
+    data: {
+      user: {
+        id: testUser.id,
+        email: testUser.email,
+        fullName: testUser.fullName,
+        onboardingRole: null,
+      },
+    },
     error: null,
   })
 

@@ -5,7 +5,12 @@ import { onboardingRoleSchema } from './auth.types'
 
 export async function getCurrentUser(request: FastifyRequest, reply: FastifyReply) {
   return reply.send({
-    data: { user: request.authenticatedUser! },
+    data: {
+      user: {
+        ...request.authenticatedUser!,
+        onboardingRole: request.userOnboardingRole ?? null,
+      },
+    },
     error: null,
   })
 }

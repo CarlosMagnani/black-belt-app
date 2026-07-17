@@ -3,9 +3,81 @@ import type { MembershipService } from './membership.service'
 import { AlreadyMemberError, InvalidInviteCodeError, MediaUploadError } from './membership.service'
 import type { Belt } from '@prisma/client'
 import type { MediaContentType } from '../storage/object-storage'
+import { z } from 'zod'
 
 const ALLOWED_CONTENT_TYPES: MediaContentType[] = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
+const inviteCodeSchema = z.object({ inviteCode: z.string().trim().min(1) })
+
+export async function verifyInviteCode(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  membershipService: MembershipService
+) {
+  if (request.userOnboardingRole !== 'student') {
+    return reply.code(403).send({
+      data: null,
+      error: { code: 'FORBIDDEN', message: 'Only students can verify academy invites' },
+    })
+  }
+
+  const input = inviteCodeSchema.safeParse(request.body)
+  if (!input.success) {
+    return reply.code(400).send({
+      data: null,
+      error: { code: 'INVALID_INPUT', message: 'inviteCode is required' },
+    })
+  }
+
+  try {
+    const academy = await membershipService.verifyInviteCode(input.data.inviteCode)
+    return reply.send({ data: { academy }, error: null })
+  } catch (error) {
+    if (error instanceof InvalidInviteCodeError) {
+      return reply.code(404).send({
+        data: null,
+        error: { code: 'INVALID_INVITE_CODE', message: 'Invalid invite code' },
+      })
+    }
+
+    request.log.error({ err: error }, 'Failed to verify academy invite')
+    return reply.code(500).send({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Could not verify invite code' },
+    })
+  }
+}
+
+export async function getStudentMembership(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  membershipService: MembershipService
+) {
+  const user = request.authenticatedUser
+  if (!user) {
+    return reply.code(401).send({
+      data: null,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    })
+  }
+
+  if (request.userOnboardingRole !== 'student') {
+    return reply.code(403).send({
+      data: null,
+      error: { code: 'FORBIDDEN', message: 'Only students have student memberships' },
+    })
+  }
+
+  const membership = await membershipService.getStudentMembership(user.id)
+  if (!membership) {
+    return reply.code(404).send({
+      data: null,
+      error: { code: 'MEMBERSHIP_NOT_FOUND', message: 'Student has not joined an academy' },
+    })
+  }
+
+  return reply.send({ data: membership, error: null })
+}
 
 export async function joinAcademy(
   request: FastifyRequest,
@@ -81,7 +153,7 @@ export async function joinAcademy(
     })
   }
 
-  const validBelts: Belt[] = ['white', 'blue', 'purple', 'brown', 'black', 'coral', 'red']
+  const validBelts: Belt[] = ['white', 'blue', 'purple', 'brown', 'black']
   if (!validBelts.includes(belt)) {
     return reply.code(400).send({
       data: null,
@@ -99,7 +171,7 @@ export async function joinAcademy(
   try {
     const result = await membershipService.joinAcademy({
       userId: user.id,
-      inviteCode: inviteCode.trim(),
+      inviteCode: inviteCode.trim().toUpperCase(),
       nickname: nickname.trim(),
       belt,
       degree,

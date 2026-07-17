@@ -2,7 +2,7 @@
 
 ## 1. Current Goal
 
-Build the student onboarding route and its invite-verification API slice. The owner onboarding UI and API are now connected end to end.
+Student onboarding and academy joining are now connected end to end. The next focused slice is password recovery unless the product roadmap is reprioritized.
 
 Backend authentication and Supabase project configuration completed on 2026-07-10:
 
@@ -23,7 +23,7 @@ Frontend authentication completed on 2026-07-10:
 - Registration uses email/password only, requires a matching 8-character password, and sends users to a confirmation-email screen.
 - The confirmation screen can resend the signup email; its redirect restores the Supabase session and opens the existing role-selection handoff.
 - Session restoration, route guards, and logout are implemented with `@supabase/supabase-js`.
-- Existing owner/student role cards are recreated as the post-login destination; their full onboarding routes are intentionally deferred.
+- Existing owner/student role cards are the post-login destination and route into their implemented onboarding flows.
 
 Owner onboarding UI completed on 2026-07-14:
 
@@ -77,15 +77,32 @@ Owner onboarding API slice completed on 2026-07-14:
 - Migration `20260714190000_add_owner_onboarding_fields` created and applied.
 - New academy module: repository, service, controller, routes under `backend/src/modules/academy/`.
 
+Student onboarding slice completed on 2026-07-14:
+
+- `/onboarding/aluno` is a mobile-first three-step flow in Brazilian Portuguese: verify invite, set required `Nome no tatame` plus optional photo, then declare the initial belt and degree.
+- The invite screen accepts a typed code only; QR instructions are intentionally omitted. Codes are normalized with trim + uppercase and verified only when the user taps the action.
+- `POST /onboarding/student/verify-invite` is protected and returns only academy identity (`id`, `name`, `city`) for valid invites.
+- `POST /onboarding/student` accepts multipart `inviteCode`, `nickname`, `belt`, `degree`, and optional `photo`; file validation remains JPEG/PNG/WebP up to 5 MB.
+- Joining atomically creates the student `AcademyMember` and starting `StudentBelt`, then updates only the user's nickname/avatar. Student rank is not duplicated into `User.belt` or `User.degree`.
+- Self-declared starting rank is allowed once at join. After creation, the existing rule remains: only owners/professors may change student belt or degree.
+- The onboarding UI exposes white, blue, purple, brown, and black belts with degrees 0–4. Coral and red remain in the domain hierarchy but are not self-selectable.
+- One student can join only one academy for the MVP. The service check is backed by a partial unique PostgreSQL index for concurrent requests. A plan is not required at join; any later subscription must reference a valid academy plan.
+- `GET /memberships/me` returns the student's current membership, academy, profile, and `StudentBelt`, allowing reload/resume and direct routing to protected `/aluno`.
+- `/aluno` is a protected minimal destination showing the academy and starting rank. Full student dashboard features remain deferred.
+- Role-choice recovery now reads `onboardingRole` from `GET /auth/me`, so an already-persisted owner or student role resumes its matching onboarding rather than trying to select a new role.
+- Verification passes: 35 backend tests, backend TypeScript build, frontend lint/build, Prisma validation, migration status, and live local API health/protection probes.
+
 Next implementation focus:
 
-- Build the student onboarding route and its invite-verification API slice.
 - Implement password recovery as the next separate auth slice.
+- Build the first real student dashboard capability as a separate vertical slice after product prioritization.
 
 Open risks:
 
 - Live end-to-end signup and confirmation still need a disposable confirmed test account.
 - The full browser flow has not yet been submitted with a disposable owner because that would create real academy records; backend HTTP tests and the reversible live Storage smoke test pass.
+- Student joining has automated service/HTTP coverage but still needs one disposable confirmed student for a browser submission against a disposable academy.
+- Rotate the Supabase backend secret that appeared in local diagnostic output, then update the uncommitted local environment files before further live media testing.
 - Supabase leaked-password protection remains disabled and should be enabled separately in Auth settings.
 
 Commands run:

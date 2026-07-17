@@ -1,5 +1,6 @@
 import type { Belt } from '@prisma/client'
 import type { MembershipRepository } from './membership.repository'
+import { StudentMembershipConflictError } from './membership.repository'
 import type { MediaContentType, ObjectStorage } from '../storage/object-storage'
 import { ObjectStorageError } from '../storage/object-storage'
 
@@ -18,18 +19,28 @@ export type StudentOnboardingResult = {
     name: string
     city: string
   }
+  membership: {
+    id: string
+    joinedAt: Date
+    status: string
+  }
   student: {
     id: string
     fullName: string
     nickname: string | null
     avatarUrl: string | null
-    belt: Belt | null
+  }
+  studentBelt: {
+    approvedClassesAtLevel: number
+    belt: Belt
     degree: number
   }
 }
 
 export interface MembershipService {
+  getStudentMembership(userId: string): Promise<StudentOnboardingResult | null>
   joinAcademy(input: JoinAcademyInput): Promise<StudentOnboardingResult>
+  verifyInviteCode(inviteCode: string): Promise<StudentOnboardingResult['academy']>
 }
 
 export class DefaultMembershipService implements MembershipService {
@@ -38,8 +49,48 @@ export class DefaultMembershipService implements MembershipService {
     private readonly objectStorage: ObjectStorage
   ) {}
 
+  async verifyInviteCode(inviteCode: string): Promise<StudentOnboardingResult['academy']> {
+    const academy = await this.membershipRepository.findAcademyByInviteCode(normalizeInviteCode(inviteCode))
+    if (!academy) {
+      throw new InvalidInviteCodeError()
+    }
+
+    return { id: academy.id, name: academy.name, city: academy.city }
+  }
+
+  async getStudentMembership(userId: string): Promise<StudentOnboardingResult | null> {
+    const result = await this.membershipRepository.findStudentMembershipByUserId(userId)
+    if (!result) {
+      return null
+    }
+
+    return {
+      academy: {
+        id: result.academy.id,
+        name: result.academy.name,
+        city: result.academy.city,
+      },
+      membership: {
+        id: result.member.id,
+        joinedAt: result.member.joinedAt,
+        status: result.member.status,
+      },
+      student: {
+        id: result.student.id,
+        fullName: result.student.fullName,
+        nickname: result.student.nickname,
+        avatarUrl: result.student.avatarUrl,
+      },
+      studentBelt: {
+        approvedClassesAtLevel: result.studentBelt.approvedClassesAtLevel,
+        belt: result.studentBelt.belt,
+        degree: result.studentBelt.degree,
+      },
+    }
+  }
+
   async joinAcademy(input: JoinAcademyInput): Promise<StudentOnboardingResult> {
-    const academy = await this.membershipRepository.findAcademyByInviteCode(input.inviteCode)
+    const academy = await this.membershipRepository.findAcademyByInviteCode(normalizeInviteCode(input.inviteCode))
     if (!academy) {
       throw new InvalidInviteCodeError()
     }
@@ -84,18 +135,29 @@ export class DefaultMembershipService implements MembershipService {
           name: result.academy.name,
           city: result.academy.city,
         },
+        membership: {
+          id: result.member.id,
+          joinedAt: result.member.joinedAt,
+          status: result.member.status,
+        },
         student: {
           id: result.student.id,
           fullName: result.student.fullName,
           nickname: result.student.nickname,
           avatarUrl: result.student.avatarUrl,
-          belt: result.student.belt,
-          degree: result.student.degree,
+        },
+        studentBelt: {
+          approvedClassesAtLevel: result.studentBelt.approvedClassesAtLevel,
+          belt: result.studentBelt.belt,
+          degree: result.studentBelt.degree,
         },
       }
     } catch (error) {
       if (avatarUrl) {
         await this.safeDeleteObject(avatarUrl)
+      }
+      if (error instanceof StudentMembershipConflictError) {
+        throw new AlreadyMemberError()
       }
       throw error
     }
@@ -108,6 +170,10 @@ export class DefaultMembershipService implements MembershipService {
       // best-effort cleanup; orphaned objects are preferable to a broken flow
     }
   }
+}
+
+function normalizeInviteCode(inviteCode: string) {
+  return inviteCode.trim().toUpperCase()
 }
 
 export class InvalidInviteCodeError extends Error {

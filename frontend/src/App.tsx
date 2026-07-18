@@ -1,48 +1,21 @@
-import { useEffect, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { useAuth } from './hooks/useAuth'
+import { SessionLoading } from './components/SessionLoading'
 import { AuthPage, ConfirmationPage } from './features/auth/AuthPage'
 import { RoleChoicePage } from './features/auth/RoleChoicePage'
 import { OwnerOnboardingPage } from './features/onboarding/OwnerOnboardingPage'
 import { StudentHomePage } from './features/onboarding/StudentHomePage'
 import { StudentOnboardingPage } from './features/onboarding/StudentOnboardingPage'
-import { supabase } from './lib/supabase'
-
-function OwnerHomePlaceholder() {
-  const location = useLocation()
-  const notice = (location.state as { notice?: string } | null)?.notice
-
-  return (
-    <main className="onboarding-placeholder bb-grain">
-      <section className="page-enter">
-        <p className="eyebrow">ÁREA DO MESTRE</p>
-        <h1>ACADEMIA CRIADA</h1>
-        {notice && <p className="role-notice" role="status">{notice}</p>}
-        <p>O painel da sua academia será construído na próxima etapa.</p>
-      </section>
-    </main>
-  )
-}
+import { OwnerRoute } from './components/OwnerRoute'
+import { OwnerWorkspaceLayout } from './features/owner/OwnerWorkspaceLayout'
+import { OwnerHomePage } from './features/owner/OwnerHomePage'
+import { RosterPage } from './features/owner/RosterPage'
+import { SchedulePlaceholder, FinancePlaceholder, AcademySettingsPlaceholder } from './features/owner/OwnerPlaceholders'
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null)
-  const [isLoadingSession, setIsLoadingSession] = useState(true)
+  const { session, isLoading } = useAuth()
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setIsLoadingSession(false)
-    })
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession)
-      setIsLoadingSession(false)
-    })
-
-    return () => subscription.subscription.unsubscribe()
-  }, [])
-
-  if (isLoadingSession) {
+  if (isLoading) {
     return <SessionLoading />
   }
 
@@ -54,22 +27,23 @@ function App() {
         <Route path="/confirmar-email" element={session ? <Navigate to="/boas-vindas" replace /> : <ConfirmationPage />} />
         <Route path="/boas-vindas" element={session ? <RoleChoicePage /> : <Navigate to="/entrar" replace />} />
         <Route path="/onboarding/mestre" element={session ? <OwnerOnboardingPage /> : <Navigate to="/entrar" replace />} />
-        <Route path="/mestre" element={session ? <OwnerHomePlaceholder /> : <Navigate to="/entrar" replace />} />
         <Route path="/onboarding/aluno" element={session ? <StudentOnboardingPage /> : <Navigate to="/entrar" replace />} />
+
+        <Route element={<OwnerRoute />}>
+          <Route element={<OwnerWorkspaceLayout />}>
+            <Route path="/mestre" element={<Navigate to="/mestre/painel" replace />} />
+            <Route path="/mestre/painel" element={<OwnerHomePage />} />
+            <Route path="/mestre/agenda" element={<SchedulePlaceholder />} />
+            <Route path="/mestre/alunos" element={<RosterPage />} />
+            <Route path="/mestre/caixa" element={<FinancePlaceholder />} />
+            <Route path="/mestre/perfil" element={<AcademySettingsPlaceholder />} />
+          </Route>
+        </Route>
+
         <Route path="/aluno" element={session ? <StudentHomePage /> : <Navigate to="/entrar" replace />} />
         <Route path="*" element={<Navigate to={session ? '/boas-vindas' : '/entrar'} replace />} />
       </Routes>
     </BrowserRouter>
-  )
-}
-
-function SessionLoading() {
-  return (
-    <main className="session-loading bb-grain" aria-live="polite">
-      <p className="eyebrow">BLACK BELT</p>
-      <div className="dot-loader" aria-label="Carregando sessão"><span /><span /><span /></div>
-      <p>Ajustando sua faixa...</p>
-    </main>
   )
 }
 

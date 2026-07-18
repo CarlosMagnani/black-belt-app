@@ -14,12 +14,16 @@ import { academyRoutes } from './modules/academy/academy.routes'
 import { DefaultMembershipService, type MembershipService } from './modules/membership/membership.service'
 import { PrismaMembershipRepository } from './modules/membership/membership.repository'
 import { membershipRoutes } from './modules/membership/membership.routes'
+import { DefaultRosterService, type RosterService } from './modules/academy/roster/roster.service'
+import { PrismaRosterRepository } from './modules/academy/roster/roster.repository'
+import { rosterRoutes } from './modules/academy/roster/roster.routes'
 
 type BuildAppOptions = {
   academyService?: AcademyService
   authService?: AuthService
   logger?: boolean
   membershipService?: MembershipService
+  rosterService?: RosterService
   supabaseUrl: string
   supabaseSecretKey?: string
   storageBucket?: string
@@ -34,6 +38,7 @@ export function buildApp(options: BuildAppOptions) {
 
   const academyService = options.academyService ?? createDefaultAcademyService(options)
   const membershipService = options.membershipService ?? createDefaultMembershipService(options)
+  const rosterService = options.rosterService ?? new DefaultRosterService(new PrismaRosterRepository())
 
   app.register(cors, { origin: true })
   app.register(helmet)
@@ -51,6 +56,7 @@ export function buildApp(options: BuildAppOptions) {
   app.register(async (app) => {
     await academyRoutes(app, academyService, authService, verifyAccessToken)
     await membershipRoutes(app, membershipService, authService, verifyAccessToken)
+    await rosterRoutes(app, rosterService, authService, verifyAccessToken)
   })
 
   app.get('/health', async () => ({ status: 'ok' }))

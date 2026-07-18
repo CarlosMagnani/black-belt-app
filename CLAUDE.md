@@ -56,3 +56,17 @@ If an implementation would violate a rule in `docs/ai-context/02-domain-rules.md
 - No premature optimization.
 - TypeScript preferred over JavaScript for new files.
 - Consistent naming with the existing codebase.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked in this repository's GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+This repository uses the five default canonical triage labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repository uses a single-context domain documentation layout. See `docs/agents/domain.md`.

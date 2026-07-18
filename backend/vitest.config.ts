@@ -7,5 +7,7 @@ export default defineConfig({
     setupFiles: ['test/setup.ts'],
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Run files sequentially because they share the same database
+    fileParallelism: false,
   },
 })

@@ -22,6 +22,20 @@ export async function resolveOwnedAcademy(userId: string): Promise<ResolvedAcade
   return { academyId: member.academyId }
 }
 
+/**
+ * Looks up any academy where the user has an active membership
+ * (owner, professor, or student with status = 'active').
+ * Returns null if the user has no active membership in any academy.
+ */
+export async function resolveAcademyMember(userId: string): Promise<ResolvedAcademy | null> {
+  const member = await prisma.academyMember.findFirst({
+    where: { userId, status: 'active' },
+    select: { academyId: true },
+  })
+  if (!member) return null
+  return { academyId: member.academyId }
+}
+
 declare module 'fastify' {
   interface FastifyRequest {
     academy?: ResolvedAcademy

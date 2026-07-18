@@ -108,9 +108,9 @@ export class PrismaRosterRepository implements RosterRepository {
     }
   }
 
-  async countActiveClassesForInstructor(instructorId: string): Promise<number> {
+  async countActiveClassesForInstructor(instructorId: string, academyId: string): Promise<number> {
     return prisma.classSchedule.count({
-      where: { instructorId, isActive: true },
+      where: { instructorId, academyId, isActive: true },
     })
   }
 

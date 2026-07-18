@@ -90,7 +90,8 @@ export class DefaultRosterService implements RosterService {
 
       // Check if professor has active classes
       const activeClassCount = await this.rosterRepository.countActiveClassesForInstructor(
-        targetMember.userId
+        targetMember.userId,
+        ownedAcademy.academyId
       )
 
       if (!canRevokeProfessor(activeClassCount)) {

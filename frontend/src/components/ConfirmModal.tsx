@@ -77,7 +77,7 @@ export function ConfirmModal({
           ) : (
             <button
               ref={confirmRef}
-              className="min-h-[56px] w-full border border-red bg-surface text-red font-display uppercase text-[15px] tracking-[0.01em] px-4 transition enabled:hover:bg-red/10 disabled:opacity-40"
+              className="min-h-[50px] w-full bg-transparent text-red uppercase font-display text-[15px] tracking-[0.01em] px-4 transition disabled:opacity-40"
               onClick={onConfirm}
               disabled={isLoading}
               type="button"

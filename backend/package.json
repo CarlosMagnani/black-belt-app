@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "vitest run",
+    "test:vitest": "vitest run",
+    "test": "npm run test:vitest && npm run test:legacy",
     "test:watch": "vitest",
     "test:legacy": "tsx --test test/**/*.test.ts",
     "start": "node dist/server.js",

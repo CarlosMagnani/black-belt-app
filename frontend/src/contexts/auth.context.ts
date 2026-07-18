@@ -5,11 +5,7 @@ type UserProfile = {
   id: string
   email: string
   fullName: string
-  nickname: string | null
-  avatarUrl: string | null
   onboardingRole: 'owner' | 'student' | null
-  belt: string | null
-  degree: number | null
 }
 
 type AuthContextValue = {

@@ -69,7 +69,7 @@ export interface RosterRepository {
   findOwnedAcademy(userId: string): Promise<OwnedAcademy | null>
   listMembers(academyId: string): Promise<RosterMemberRecord[]>
   findByAcademyAndMemberId(academyId: string, memberId: string): Promise<RosterMemberRecord | null>
-  countActiveClassesForInstructor(instructorId: string): Promise<number>
+  countActiveClassesForInstructor(instructorId: string, academyId: string): Promise<number>
   updateRole(
     academyId: string,
     memberId: string,

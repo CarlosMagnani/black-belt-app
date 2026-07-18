@@ -84,7 +84,7 @@ Student onboarding slice completed on 2026-07-14:
 - `POST /onboarding/student/verify-invite` is protected and returns only academy identity (`id`, `name`, `city`) for valid invites.
 - `POST /onboarding/student` accepts multipart `inviteCode`, `nickname`, `belt`, `degree`, and optional `photo`; file validation remains JPEG/PNG/WebP up to 5 MB.
 - Joining atomically creates the student `AcademyMember` and starting `StudentBelt`, then updates only the user's nickname/avatar. Student rank is not duplicated into `User.belt` or `User.degree`.
-- Self-declared starting rank is allowed once at join. After creation, the existing rule remains: only owners/professors may change student belt or degree.
+- Self-declared starting rank is allowed once at join. After creation, product direction is that only the academy owner may change student belt or degree; the current implementation has not yet added those changes.
 - The onboarding UI exposes white, blue, purple, brown, and black belts with degrees 0–4. Coral and red remain in the domain hierarchy but are not self-selectable.
 - One student can join only one academy for the MVP. The service check is backed by a partial unique PostgreSQL index for concurrent requests. A plan is not required at join; any later subscription must reference a valid academy plan.
 - `GET /memberships/me` returns the student's current membership, academy, profile, and `StudentBelt`, allowing reload/resume and direct routing to protected `/aluno`.

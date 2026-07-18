@@ -31,7 +31,7 @@ Owners define the weekly class schedule: day, time, instructor, location, and le
 Students request check-ins after attending a class. Owners and professors review the pending list and approve or reject each one. Approved check-ins are the mechanism that drives belt progression — every approval counts.
 
 ### Belt Progression Tracking
-Every approved check-in advances the student toward their next degree or belt. The system tracks how many classes a student has attended and shows their progress toward the next milestone. Belt changes are controlled by professors and owners — students cannot change their own belt.
+Every approved check-in advances the student toward promotion eligibility. The system tracks how many classes a student has attended and shows their progress toward the next milestone. Belt changes are controlled only by the academy owner — neither students nor professors can change a student's belt.
 
 The belt hierarchy follows the standard Brazilian Jiu-Jitsu progression:
 White → Blue → Purple → Brown → Black → Coral → Red

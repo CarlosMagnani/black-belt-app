@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
+  "agents": {
+    "orchestrator": {
+      "skills": ["*"]
+    },
+    "fixer": {
+      "skills": ["implement"]
+    }
+  }
+}

@@ -122,7 +122,7 @@ export function RosterPage() {
             member={member}
             action={
               <GhostButton
-                className="h-11 px-3 text-[13px]"
+                className="h-11 min-h-0 px-3 text-[13px]"
                 disabled={blockedRevokeIds.has(member.id)}
                 onClick={() => handleRevoke(member)}
                 title={
@@ -148,7 +148,7 @@ export function RosterPage() {
             member={member}
             action={
               <PrimaryButton
-                className="h-11 px-3 text-[13px]"
+                className="h-11 min-h-0 px-3 text-[13px]"
                 onClick={() => handlePromote(member)}
               >
                 PROMOVER

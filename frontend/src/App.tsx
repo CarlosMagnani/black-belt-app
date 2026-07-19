@@ -10,7 +10,9 @@ import { OwnerRoute } from './components/OwnerRoute'
 import { OwnerWorkspaceLayout } from './features/owner/OwnerWorkspaceLayout'
 import { OwnerHomePage } from './features/owner/OwnerHomePage'
 import { RosterPage } from './features/owner/RosterPage'
-import { SchedulePlaceholder, FinancePlaceholder, AcademySettingsPlaceholder } from './features/owner/OwnerPlaceholders'
+import { FinancePlaceholder, AcademySettingsPlaceholder } from './features/owner/OwnerPlaceholders'
+import { AgendaPage } from './features/schedule/AgendaPage'
+import { ClassFormPage } from './features/schedule/ClassFormPage'
 
 function App() {
   const { session, isLoading } = useAuth()
@@ -33,7 +35,10 @@ function App() {
           <Route element={<OwnerWorkspaceLayout />}>
             <Route path="/mestre" element={<Navigate to="/mestre/painel" replace />} />
             <Route path="/mestre/painel" element={<OwnerHomePage />} />
-            <Route path="/mestre/agenda" element={<SchedulePlaceholder />} />
+            <Route path="/mestre/agenda" element={<AgendaPage />} />
+            <Route path="/mestre/agenda/nova" element={<ClassFormPage mode="create" />} />
+            <Route path="/mestre/agenda/:classId/editar" element={<ClassFormPage mode="edit" />} />
+            <Route path="/mestre/agenda/:classId" element={<ClassFormPage mode="edit" />} />
             <Route path="/mestre/alunos" element={<RosterPage />} />
             <Route path="/mestre/caixa" element={<FinancePlaceholder />} />
             <Route path="/mestre/perfil" element={<AcademySettingsPlaceholder />} />

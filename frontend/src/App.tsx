@@ -4,7 +4,8 @@ import { SessionLoading } from './components/SessionLoading'
 import { AuthPage, ConfirmationPage } from './features/auth/AuthPage'
 import { RoleChoicePage } from './features/auth/RoleChoicePage'
 import { OwnerOnboardingPage } from './features/onboarding/OwnerOnboardingPage'
-import { StudentHomePage } from './features/onboarding/StudentHomePage'
+import { StudentHomePage } from './features/student/StudentHomePage'
+import { ClassDetailPage } from './features/student/ClassDetailPage'
 import { StudentOnboardingPage } from './features/onboarding/StudentOnboardingPage'
 import { OwnerRoute } from './components/OwnerRoute'
 import { OwnerWorkspaceLayout } from './features/owner/OwnerWorkspaceLayout'
@@ -46,6 +47,7 @@ function App() {
         </Route>
 
         <Route path="/aluno" element={session ? <StudentHomePage /> : <Navigate to="/entrar" replace />} />
+        <Route path="/aluno/aula/:classId" element={session ? <ClassDetailPage /> : <Navigate to="/entrar" replace />} />
         <Route path="*" element={<Navigate to={session ? '/boas-vindas' : '/entrar'} replace />} />
       </Routes>
     </BrowserRouter>

@@ -61,3 +61,42 @@ export function todayInSaoPaulo(): string {
     day: '2-digit',
   }).format(new Date())
 }
+
+export function isClassToday(classSchedule: { dayOfWeek: number }, today: Date): boolean {
+  return classSchedule.dayOfWeek === today.getDay()
+}
+
+export function formatClassTimeRange(startTime: string, durationMinutes: number): string {
+  const [hours, minutes] = startTime.split(':').map(Number)
+  const startMinutes = hours * 60 + minutes
+  const endMinutes = startMinutes + durationMinutes
+  const endHours = Math.floor(endMinutes / 60) % 24
+  const endMins = endMinutes % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${startTime} — ${pad(endHours)}:${pad(endMins)}`
+}
+
+export function formatTodayHeader(date: Date): string {
+  const weekday = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'short',
+  })
+    .format(date)
+    .replace(/\./g, '')
+    .toUpperCase()
+
+  const day = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: 'numeric',
+  }).format(date)
+
+  const month = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    month: 'short',
+  })
+    .format(date)
+    .replace(/\./g, '')
+    .toUpperCase()
+
+  return `${weekday} · ${day} ${month}`
+}

@@ -28,7 +28,7 @@ export function useDeactivateClass() {
         return result.data
       }
 
-      if (result.error && result.error.code === 'not_found') {
+      if (result.error && result.error.code === 'NOT_FOUND') {
         return null
       }
 

@@ -20,12 +20,6 @@ import type { ClassLevel, CreateClassInput, MemberSummary, ScheduledClass } from
 
 const classFormSchema = z.object({
   title: z.string().trim().min(1, 'Título obrigatório').max(100, 'Máximo 100 caracteres'),
-  description: z
-    .string()
-    .trim()
-    .max(500, 'Máximo 500 caracteres')
-    .optional()
-    .or(z.literal('')),
   dayOfWeek: z.number().int().min(0, 'Dia inválido').max(6, 'Dia inválido'),
   startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido (HH:mm)'),
   durationMinutes: z.number().int().min(15, 'Mínimo 15 min').max(240, 'Máximo 240 min'),
@@ -43,7 +37,6 @@ type FormValues = z.infer<typeof classFormSchema>
 
 const emptyFormValues: FormValues = {
   title: '',
-  description: undefined,
   dayOfWeek: 1,
   startTime: '07:00',
   durationMinutes: 60,
@@ -55,22 +48,19 @@ const emptyFormValues: FormValues = {
 function classToFormValues(cls: ScheduledClass, members: MemberSummary[]): FormValues {
   return {
     title: cls.title,
-    description: cls.description ?? undefined,
     dayOfWeek: cls.dayOfWeek,
     startTime: cls.startTime,
     durationMinutes: cls.durationMinutes,
     location: cls.location ?? undefined,
     level: cls.level,
-    instructorId: resolveInstructorMemberId(cls.instructor.id, members),
+    instructorId: resolveInstructorUserId(cls.instructor.id, members),
   }
 }
 
-function resolveInstructorMemberId(instructorId: string, members: MemberSummary[]): string {
-  const direct = members.find((member) => member.id === instructorId)
-  if (direct) return direct.id
-
-  const byUserId = members.find((member) => member.userId === instructorId)
-  return byUserId?.id ?? instructorId
+function resolveInstructorUserId(instructorId: string, members: MemberSummary[]): string {
+  // instructorId from the backend is User.id (ClassSchedule.instructorId FK), not AcademyMember.id
+  const member = members.find((member) => member.userId === instructorId)
+  return member?.userId ?? instructorId
 }
 
 export function ClassFormPage({ mode }: { mode: 'create' | 'edit' }) {
@@ -105,7 +95,6 @@ export function ClassFormPage({ mode }: { mode: 'create' | 'edit' }) {
   function toClassInput(data: FormValues): CreateClassInput {
     return {
       title: data.title,
-      description: data.description || undefined,
       dayOfWeek: data.dayOfWeek as CreateClassInput['dayOfWeek'],
       startTime: data.startTime,
       durationMinutes: data.durationMinutes,
@@ -191,17 +180,6 @@ export function ClassFormPage({ mode }: { mode: 'create' | 'edit' }) {
             className="h-[56px] w-full bg-surface border border-line px-4 text-[17px] text-text outline-none focus:border-red"
           />
           {errors.title && <p className="text-[12px] text-red">{errors.title.message}</p>}
-        </div>
-
-        <div className="form-field">
-          <span>Descrição (opcional)</span>
-          <textarea
-            {...register('description')}
-            rows={3}
-            placeholder="Ex: Aula focada em posições de guarda"
-            className="min-h-[96px] w-full bg-surface border border-line px-4 py-3 text-[17px] text-text outline-none focus:border-red resize-none"
-          />
-          {errors.description && <p className="text-[12px] text-red">{errors.description.message}</p>}
         </div>
 
         <div className="form-field">

@@ -1,3 +1,4 @@
+// Value is User.id (ClassSchedule.instructorId FK), not AcademyMember.id.
 import { beltColor, beltTextColor } from '../utils/beltColor'
 import { getInitials } from '../utils/initials'
 import type { MemberSummary } from '../features/schedule/schedule.types'
@@ -21,7 +22,7 @@ export function ProfessorSelect({
     .filter((member) => member.role === 'owner' || member.role === 'professor')
     .sort((a, b) => a.fullName.localeCompare(b.fullName))
 
-  const selected = eligible.find((member) => member.id === value) ?? null
+  const selected = eligible.find((member) => member.userId === value) ?? null
 
   return (
     <div>
@@ -43,7 +44,7 @@ export function ProfessorSelect({
             Selecione um professor
           </option>
           {eligible.map((member) => (
-            <option key={member.id} value={member.id}>
+            <option key={member.id} value={member.userId}>
               Prof. {member.fullName}
             </option>
           ))}

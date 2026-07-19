@@ -5,7 +5,6 @@ export type ClassLevel = 'todas' | 'iniciante' | 'intermediario' | 'avancado'
 export type ScheduledClass = {
   id: string
   title: string
-  description: string | null
   dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6
   startTime: string
   durationMinutes: number
@@ -28,7 +27,6 @@ export type ClassesResponse = {
 
 export type CreateClassInput = {
   title: string
-  description?: string
   dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6
   startTime: string
   durationMinutes: number

@@ -148,7 +148,7 @@ export class PrismaScheduleRepository implements ScheduleRepository {
       }
 
       const cls = await tx.classSchedule.update({
-        where: { id: classId },
+        where: { id: classId, academyId },
         data,
       })
 
@@ -161,8 +161,8 @@ export class PrismaScheduleRepository implements ScheduleRepository {
         },
       })
 
-      const full = await tx.classSchedule.findUniqueOrThrow({
-        where: { id: cls.id },
+      const full = await tx.classSchedule.findFirstOrThrow({
+        where: { id: cls.id, academyId },
         include: classInclude,
       })
 
@@ -179,15 +179,15 @@ export class PrismaScheduleRepository implements ScheduleRepository {
     actorId: string
   ): Promise<DeactivateClassResult> {
     // Check if already inactive first
-    const existing = await prisma.classSchedule.findUnique({
-      where: { id: classId },
+    const existing = await prisma.classSchedule.findFirst({
+      where: { id: classId, academyId },
       select: { isActive: true },
     })
 
     if (existing && !existing.isActive) {
       // Already inactive — return current state without writing an event
-      const full = await prisma.classSchedule.findUniqueOrThrow({
-        where: { id: classId },
+      const full = await prisma.classSchedule.findFirstOrThrow({
+        where: { id: classId, academyId },
         include: classInclude,
       })
 
@@ -199,7 +199,7 @@ export class PrismaScheduleRepository implements ScheduleRepository {
 
     return prisma.$transaction(async (tx) => {
       const cls = await tx.classSchedule.update({
-        where: { id: classId },
+        where: { id: classId, academyId },
         data: { isActive: false },
       })
 
@@ -212,8 +212,8 @@ export class PrismaScheduleRepository implements ScheduleRepository {
         },
       })
 
-      const full = await tx.classSchedule.findUniqueOrThrow({
-        where: { id: cls.id },
+      const full = await tx.classSchedule.findFirstOrThrow({
+        where: { id: cls.id, academyId },
         include: classInclude,
       })
 

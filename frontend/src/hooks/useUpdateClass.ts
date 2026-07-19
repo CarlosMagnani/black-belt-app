@@ -1,19 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { apiClient } from '../lib/api'
+import { apiClient, isApiError } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
 import { useToast } from './useToast'
-import type { ApiError } from '../lib/api'
 import type { ClassActionResponse, UpdateClassInput } from '../features/schedule/schedule.types'
-
-function isApiError(error: unknown): error is ApiError {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof (error as ApiError).code === 'string'
-  )
-}
 
 export function useUpdateClass() {
   const queryClient = useQueryClient()

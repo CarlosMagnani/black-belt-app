@@ -28,7 +28,7 @@ export function StudentHomePage() {
           return
         }
         if (result.error?.code === 'MEMBERSHIP_NOT_FOUND') {
-          navigate('/onboarding/aluno', { replace: true })
+          navigate('/onboarding/student', { replace: true })
           return
         }
         setError('Não foi possível carregar sua academia.')

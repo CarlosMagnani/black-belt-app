@@ -31,7 +31,7 @@ export class SupabaseObjectStorage implements ObjectStorage {
       headers: {
         apikey: this.secretKey,
         'content-type': input.contentType,
-        'x-upsert': 'false',
+        'x-upsert': 'true',
       },
       body: Buffer.from(input.content),
     })

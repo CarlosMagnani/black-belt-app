@@ -158,5 +158,5 @@ function ShieldIcon() {
 }
 
 function getOnboardingRoute(role: 'owner' | 'student') {
-  return role === 'owner' ? '/onboarding/mestre' : '/onboarding/aluno'
+  return role === 'owner' ? '/onboarding/owner' : '/onboarding/student'
 }

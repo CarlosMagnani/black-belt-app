@@ -3,6 +3,7 @@
 ## Academy
 
 - One owner can create and manage only one academy.
+- Selecting the owner onboarding role must persist before owner onboarding is available. Creating an academy must atomically create that user's active `owner` membership for the academy.
 - Each academy must have a unique invite code.
 - All academy schedules and check-in dates use `America/Sao_Paulo` during the MVP.
 - A student can only join an academy using a valid invite code.

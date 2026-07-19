@@ -435,7 +435,7 @@ describe('CheckIn API', () => {
     })
 
     it('works for a professor caller (the instructor themselves)', async () => {
-      const { user: professor, member: profMember } = await seedProfessor(academy.id)
+      const { user: professor } = await seedProfessor(academy.id)
       const ctx = createAppCtx({ id: professor.id, email: professor.email, fullName: professor.fullName })
       const app = buildApp({ ...ctx, logger: false, supabaseUrl: 'https://test.supabase.co' })
 

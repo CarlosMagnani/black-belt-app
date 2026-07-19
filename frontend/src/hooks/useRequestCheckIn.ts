@@ -25,7 +25,6 @@ export function useRequestCheckIn() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.myCheckInsToday() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.classes() })
       showToast({ type: 'success', message: 'Check-in enviado · Aguardando aprovação' })
     },
     onError: (error) => {

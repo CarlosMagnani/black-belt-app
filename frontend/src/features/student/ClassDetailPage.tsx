@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useClasses } from '../../hooks/useClasses'
 import { useMyCheckInsToday } from '../../hooks/useMyCheckInsToday'
 import { useRequestCheckIn } from '../../hooks/useRequestCheckIn'
+import { IconButton } from '../../components/IconButton'
 import { SlideToConfirm } from '../../components/SlideToConfirm'
 import { ErrorState } from '../../components/ErrorState'
 import { ChevronLeftIcon, ClockIcon, HourglassIcon, CheckIcon, XIcon } from '../../components/Icons'
@@ -130,14 +131,13 @@ export function ClassDetailPage() {
         />
 
         <div className="absolute top-[60px] left-6 right-6 flex items-center justify-between">
-          <button
+          <IconButton
             onClick={() => navigate('/aluno')}
-            className="w-[38px] h-[38px] bg-black/60 border border-line-2 backdrop-blur-md flex items-center justify-center text-text"
+            className="bg-black/60 border-line-2 backdrop-blur-md"
             aria-label="Voltar"
-            type="button"
           >
             <ChevronLeftIcon className="w-[18px] h-[18px]" strokeWidth={1.8} />
-          </button>
+          </IconButton>
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-red">● HOJE</span>
         </div>
 

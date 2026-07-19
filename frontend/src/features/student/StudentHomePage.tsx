@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useClasses } from '../../hooks/useClasses'
 import { useMyCheckInsToday } from '../../hooks/useMyCheckInsToday'
+import { useMembershipGuard } from '../../hooks/useMembershipGuard'
+import { SessionLoading } from '../../components/SessionLoading'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton'
 import { ErrorState } from '../../components/ErrorState'
 import { EmptyState } from '../../components/EmptyState'
@@ -20,6 +22,7 @@ function checkInByClassId(checkIns: CheckInRecord[], classId: string): CheckInRe
 
 export function StudentHomePage() {
   const { user } = useAuth()
+  const { isLoading: isMembershipLoading } = useMembershipGuard()
   const today = useMemo(() => nowInSaoPaulo(), [])
 
   const {
@@ -52,6 +55,10 @@ export function StudentHomePage() {
   const handleRetry = () => {
     refetchClasses()
     refetchCheckIns()
+  }
+
+  if (isMembershipLoading) {
+    return <SessionLoading />
   }
 
   return (

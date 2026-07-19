@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { apiClient } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
 
 export function RoleChoicePage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { refresh } = useAuth()
   const [selectedRole, setSelectedRole] = useState<'owner' | 'student' | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +60,7 @@ export function RoleChoicePage() {
       return
     }
 
+    await refresh()
     navigate(getOnboardingRoute(role))
   }
 

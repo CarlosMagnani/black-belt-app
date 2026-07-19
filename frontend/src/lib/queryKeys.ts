@@ -1,3 +1,3 @@
 export const queryKeys = {
-  roster: () => ['academy', 'roster'] as const,
+  roster: (userId?: string) => ['academy', 'roster', userId] as const,
 }

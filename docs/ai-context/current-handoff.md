@@ -262,3 +262,16 @@ src/
   repositories/
   lib/
   styles/
+
+## Latest Completed Work
+
+Owner workspace frontend slice (issue #7) completed:
+
+- `/mestre/painel`, `/mestre/alunos`, `/mestre/agenda`, `/mestre/caixa`, `/mestre/perfil` routes are protected by `OwnerRoute` and rendered inside `OwnerWorkspaceLayout`.
+- `AuthContext` exposes `session`, `user`, `onboardingRole`, `signOut`, and `refresh` via `GET /auth/me`.
+- TanStack Query is wired through `Providers` with a shared `QueryClient`.
+- `RosterPage` lists members grouped by role (donos, professores, alunos) with promote/revoke actions, confirmation modals, belt swatches, and per-section loading/empty/error states.
+- Success and error toasts use a minimal in-house `ToastProvider`.
+- Build and lint pass.
+
+Next focus: end-to-end integration with the backend roster API and password recovery slice.

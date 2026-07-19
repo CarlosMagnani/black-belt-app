@@ -1,11 +1,16 @@
 import { supabase } from '../lib/supabase'
 
+export type ApiError = {
+  code: string
+  message: string
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {}
-): Promise<{ data: T | null; error: { code: string; message: string } | null }> {
+): Promise<{ data: T | null; error: ApiError | null }> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   const headers = new Headers(options.headers)

@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "tsx --test test/**/*.test.ts",
+    "test:vitest": "vitest run",
+    "test": "npm run test:vitest && npm run test:legacy",
+    "test:watch": "vitest",
+    "test:legacy": "tsx --test test/**/*.test.ts",
     "start": "node dist/server.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -29,9 +32,11 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.3",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.1.10"
   }
 }

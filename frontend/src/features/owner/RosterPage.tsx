@@ -15,7 +15,7 @@ import { useRoster } from '../../hooks/useRoster'
 import { beltColor, beltTextColor, formatBeltLabel } from '../../utils/beltColor'
 import { getInitials } from '../../utils/initials'
 import type { MemberSummary } from './roster.types'
-import type { ApiError } from '../../lib/api'
+import { isApiError } from '../../lib/api'
 
 export function RosterPage() {
   const { members, isLoading, isError, error, refetch } = useRoster()
@@ -50,15 +50,6 @@ export function RosterPage() {
   const owners = members.filter((member) => member.role === 'owner')
   const professors = members.filter((member) => member.role === 'professor')
   const students = members.filter((member) => member.role === 'student')
-
-  function isApiError(error: unknown): error is ApiError {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      typeof (error as ApiError).code === 'string'
-    )
-  }
 
   function handlePromote(member: MemberSummary) {
     setPromoteTarget(member)

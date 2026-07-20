@@ -4,13 +4,16 @@ import { SessionLoading } from './components/SessionLoading'
 import { AuthPage, ConfirmationPage } from './features/auth/AuthPage'
 import { RoleChoicePage } from './features/auth/RoleChoicePage'
 import { OwnerOnboardingPage } from './features/onboarding/OwnerOnboardingPage'
-import { StudentHomePage } from './features/onboarding/StudentHomePage'
+import { StudentHomePage } from './features/student/StudentHomePage'
+import { ClassDetailPage } from './features/student/ClassDetailPage'
 import { StudentOnboardingPage } from './features/onboarding/StudentOnboardingPage'
 import { OwnerRoute } from './components/OwnerRoute'
 import { OwnerWorkspaceLayout } from './features/owner/OwnerWorkspaceLayout'
 import { OwnerHomePage } from './features/owner/OwnerHomePage'
 import { RosterPage } from './features/owner/RosterPage'
-import { SchedulePlaceholder, FinancePlaceholder, AcademySettingsPlaceholder } from './features/owner/OwnerPlaceholders'
+import { FinancePlaceholder, AcademySettingsPlaceholder } from './features/owner/OwnerPlaceholders'
+import { AgendaPage } from './features/schedule/AgendaPage'
+import { ClassFormPage } from './features/schedule/ClassFormPage'
 
 function App() {
   const { session, isLoading } = useAuth()
@@ -33,7 +36,10 @@ function App() {
           <Route element={<OwnerWorkspaceLayout />}>
             <Route path="/owner" element={<Navigate to="/owner/dashboard" replace />} />
             <Route path="/owner/dashboard" element={<OwnerHomePage />} />
-            <Route path="/owner/schedule" element={<SchedulePlaceholder />} />
+            <Route path="/owner/schedule" element={<AgendaPage />} />
+            <Route path="/owner/schedule/new" element={<ClassFormPage mode="create" />} />
+            <Route path="/owner/schedule/:classId/edit" element={<ClassFormPage mode="edit" />} />
+            <Route path="/owner/schedule/:classId" element={<ClassFormPage mode="edit" />} />
             <Route path="/owner/students" element={<RosterPage />} />
             <Route path="/owner/finance" element={<FinancePlaceholder />} />
             <Route path="/owner/profile" element={<AcademySettingsPlaceholder />} />
@@ -41,6 +47,7 @@ function App() {
         </Route>
 
         <Route path="/student" element={session ? <StudentHomePage /> : <Navigate to="/login" replace />} />
+        <Route path="/student/classes/:classId" element={session ? <ClassDetailPage /> : <Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to={session ? '/welcome' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>

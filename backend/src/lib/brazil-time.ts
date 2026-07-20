@@ -1,0 +1,68 @@
+/**
+ * Brazil time utilities using only Intl.DateTimeFormat — no external deps.
+ *
+ * We deliberately avoid libraries (luxon, date-fns-tz, dayjs) to keep the
+ * dependency footprint minimal for the MVP. Intl.DateTimeFormat is available
+ * in all supported Node.js versions and gives us correct America/Sao_Paulo
+ * offsets including daylight saving transitions.
+ */
+
+/**
+ * Returns a Date object whose UTC value corresponds to "now" in
+ * America/Sao_Paulo. The returned Date's getHours/getMinutes etc. will
+ * reflect the wall-clock time in São Paulo.
+ */
+export function nowInSaoPaulo(): Date {
+  return new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
+  )
+}
+
+/**
+ * Returns today's date in São Paulo as a YYYY-MM-DD string.
+ * Uses en-CA locale which formats as YYYY-MM-DD by default.
+ */
+export function todayInSaoPaulo(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
+/**
+ * Returns the current time in São Paulo as "HH:mm" string (24-hour format).
+ */
+export function nowTimeInSaoPaulo(): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date())
+}
+
+/**
+ * Returns the day-of-week (0=Sunday, 1=Monday, …, 6=Saturday) for the given
+ * Date, interpreted in the America/Sao_Paulo timezone.
+ *
+ * This matches the Prisma ClassSchedule.dayOfWeek schema convention
+ * (0=Sunday through 6=Saturday).
+ */
+export function dayOfWeekInSaoPaulo(date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'short',
+  }).formatToParts(date)
+  const weekday = parts.find((p) => p.type === 'weekday')?.value
+  if (weekday === 'Sun') return 0
+  if (weekday === 'Mon') return 1
+  if (weekday === 'Tue') return 2
+  if (weekday === 'Wed') return 3
+  if (weekday === 'Thu') return 4
+  if (weekday === 'Fri') return 5
+  if (weekday === 'Sat') return 6
+  // Fallback: compute from the local date (should not reach here)
+  return new Date().getDay()
+}

@@ -117,7 +117,7 @@ export function ClassFormPage({ mode }: { mode: 'create' | 'edit' }) {
   }
 
   function handleCancel() {
-    navigate('/mestre/agenda')
+    navigate('/owner/schedule')
   }
 
   const isLoading = isLoadingRoster || (mode === 'edit' && isLoadingClasses)

@@ -34,7 +34,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           {isLogin ? <LoginForm /> : <RegistrationForm />}
           <p className="auth-switch">
             {isLogin ? 'Ainda não tem conta?' : 'Já faz parte do tatame?'}{' '}
-            <Link to={isLogin ? '/criar-conta' : '/entrar'}>
+            <Link to={isLogin ? '/sign-up' : '/login'}>
               {isLogin ? 'Criar conta' : 'Entrar'}
             </Link>
           </p>
@@ -69,7 +69,7 @@ function LoginForm() {
       return
     }
 
-    navigate('/boas-vindas', { replace: true })
+    navigate('/welcome', { replace: true })
   }
 
   return (
@@ -113,7 +113,7 @@ function RegistrationForm() {
     const { error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
-      options: { emailRedirectTo: `${window.location.origin}/boas-vindas` },
+      options: { emailRedirectTo: `${window.location.origin}/welcome` },
     })
 
     if (error) {
@@ -121,7 +121,7 @@ function RegistrationForm() {
       return
     }
 
-    navigate('/confirmar-email', { state: { email: parsed.data.email } satisfies ConfirmationState })
+    navigate('/confirm-email', { state: { email: parsed.data.email } satisfies ConfirmationState })
   }
 
   return (
@@ -171,7 +171,7 @@ export function ConfirmationPage() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: `${window.location.origin}/boas-vindas` },
+      options: { emailRedirectTo: `${window.location.origin}/welcome` },
     })
     setIsResending(false)
     setMessage(error ? 'Não foi possível reenviar agora. Tente novamente em instantes.' : 'Novo e-mail enviado.')
@@ -193,7 +193,7 @@ export function ConfirmationPage() {
           <button className="button button--ghost" type="button" onClick={resendConfirmation} disabled={isResending}>
             {isResending ? 'REENVIANDO...' : 'REENVIAR E-MAIL'}
           </button>
-          <button className="text-button" type="button" onClick={() => navigate('/entrar')}>
+          <button className="text-button" type="button" onClick={() => navigate('/login')}>
             Já confirmou? Entrar
           </button>
         </div>

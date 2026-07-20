@@ -132,7 +132,7 @@ export function ClassDetailPage() {
 
         <div className="absolute top-[60px] left-6 right-6 flex items-center justify-between">
           <IconButton
-            onClick={() => navigate('/aluno')}
+            onClick={() => navigate('/student')}
             className="bg-black/60 border-line-2 backdrop-blur-md"
             aria-label="Voltar"
           >

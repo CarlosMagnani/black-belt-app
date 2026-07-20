@@ -3,11 +3,11 @@ import { BottomTabBar } from './BottomTabBar'
 import { HomeIcon, CalendarIcon, UsersIcon, BoltIcon, UserIcon } from './Icons'
 
 const TABS = [
-  { id: 'painel', label: 'PAINEL', icon: <HomeIcon />, to: '/mestre/painel' },
-  { id: 'agenda', label: 'AGENDA', icon: <CalendarIcon />, to: '/mestre/agenda' },
-  { id: 'alunos', label: 'ALUNOS', icon: <UsersIcon />, to: '/mestre/alunos' },
-  { id: 'caixa', label: 'CAIXA', icon: <BoltIcon />, to: '/mestre/caixa' },
-  { id: 'perfil', label: 'PERFIL', icon: <UserIcon />, to: '/mestre/perfil' },
+  { id: 'painel', label: 'PAINEL', icon: <HomeIcon />, to: '/owner/dashboard' },
+  { id: 'agenda', label: 'AGENDA', icon: <CalendarIcon />, to: '/owner/schedule' },
+  { id: 'alunos', label: 'ALUNOS', icon: <UsersIcon />, to: '/owner/students' },
+  { id: 'caixa', label: 'CAIXA', icon: <BoltIcon />, to: '/owner/finance' },
+  { id: 'perfil', label: 'PERFIL', icon: <UserIcon />, to: '/owner/profile' },
 ]
 
 export function OwnerTabBar() {

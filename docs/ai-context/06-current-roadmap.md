@@ -4,6 +4,17 @@
 
 These are the features required to make BlackBelt minimally viable. Nothing else gets built until these work end-to-end.
 
+### Confirmed Owner Delivery Sequence (2026-07-18)
+
+1. Owner dashboard shell, academy identity, roster, and professor role management
+2. Recurring class schedule management
+3. Student check-in requests and owner/professor review
+4. Belt progress, manual promotion, and belt-change history
+5. Membership plans and manually managed subscription status
+6. Live owner dashboard metrics, promotion queue, and activity feed
+
+Payment processing and academy billing automation remain out of scope for this sequence.
+
 ### Authentication
 - [x] User registration (email + password)
 - [x] User login
@@ -35,7 +46,7 @@ These are the features required to make BlackBelt minimally viable. Nothing else
 - [ ] Owner/Professor approves or rejects a check-in
 - [ ] Approved check-in increments class count
 
-### Belt Progression (Owner/Professor)
+### Belt Progression (Owner)
 - [ ] View student progress (approved classes at current level)
 - [ ] Manually promote student (degree or belt change)
 - [ ] History of belt changes per student
@@ -47,11 +58,13 @@ These are the features required to make BlackBelt minimally viable. Nothing else
 - [ ] Check-in status for recent classes
 
 ### Owner Dashboard
-- [ ] Academy pulse (average occupancy, live class status)
+- [ ] Academy pulse (average attendance, live class status)
 - [ ] Today's schedule
 - [ ] Roster snapshot (belt distribution)
 - [ ] Promotion queue (students ready to advance)
 - [ ] Recent activity feed
+
+Dashboard data is fetched as a fresh snapshot when Home opens and by pull-to-refresh. The live-class label may update from the local clock while open, but check-in counts do not poll or use real-time transport in the MVP.
 
 ### Membership Plans (Owner)
 - [ ] Create a membership plan (name, price, period)

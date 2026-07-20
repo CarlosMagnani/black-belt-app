@@ -24,7 +24,7 @@ export function useUpdateClass() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.classes() })
       showToast({ type: 'success', message: 'Aula atualizada' })
-      navigate('/mestre/agenda')
+      navigate('/owner/schedule')
     },
     onError: (error) => {
       const message = isApiError(error) ? error.message : 'Não foi possível atualizar a aula.'

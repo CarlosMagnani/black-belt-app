@@ -25,30 +25,30 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/entrar" element={session ? <Navigate to="/boas-vindas" replace /> : <AuthPage mode="login" />} />
-        <Route path="/criar-conta" element={session ? <Navigate to="/boas-vindas" replace /> : <AuthPage mode="register" />} />
-        <Route path="/confirmar-email" element={session ? <Navigate to="/boas-vindas" replace /> : <ConfirmationPage />} />
-        <Route path="/boas-vindas" element={session ? <RoleChoicePage /> : <Navigate to="/entrar" replace />} />
-        <Route path="/onboarding/mestre" element={session ? <OwnerOnboardingPage /> : <Navigate to="/entrar" replace />} />
-        <Route path="/onboarding/aluno" element={session ? <StudentOnboardingPage /> : <Navigate to="/entrar" replace />} />
+        <Route path="/login" element={session ? <Navigate to="/welcome" replace /> : <AuthPage mode="login" />} />
+        <Route path="/sign-up" element={session ? <Navigate to="/welcome" replace /> : <AuthPage mode="register" />} />
+        <Route path="/confirm-email" element={session ? <Navigate to="/welcome" replace /> : <ConfirmationPage />} />
+        <Route path="/welcome" element={session ? <RoleChoicePage /> : <Navigate to="/login" replace />} />
+        <Route path="/onboarding/owner" element={session ? <OwnerOnboardingPage /> : <Navigate to="/login" replace />} />
+        <Route path="/onboarding/student" element={session ? <StudentOnboardingPage /> : <Navigate to="/login" replace />} />
 
         <Route element={<OwnerRoute />}>
           <Route element={<OwnerWorkspaceLayout />}>
-            <Route path="/mestre" element={<Navigate to="/mestre/painel" replace />} />
-            <Route path="/mestre/painel" element={<OwnerHomePage />} />
-            <Route path="/mestre/agenda" element={<AgendaPage />} />
-            <Route path="/mestre/agenda/nova" element={<ClassFormPage mode="create" />} />
-            <Route path="/mestre/agenda/:classId/editar" element={<ClassFormPage mode="edit" />} />
-            <Route path="/mestre/agenda/:classId" element={<ClassFormPage mode="edit" />} />
-            <Route path="/mestre/alunos" element={<RosterPage />} />
-            <Route path="/mestre/caixa" element={<FinancePlaceholder />} />
-            <Route path="/mestre/perfil" element={<AcademySettingsPlaceholder />} />
+            <Route path="/owner" element={<Navigate to="/owner/dashboard" replace />} />
+            <Route path="/owner/dashboard" element={<OwnerHomePage />} />
+            <Route path="/owner/schedule" element={<AgendaPage />} />
+            <Route path="/owner/schedule/new" element={<ClassFormPage mode="create" />} />
+            <Route path="/owner/schedule/:classId/edit" element={<ClassFormPage mode="edit" />} />
+            <Route path="/owner/schedule/:classId" element={<ClassFormPage mode="edit" />} />
+            <Route path="/owner/students" element={<RosterPage />} />
+            <Route path="/owner/finance" element={<FinancePlaceholder />} />
+            <Route path="/owner/profile" element={<AcademySettingsPlaceholder />} />
           </Route>
         </Route>
 
-        <Route path="/aluno" element={session ? <StudentHomePage /> : <Navigate to="/entrar" replace />} />
-        <Route path="/aluno/aula/:classId" element={session ? <ClassDetailPage /> : <Navigate to="/entrar" replace />} />
-        <Route path="*" element={<Navigate to={session ? '/boas-vindas' : '/entrar'} replace />} />
+        <Route path="/student" element={session ? <StudentHomePage /> : <Navigate to="/login" replace />} />
+        <Route path="/student/classes/:classId" element={session ? <ClassDetailPage /> : <Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={session ? '/welcome' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>
   )

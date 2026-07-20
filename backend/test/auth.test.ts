@@ -100,6 +100,38 @@ test('auth service creates the local profile from non-authorization metadata', a
   })
 })
 
+test('POST /auth/onboarding persists the owner role before owner onboarding', async () => {
+  let selectedRole: string | undefined
+  const app = buildApp({
+    authService: {
+      async syncAuthenticatedUser() {
+        return testUser
+      },
+      async setOnboardingRole(_userId, role) {
+        selectedRole = role
+        return { ...testUser, onboardingRole: role }
+      },
+    },
+    supabaseUrl,
+    verifyAccessToken: await testTokenVerifier,
+    logger: false,
+  })
+  await app.ready()
+  const token = await signUserToken()
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/onboarding',
+    headers: { authorization: `Bearer ${token}` },
+    payload: { role: 'owner' },
+  })
+
+  assert.equal(response.statusCode, 200)
+  assert.equal(selectedRole, 'owner')
+  assert.equal(response.json().data.user.onboardingRole, 'owner')
+
+  await app.close()
+})
+
 test('GET /auth/me rejects requests without a bearer token', async () => {
   const app = await createTestApp()
   const response = await app.inject({ method: 'GET', url: '/auth/me' })

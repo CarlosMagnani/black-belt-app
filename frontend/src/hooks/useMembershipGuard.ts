@@ -24,7 +24,7 @@ export function useMembershipGuard() {
 
   useEffect(() => {
     if (!isLoading && !data) {
-      navigate('/onboarding/aluno', { replace: true })
+      navigate('/onboarding/student', { replace: true })
     }
   }, [isLoading, data, navigate])
 

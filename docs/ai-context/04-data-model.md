@@ -62,7 +62,7 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 
 ## AcademyMember
 
-**Purpose:** Links a User to an Academy with a specific role. This is the join table that defines membership and role.
+**Purpose:** Links a User to an Academy with a specific role. This is the join table that defines membership and role; promotion changes an existing student's role to `professor`.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -78,8 +78,7 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 **Relationships:**
 - Belongs to one `Academy`
 - Belongs to one `User`
-- If role = `student`, has one `StudentBelt`
-- If role = `student`, may have one `MembershipSubscription`
+- A student promoted to professor retains their `StudentBelt` and membership subscription
 
 **Constraints:**
 - One user can only have one membership per academy
@@ -111,7 +110,7 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 
 **Constraints:**
 - During first academy join only, the student may create their initial belt and degree and `changed_by` records that student
-- After initial creation, students cannot modify their own belt — `changed_by` must be an owner or professor
+- After initial creation, a student cannot modify their own belt — `changed_by` must be the academy owner
 - Initial `StudentBelt` creation is not a progression event; later belt or degree changes must create a `BeltProgressionEvent`
 - degree is 0–4
 - Belt order: white → blue → purple → brown → black → coral → red
@@ -138,13 +137,37 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 
 **Constraints:**
 - Immutable — never update or delete these records
-- `performed_by` must not equal the student's user_id
+- `performed_by` must be the academy owner and must not equal the student's user_id
+- Each event must record exactly one forward transition: the next degree on the same belt, or the next belt at degree 0 after degree 4
+- Skips, demotions, and rank corrections are not supported in the MVP
+
+---
+
+## ActivityEvent
+
+**Purpose:** Immutable audit record for a meaningful academy operation and the source of the owner dashboard's recent activity feed. It is written in the same transaction as the operation and is not an asynchronous event mechanism.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | UUID | Primary key |
+| academy_id | UUID | FK → Academy.id |
+| actor_id | UUID | FK → User.id — who performed the action |
+| action | enum | `professor_promoted`, `professor_revoked`, `class_created`, `class_updated`, `class_deactivated`, `check_in_approved`, `check_in_rejected`, `belt_promoted`, `plan_created`, `plan_updated`, `plan_deactivated`, `subscription_assigned`, `subscription_changed` |
+| subject_member_id | UUID | Nullable FK → AcademyMember.id when a member is affected |
+| subject_class_id | UUID | Nullable FK → ClassSchedule.id when a class is affected |
+| subject_plan_id | UUID | Nullable FK → MembershipPlan.id when a plan is affected |
+| created_at | timestamp | When the operation occurred |
+
+**Constraints:**
+- Immutable — never update or delete these records
+- Created in the same database transaction as the recorded operation
+- `actor_id` must be authorized to perform the recorded action
 
 ---
 
 ## ClassSchedule
 
-**Purpose:** Defines recurring or one-off classes at the academy.
+**Purpose:** Defines recurring weekly classes at the academy. Individual class sessions and one-off schedule exceptions are out of scope for the MVP.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -167,6 +190,8 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 
 **Constraints:**
 - instructor_id must be a member of the academy with role `professor` or `owner`
+- A professor assigned to an active class cannot have their role revoked until every active class is reassigned or deactivated
+- Editing a class changes its recurring schedule going forward; deactivation prevents future use while preserving existing check-ins
 
 ---
 
@@ -195,10 +220,11 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 **Constraints:**
 - Status starts as `pending` — always
 - `reviewed_by` must not be the same user as the student — enforced server-side
-- `reviewed_by` must have role `professor` or `owner` in the academy
+- `reviewed_by` must be the academy owner or the professor assigned to the check-in's class
 - One check-in per student per class per date (unique constraint)
 - Only `approved` check-ins count toward belt progression
 - `rejected` check-ins must not count
+- A rejected check-in cannot be resubmitted for the same student, class, and date
 
 ---
 
@@ -250,6 +276,13 @@ Simple relational model. Every table gets `created_at`, `updated_at`. Audit-sens
 **Constraints:**
 - Payment processing is out of scope for MVP — status is managed manually by the owner
 - One active subscription per student per academy (enforce in application logic)
+- `expires_at` is calculated from `started_at` and the assigned plan's `period_days`
+- Reaching `expires_at` does not automatically change status or trigger a reminder
+- Changing plans cancels the current active subscription and creates a new active subscription; existing subscriptions remain as history
+
+## Membership Plan Deactivation
+
+Deactivating a membership plan prevents future subscription assignments. It does not change the status of existing subscriptions, which remain under manual owner control.
 
 ---
 
@@ -261,8 +294,10 @@ This is the business rule encoded in the data model:
 approvedClasses = COUNT(CheckIn WHERE student_member_id = X AND status = 'approved')
 approvedClassesAtCurrentLevel = approved_classes_at_level on StudentBelt
 
-Every 24 approved classes at the current level → advance one degree
-When degree reaches 4 → advance to next belt with degree = 0
+Every 24 approved classes at the current level → student becomes eligible for promotion
+An authorized actor must explicitly promote the student; when degree reaches 4, the next promotion advances to the next belt with degree = 0
+
+The 24-class threshold is universal. `approved_classes_at_level` may exceed 24 while a promotion is pending; no per-student threshold is stored.
 
 Belt order: white(0) → blue(1) → purple(2) → brown(3) → black(4) → coral(5) → red(6)
 ```
@@ -270,3 +305,5 @@ Belt order: white(0) → blue(1) → purple(2) → brown(3) → black(4) → cor
 The `approved_classes_at_level` field resets to 0 on each degree or belt advancement.
 
 This calculation happens in the use case layer, not in the database.
+
+All schedule and check-in date calculations use `America/Sao_Paulo` during the MVP.

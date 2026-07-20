@@ -24,11 +24,11 @@ export function AgendaPage() {
   const deactivate = useDeactivateClass()
 
   function handleAddClass() {
-    navigate('/mestre/agenda/nova')
+    navigate('/owner/schedule/new')
   }
 
   function handleEditClass(cls: ScheduledClass) {
-    navigate(`/mestre/agenda/${cls.id}/editar`)
+    navigate(`/owner/schedule/${cls.id}/edit`)
   }
 
   function handleDeactivateClass(cls: ScheduledClass) {

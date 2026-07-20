@@ -68,7 +68,7 @@ export function StudentClassListItem({ cls, checkIn }: StudentClassListItemProps
       <div className="shrink-0 flex items-center px-3">
         {state === 'idle' ? (
           <PrimaryButton
-            onClick={() => navigate(`/aluno/aula/${cls.id}`)}
+            onClick={() => navigate(`/student/classes/${cls.id}`)}
             className="min-h-[44px] text-[13px] px-3"
           >
             FAZER CHECK-IN

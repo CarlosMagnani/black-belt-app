@@ -14,7 +14,7 @@ const storage = new SupabaseObjectStorage({
     assert.equal(init?.headers?.apikey, 'sb_secret_server-only-test-key')
     assert.equal(init?.headers?.authorization, undefined)
     assert.equal(init?.headers?.['content-type'], 'image/png')
-    assert.equal(init?.headers?.['x-upsert'], 'false')
+    assert.equal(init?.headers?.['x-upsert'], 'true')
     return new Response(null, { status: 200 })
   },
 })

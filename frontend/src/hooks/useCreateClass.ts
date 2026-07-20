@@ -24,7 +24,7 @@ export function useCreateClass() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.classes() })
       showToast({ type: 'success', message: 'Aula criada' })
-      navigate('/mestre/agenda')
+      navigate('/owner/schedule')
     },
     onError: (error) => {
       const message = isApiError(error) ? error.message : 'Não foi possível criar a aula.'

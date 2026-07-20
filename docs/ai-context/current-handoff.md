@@ -27,12 +27,12 @@ Frontend authentication completed on 2026-07-10:
 
 Owner onboarding UI completed on 2026-07-14:
 
-- `/onboarding/mestre` is a mobile-first, three-step owner onboarding flow: academy details, owner profile/grade, and successful invite reveal.
+- `/onboarding/owner` is a mobile-first, three-step owner onboarding flow: academy details, owner profile/grade, and successful invite reveal.
 - Academy logo and owner-photo controls remain optional local previews before submission: JPEG, PNG, or WebP files up to 5 MB, with replace/remove actions and no crop editor.
-- Step 2 submits multipart data to `POST /onboarding/owner`. Failures keep all fields and selected files in place for retry; a duplicate academy redirects safely to `/mestre`.
+- Step 2 submits multipart data to `POST /onboarding/owner`. Failures keep all fields and selected files in place for retry; a duplicate academy redirects safely to `/owner`.
 - Step 3 is only shown after a successful API response and uses the real server-generated invite code for copy/share actions.
 - The owner profile field is labelled `Nome no tatame` and maps to `ownerNickname`; it does not overwrite the authenticated full name.
-- `/mestre` is a protected minimal destination. The full owner dashboard is intentionally deferred.
+- `/owner` is a protected minimal destination. The full owner dashboard is intentionally deferred.
 - Returning to the role screen from the first onboarding step can resume the owner flow in the same browser navigation session without attempting to save the already-selected role again.
 
 Media storage foundation completed on 2026-07-10:
@@ -59,7 +59,7 @@ Role assignment API slice completed on 2026-07-14:
 - `OnboardingRole` enum (owner/student) added to Prisma schema; `onboardingRole` nullable field on `User`.
 - Role selection is one-time: 409 Conflict if `onboardingRole` is already set.
 - Auth middleware attaches `userOnboardingRole` to request for downstream authorization checks.
-- Frontend `RoleChoicePage` calls the endpoint on card click and navigates to `/onboarding/mestre` or `/onboarding/aluno`.
+- Frontend `RoleChoicePage` calls the endpoint on card click and navigates to `/onboarding/owner` or `/onboarding/student`.
 - Professor role is not selectable during onboarding — it is an academy-level assignment, not a self-selection.
 
 Owner onboarding API slice completed on 2026-07-14:
@@ -79,16 +79,16 @@ Owner onboarding API slice completed on 2026-07-14:
 
 Student onboarding slice completed on 2026-07-14:
 
-- `/onboarding/aluno` is a mobile-first three-step flow in Brazilian Portuguese: verify invite, set required `Nome no tatame` plus optional photo, then declare the initial belt and degree.
+- `/onboarding/student` is a mobile-first three-step flow in Brazilian Portuguese: verify invite, set required `Nome no tatame` plus optional photo, then declare the initial belt and degree.
 - The invite screen accepts a typed code only; QR instructions are intentionally omitted. Codes are normalized with trim + uppercase and verified only when the user taps the action.
 - `POST /onboarding/student/verify-invite` is protected and returns only academy identity (`id`, `name`, `city`) for valid invites.
 - `POST /onboarding/student` accepts multipart `inviteCode`, `nickname`, `belt`, `degree`, and optional `photo`; file validation remains JPEG/PNG/WebP up to 5 MB.
 - Joining atomically creates the student `AcademyMember` and starting `StudentBelt`, then updates only the user's nickname/avatar. Student rank is not duplicated into `User.belt` or `User.degree`.
-- Self-declared starting rank is allowed once at join. After creation, the existing rule remains: only owners/professors may change student belt or degree.
+- Self-declared starting rank is allowed once at join. After creation, product direction is that only the academy owner may change student belt or degree; the current implementation has not yet added those changes.
 - The onboarding UI exposes white, blue, purple, brown, and black belts with degrees 0–4. Coral and red remain in the domain hierarchy but are not self-selectable.
 - One student can join only one academy for the MVP. The service check is backed by a partial unique PostgreSQL index for concurrent requests. A plan is not required at join; any later subscription must reference a valid academy plan.
-- `GET /memberships/me` returns the student's current membership, academy, profile, and `StudentBelt`, allowing reload/resume and direct routing to protected `/aluno`.
-- `/aluno` is a protected minimal destination showing the academy and starting rank. Full student dashboard features remain deferred.
+- `GET /memberships/me` returns the student's current membership, academy, profile, and `StudentBelt`, allowing reload/resume and direct routing to protected `/student`.
+- `/student` is a protected minimal destination showing the academy and starting rank. Full student dashboard features remain deferred.
 - Role-choice recovery now reads `onboardingRole` from `GET /auth/me`, so an already-persisted owner or student role resumes its matching onboarding rather than trying to select a new role.
 - Verification passes: 35 backend tests, backend TypeScript build, frontend lint/build, Prisma validation, migration status, and live local API health/protection probes.
 
@@ -267,8 +267,11 @@ src/
 
 Owner workspace frontend slice (issue #7) completed:
 
-- `/mestre/painel`, `/mestre/alunos`, `/mestre/agenda`, `/mestre/caixa`, `/mestre/perfil` routes are protected by `OwnerRoute` and rendered inside `OwnerWorkspaceLayout`.
+- `/owner/dashboard`, `/owner/students`, `/owner/schedule`, `/owner/finance`, `/owner/profile` routes are protected by `OwnerRoute` and rendered inside `OwnerWorkspaceLayout`.
+- Owner media uploads use overwrite-safe object storage, so a retry for the same owner's logo or photo replaces the prior object instead of failing on an existing key.
 - `AuthContext` exposes `session`, `user`, `onboardingRole`, `signOut`, and `refresh` via `GET /auth/me`.
+- After role selection, `RoleChoicePage` refreshes the authenticated user before continuing, so a new owner reaches the protected owner workspace without a browser reload.
+- Roster queries are keyed by the signed-in user, preventing cached academy data from appearing after a different user signs in on the same browser.
 - TanStack Query is wired through `Providers` with a shared `QueryClient`.
 - `RosterPage` lists members grouped by role (donos, professores, alunos) with promote/revoke actions, confirmation modals, belt swatches, and per-section loading/empty/error states.
 - Success and error toasts use a minimal in-house `ToastProvider`.

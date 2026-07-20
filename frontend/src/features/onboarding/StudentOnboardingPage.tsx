@@ -39,7 +39,7 @@ export function StudentOnboardingPage() {
       .then((result) => {
         if (!isActive) return
         if (result.data) {
-          navigate('/aluno', { replace: true, state: { membership: result.data } })
+          navigate('/student', { replace: true, state: { membership: result.data } })
           return
         }
         if (result.error && result.error.code !== 'MEMBERSHIP_NOT_FOUND') {
@@ -62,7 +62,7 @@ export function StudentOnboardingPage() {
     setFieldError(null)
 
     if (step === 0) {
-      navigate('/boas-vindas', { state: { onboardingRole: 'student' } })
+      navigate('/welcome', { state: { onboardingRole: 'student' } })
       return
     }
 
@@ -146,7 +146,7 @@ export function StudentOnboardingPage() {
       })
 
       if (result.error?.code === 'ALREADY_MEMBER') {
-        navigate('/aluno', { replace: true })
+        navigate('/student', { replace: true })
         return
       }
 
@@ -159,7 +159,7 @@ export function StudentOnboardingPage() {
         return
       }
 
-      navigate('/aluno', {
+      navigate('/student', {
         replace: true,
         state: {
           membership: result.data,

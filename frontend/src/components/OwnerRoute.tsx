@@ -10,11 +10,11 @@ export function OwnerRoute() {
   }
 
   if (!session) {
-    return <Navigate to="/entrar" replace />
+    return <Navigate to="/login" replace />
   }
 
   if (onboardingRole !== 'owner') {
-    return <Navigate to="/boas-vindas" replace />
+    return <Navigate to="/welcome" replace />
   }
 
   return <Outlet />

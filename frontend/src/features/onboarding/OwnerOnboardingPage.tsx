@@ -62,12 +62,12 @@ export function OwnerOnboardingPage() {
 
   function goBack() {
     if (step === 0) {
-      navigate('/boas-vindas', { state: { onboardingRole: 'owner' } })
+      navigate('/welcome', { state: { onboardingRole: 'owner' } })
       return
     }
 
     if (step === 2) {
-      navigate('/mestre', { replace: true })
+      navigate('/owner', { replace: true })
       return
     }
 
@@ -118,7 +118,7 @@ export function OwnerOnboardingPage() {
       })
 
       if (result.error?.code === 'ACADEMY_EXISTS') {
-        navigate('/mestre', {
+        navigate('/owner', {
           replace: true,
           state: { notice: 'Sua academia já está criada.' },
         })
@@ -268,7 +268,7 @@ export function OwnerOnboardingPage() {
           className="button button--primary onboarding-page__action"
           disabled={isSubmitting}
           type="button"
-          onClick={step === 2 ? () => navigate('/mestre', { replace: true }) : continueOnboarding}
+          onClick={step === 2 ? () => navigate('/owner', { replace: true }) : continueOnboarding}
         >
           {isSubmitting ? 'CRIANDO ACADEMIA...' : step === 2 ? 'Abrir academia →' : 'Continuar →'}
         </button>

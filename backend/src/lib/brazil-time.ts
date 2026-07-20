@@ -30,3 +30,39 @@ export function todayInSaoPaulo(): string {
     day: '2-digit',
   }).format(new Date())
 }
+
+/**
+ * Returns the current time in São Paulo as "HH:mm" string (24-hour format).
+ */
+export function nowTimeInSaoPaulo(): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date())
+}
+
+/**
+ * Returns the day-of-week (0=Sunday, 1=Monday, …, 6=Saturday) for the given
+ * Date, interpreted in the America/Sao_Paulo timezone.
+ *
+ * This matches the Prisma ClassSchedule.dayOfWeek schema convention
+ * (0=Sunday through 6=Saturday).
+ */
+export function dayOfWeekInSaoPaulo(date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'short',
+  }).formatToParts(date)
+  const weekday = parts.find((p) => p.type === 'weekday')?.value
+  if (weekday === 'Sun') return 0
+  if (weekday === 'Mon') return 1
+  if (weekday === 'Tue') return 2
+  if (weekday === 'Wed') return 3
+  if (weekday === 'Thu') return 4
+  if (weekday === 'Fri') return 5
+  if (weekday === 'Sat') return 6
+  // Fallback: compute from the local date (should not reach here)
+  return new Date().getDay()
+}

@@ -190,23 +190,58 @@ export async function seedProfessor(
 
 /**
  * Create an active ClassSchedule for a given instructor in the academy.
- * Only sets the minimal fields needed for the active-class check.
+ * Accepts optional overrides for dayOfWeek, startTime, isActive, etc.
  */
 export async function createActiveClassSchedule(
   academyId: string,
   instructorId: string,
-  overrides?: { title?: string }
+  overrides?: {
+    title?: string
+    dayOfWeek?: number
+    startTime?: string
+    durationMinutes?: number
+    isActive?: boolean
+  }
 ): Promise<{ id: string }> {
   const cls = await prisma.classSchedule.create({
     data: {
       academyId,
       instructorId,
       title: overrides?.title ?? 'Aula',
-      dayOfWeek: 1,
-      startTime: '10:00',
-      durationMinutes: 60,
-      isActive: true,
+      dayOfWeek: overrides?.dayOfWeek ?? 1,
+      startTime: overrides?.startTime ?? '10:00',
+      durationMinutes: overrides?.durationMinutes ?? 60,
+      isActive: overrides?.isActive ?? true,
     },
   })
   return { id: cls.id }
+}
+
+/**
+ * Create a test CheckIn with the given parameters for use in check-in route tests.
+ */
+export async function createTestCheckIn(
+  academyId: string,
+  studentMemberId: string,
+  classScheduleId: string,
+  status: 'pending' | 'approved' | 'rejected',
+  overrides?: {
+    classDate?: Date
+    reviewedBy?: string
+    reviewedAt?: Date
+  }
+): Promise<{ id: string }> {
+  const classDate = overrides?.classDate ?? new Date()
+  const checkIn = await prisma.checkIn.create({
+    data: {
+      academyId,
+      studentMemberId,
+      classScheduleId,
+      classDate,
+      status,
+      reviewedBy: overrides?.reviewedBy ?? null,
+      reviewedAt: overrides?.reviewedAt ?? null,
+    },
+  })
+  return { id: checkIn.id }
 }
